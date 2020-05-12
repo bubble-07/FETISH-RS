@@ -11,3 +11,8 @@ Cargo.lock
 
 #vim swap files
 *.swp
+
+
+#Added by cargo
+
+/target
