@@ -108,7 +108,19 @@ impl NormalInverseGamma {
     }
 }
 
-impl ops::AddAssign for NormalInverseGamma {
+impl ops::AddAssign<&DataPoint> for NormalInverseGamma {
+    fn add_assign(&mut self, other: &DataPoint) {
+        self.update(other, false)
+    }
+}
+
+impl ops::SubAssign<&DataPoint> for NormalInverseGamma {
+    fn sub_assign(&mut self, other: &DataPoint) {
+        self.update(other, true)
+    }
+}
+
+impl ops::AddAssign<NormalInverseGamma> for NormalInverseGamma {
     fn add_assign(&mut self, other: Self) {
         self.precision_u += &other.precision_u;
 
