@@ -41,7 +41,7 @@ pub trait FeatureCollection {
     }
 
     ///Gets the interaction part of the prior precision matrix
-    fn blank_interaction_precision(&self, other : dyn FeatureCollection, out_dims : usize, update : bool) -> Array4<f32> {
+    fn blank_interaction_precision(&self, other : &dyn FeatureCollection, out_dims : usize, update : bool) -> Array4<f32> {
         Array::zeros((out_dims, self.get_dimension(), out_dims, other.get_dimension()))
     }
 

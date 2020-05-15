@@ -9,9 +9,10 @@ use crate::feature_collection::*;
 use crate::count_sketch::*;
 
 use std::sync::Arc;
-use rustfft::FFTPlanner;
+use rustfft::FFTplanner;
+use rustfft::FFT;
 use rustfft::num_complex::Complex;
-use rustfft::num_traints::Zero;
+use rustfft::num_traits::Zero;
 
 const QUAD_REG_STRENGTH : f32 = 5.0;
 const QUAD_FEATURE_MULTIPLIER : usize = 5;
@@ -21,8 +22,8 @@ struct QuadraticFeatureCollection {
     reg_strength : f32,
     sketch_one : CountSketch,
     sketch_two : CountSketch,
-    fft : Arc<dyn FFT<T>>,
-    ifft : Arc<dyn FFT<T>>
+    fft : Arc<dyn FFT<f32>>,
+    ifft : Arc<dyn FFT<f32>>
 }
 
 impl QuadraticFeatureCollection {
@@ -32,8 +33,8 @@ impl QuadraticFeatureCollection {
         let sketch_one = CountSketch::new(in_dimensions, out_dimensions);
         let sketch_two = CountSketch::new(in_dimensions, out_dimensions);
         
-        let mut fftplanner = FFTPlanner(false);
-        let mut ifftplanner = FFTPlanner(true);
+        let mut fftplanner = FFTplanner::<f32>::new(false);
+        let mut ifftplanner = FFTplanner::<f32>::new(true);
 
         let fft = fftplanner.plan_fft(out_dimensions);
         let ifft = fftplanner.plan_fft(out_dimensions);
@@ -60,8 +61,8 @@ fn from_complex(complex : Complex<f32>) -> f32 {
 impl FeatureCollection for QuadraticFeatureCollection {
 
     fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32> {
-        let first_sketch = self.sketch_one.sketch(in_vec)
-        let second_sketch = self.sketch_two.sketch(in_vec)
+        let first_sketch = self.sketch_one.sketch(in_vec);
+        let second_sketch = self.sketch_two.sketch(in_vec);
 
         //FFT polynomial multiplication
         let mut complex_first_sketch = in_vec.mapv(to_complex).to_vec();
@@ -77,13 +78,13 @@ impl FeatureCollection for QuadraticFeatureCollection {
 
         //Turn second_fft into the multiplied fft in-place
         for i in 0..out_dim {
-            let second_fft[i] *= first_fft[i];
+            second_fft[i] *= first_fft[i];
         }
 
         //Turn first_fft into the result inverse-fft
         self.ifft.process(&mut second_fft, &mut first_fft);
         
-        return Array::from(first_fft).mapv(from_complex)
+        Array::from(first_fft).mapv(from_complex)
     }
 
     fn get_in_dimensions(&self) -> usize {

@@ -11,7 +11,7 @@ use rand::prelude::*;
 
 use rand::distributions::{Bernoulli, Distribution};
 
-struct CountSketch {
+pub struct CountSketch {
     in_dims : usize,
     out_dims : usize,
     indices : Vec<usize>,
@@ -19,7 +19,7 @@ struct CountSketch {
 }
 
 impl CountSketch {
-    fn new(in_dims : usize, out_dims : usize) -> CountSketch {
+    pub fn new(in_dims : usize, out_dims : usize) -> CountSketch {
         //Need to initialize both indices and signs here.
         let mut indices = Vec::<usize>::with_capacity(in_dims);
         let mut signs = Vec::<f32>::with_capacity(in_dims);
@@ -43,11 +43,11 @@ impl CountSketch {
         }
     }
     
-    fn get_out_dimensions(&self) -> usize {
+    pub fn get_out_dimensions(&self) -> usize {
         self.out_dims
     }
 
-    fn sketch(&self, v: Array1<f32>) -> Array1<f32> {
+    pub fn sketch(&self, v: &Array1<f32>) -> Array1<f32> {
         let mut result = Array::zeros((self.out_dims,));
         for i in 0..self.in_dims {
             result[[self.indices[i],]] += self.signs[i] * v[[i,]]
