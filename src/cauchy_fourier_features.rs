@@ -38,3 +38,7 @@ fn generate_cauchy_random<R : Rng + ?Sized>(rng : &mut R, dims : usize) -> Array
 
     result
 }
+
+pub fn gen_cauchy_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {
+    generate_cauchy_random(rng, dims)
+}

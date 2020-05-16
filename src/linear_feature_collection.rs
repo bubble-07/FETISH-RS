@@ -9,13 +9,13 @@ use crate::feature_collection::*;
 
 const LIN_REG_STRENGTH : f32 = 5.0;
 
-struct LinearFeatureCollection {
+pub struct LinearFeatureCollection {
     in_dimensions : usize,
     reg_strength : f32
 }
 
 impl LinearFeatureCollection {
-    fn new(in_dimensions: usize) -> LinearFeatureCollection {
+    pub fn new(in_dimensions: usize) -> LinearFeatureCollection {
         LinearFeatureCollection {
             in_dimensions : in_dimensions,
             reg_strength : LIN_REG_STRENGTH

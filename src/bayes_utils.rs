@@ -10,7 +10,7 @@ use ndarray_linalg::solveh::*;
 
 ///Data point [input, output pair]
 ///with an output precision matrix
-struct DataPoint {
+pub struct DataPoint {
     in_vec: Array1<f32>,
     out_vec: Array1<f32>,
     out_precision: Array2<f32>
@@ -18,7 +18,7 @@ struct DataPoint {
 
 ///Normal-inverse-gamma distribution representation
 ///for bayesian inference
-struct NormalInverseGamma {
+pub struct NormalInverseGamma {
     mean: Array2<f32>,
     precision_u: Array2<f32>,
     precision: Array4<f32>,
@@ -26,8 +26,26 @@ struct NormalInverseGamma {
     a: f32,
     b: f32,
     t: usize,
-    s: usize,
-    proper: bool //Whether/not this has a defined sigma
+    s: usize
+}
+
+impl NormalInverseGamma {
+    pub fn new(mean : Array2<f32>, precision : Array4<f32>, a : f32, b : f32, t : usize, s : usize) -> NormalInverseGamma {
+        let precision_u : Array2<f32> = einsum("abcd,cd->ab", &[&precision, &mean])
+                                        .unwrap().into_dimensionality::<Ix2>().unwrap();
+        let sigma = invert_hermitian_array4(&precision);
+        
+        NormalInverseGamma {
+            mean,
+            precision_u,
+            precision,
+            sigma,
+            a,
+            b,
+            t,
+            s
+        }
+    }
 }
 
 ///Allows doing dist ^= dist to invert dist in place
@@ -52,6 +70,7 @@ fn invert_hermitian_array4(in_array: &Array4<f32>) -> Array4<f32> {
 }
 
 impl NormalInverseGamma {
+
     fn update(&mut self, data_point : &DataPoint, downdate : bool) {
         let U = crate::linalg_utils::sqrtm(&data_point.out_precision);
         let out_precision = (if downdate == true {-1.0} else {1.0}) * &data_point.out_precision;
@@ -128,8 +147,6 @@ impl ops::AddAssign<NormalInverseGamma> for NormalInverseGamma {
 
         self.sigma = invert_hermitian_array4(&precision_out);
 
-        self.proper = true;
-
         let mean_out : Array2<f32> = einsum("abcd,cd->ab", &[&self.sigma, &self.precision_u])
                                         .unwrap().into_dimensionality::<Ix2>().unwrap();
 
@@ -161,8 +178,7 @@ fn zero_normal_inverse_gamma(t : usize, s : usize) -> NormalInverseGamma {
         a: ((t * s) as f32) * -0.5f32,
         b: 0.0,
         t,
-        s,
-        proper: false
+        s
     }
 }
 

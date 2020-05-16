@@ -11,7 +11,7 @@ use rand::prelude::*;
 const FOURIER_REG_STRENGTH : f32 = 1000.0;
 const FOURIER_FEATURE_MULTIPLIER : usize = 20;
 
-struct FourierFeatureCollection {
+pub struct FourierFeatureCollection {
     in_dimensions : usize,
     reg_strength : f32,
     num_features : usize,
@@ -19,14 +19,14 @@ struct FourierFeatureCollection {
 }
 
 impl FourierFeatureCollection {
-    fn new(in_dimensions: usize, generator : fn(ThreadRng, usize) -> Array1<f32>) -> FourierFeatureCollection {
+    pub fn new(in_dimensions: usize, generator : fn(&mut ThreadRng, usize) -> Array1<f32>) -> FourierFeatureCollection {
         let reg_strength = FOURIER_REG_STRENGTH;
         let num_features = FOURIER_FEATURE_MULTIPLIER * in_dimensions;
 
         let mut ws = Array::zeros((in_dimensions, num_features));
         let mut rng = rand::thread_rng();
         for i in 0..num_features {
-            let feature = generator(rng, in_dimensions);
+            let feature = generator(&mut rng, in_dimensions);
             for j in 0..in_dimensions {
                 ws[[i,j]] = feature[[j,]];
             }

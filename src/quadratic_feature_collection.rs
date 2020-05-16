@@ -17,7 +17,7 @@ use rustfft::num_traits::Zero;
 const QUAD_REG_STRENGTH : f32 = 5.0;
 const QUAD_FEATURE_MULTIPLIER : usize = 5;
 
-struct QuadraticFeatureCollection {
+pub struct QuadraticFeatureCollection {
     in_dimensions : usize,
     reg_strength : f32,
     sketch_one : CountSketch,
@@ -27,7 +27,7 @@ struct QuadraticFeatureCollection {
 }
 
 impl QuadraticFeatureCollection {
-    fn new(in_dimensions : usize) -> QuadraticFeatureCollection {
+    pub fn new(in_dimensions : usize) -> QuadraticFeatureCollection {
         let out_dimensions = in_dimensions * QUAD_FEATURE_MULTIPLIER;
         let reg_strength = QUAD_REG_STRENGTH;
         let sketch_one = CountSketch::new(in_dimensions, out_dimensions);
