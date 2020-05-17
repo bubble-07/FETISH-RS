@@ -11,7 +11,6 @@ mod model;
 
 extern crate ndarray;
 extern crate ndarray_linalg;
-extern crate openblas_src;
 
 use ndarray::*;
 use ndarray_linalg::*;
@@ -28,7 +27,7 @@ fn f(x : f32) -> f32 {
 }
 
 fn main() {
-    let num_samples = 10;
+    let num_samples = 10000;
 
     let mut model : Model = Model::new(1, 1);
     let mut rng = rand::thread_rng();

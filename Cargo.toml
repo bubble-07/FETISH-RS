@@ -7,8 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ndarray="0.13.1"
-ndarray-linalg="0.12.0"
+ndarray={version = "0.13.1", features = ["blas"] }
+ndarray-linalg={version = "0.12.0", features = ["openblas-src"]}
 ndarray_einsum_beta="0.5.0"
 rustfft="3.0.1"
 rand="0.7.3"
@@ -16,4 +16,9 @@ rand_distr="0.2.2"
 enum_dispatch="0.3.0"
 arraymap="0.1.1"
 plotters="0.2"
-openblas-src = "0.7"
+lapack-src = {version = "0.4.0", default-features = false, features = ["openblas"]}
+#blas-src = { version = "0.2.0", default-features = false, features = ["openblas"] }
+#openblas-src = { version = "0.6.0", default-features = false, features = ["cblas"] }
+
+[profile.release]
+debug = true
