@@ -9,7 +9,7 @@ use rand::prelude::*;
 use rand_distr::{Cauchy, Distribution};
 use rand_distr::StandardNormal;
 
-const CAUCHY_SCALING : f32 = 10.0;
+const CAUCHY_SCALING : f32 = 1.0;
 
 fn generate_standard_normal_random<R : Rng + ?Sized>(rng : &mut R, dims : usize) -> Array1<f32> {
     let as_vec : Vec<f32> = rng.sample_iter(StandardNormal).take(dims).collect();

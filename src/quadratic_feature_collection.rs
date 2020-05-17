@@ -65,8 +65,8 @@ impl FeatureCollection for QuadraticFeatureCollection {
         let second_sketch = self.sketch_two.sketch(in_vec);
 
         //FFT polynomial multiplication
-        let mut complex_first_sketch = in_vec.mapv(to_complex).to_vec();
-        let mut complex_second_sketch = in_vec.mapv(to_complex).to_vec();
+        let mut complex_first_sketch = first_sketch.mapv(to_complex).to_vec();
+        let mut complex_second_sketch = second_sketch.mapv(to_complex).to_vec();
 
         let out_dim = self.get_dimension();
         

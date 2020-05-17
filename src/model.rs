@@ -5,6 +5,8 @@ use ndarray::*;
 use ndarray_linalg::*;
 use ndarray_einsum_beta::*;
 
+use std::ops;
+
 use crate::feature_collection::*;
 use crate::linear_feature_collection::*;
 use crate::quadratic_feature_collection::*;
@@ -12,20 +14,69 @@ use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
 use crate::bayes_utils::*;
+use arraymap::ArrayMap;
 
 use std::collections::HashMap;
 
-struct Model {
+type UpdateKey = usize;
+
+pub struct Model {
     in_dimensions : usize,
     out_dimensions : usize,
     feature_collections : [EnumFeatureCollection; 3],
     data : NormalInverseGamma,
-    update_key_counter : usize,
-    updates : HashMap::<usize, NormalInverseGamma>
+    updates : HashMap::<UpdateKey, NormalInverseGamma>
 }
 
 impl Model {
-    fn new(in_dimensions : usize, out_dimensions : usize) -> Model {
+
+    fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32> {
+        let comps = self.feature_collections.map(|coll| coll.get_features(in_vec));
+        stack(Axis(0), &[comps[0].view(), comps[1].view(), comps[2].view()]).unwrap()
+    }
+
+    fn get_data(&self, in_data : DataPoint) -> DataPoint {
+        let feat_vec = self.get_features(&in_data.in_vec);
+
+        DataPoint {
+            in_vec : feat_vec,
+            ..in_data
+        }
+    }
+
+    pub fn eval(&self, in_vec: &Array1<f32>) -> Array1<f32> {
+        let feats : Array1<f32> = self.get_features(in_vec);
+
+        self.data.eval(&feats)
+    }
+}
+
+impl ops::AddAssign<DataPoint> for Model {
+    fn add_assign(&mut self, other: DataPoint) {
+        self.data += &self.get_data(other);
+    }
+}
+
+impl ops::SubAssign<DataPoint> for Model {
+    fn sub_assign(&mut self, other: DataPoint) {
+        self.data += &self.get_data(other);
+    }
+}
+
+impl Model {
+    fn update_distr(&mut self, update_key : UpdateKey, distr : NormalInverseGamma) {
+        self.data += &distr;
+        self.updates.insert(update_key, distr);
+    }
+    fn downdate_distr(&mut self, key : &UpdateKey) {
+        let mut distr = self.updates.remove(key).unwrap();
+        distr ^= ();
+        self.data += &distr;
+    }
+}
+
+impl Model {
+    pub fn new(in_dimensions : usize, out_dimensions : usize) -> Model {
         let linear_collection = LinearFeatureCollection::new(in_dimensions);
         let quadratic_collection = QuadraticFeatureCollection::new(in_dimensions);
         let fourier_collection = FourierFeatureCollection::new(in_dimensions, gen_cauchy_random);
@@ -33,7 +84,6 @@ impl Model {
                                    EnumFeatureCollection::from(quadratic_collection),
                                    EnumFeatureCollection::from(fourier_collection)];
 
-        let update_key_counter : usize = 0; 
         let updates : HashMap::<usize, NormalInverseGamma> = HashMap::new();
 
         let mut total_feat_dims : usize = 0;
@@ -67,18 +117,26 @@ impl Model {
                 let coll_j_size : usize = collection_j.get_dimension();
                 let end_ind_two = ind_two + coll_j_size; 
 
-                let mut precision_block = if (i == j) {
+                let precision_block = if i == j {
                     collection_i.blank_diagonal_precision(out_dimensions)
                 } else {
                     collection_i.blank_interaction_precision(collection_j, out_dimensions)
                 };
 
-                let mut precision_slice = precision.slice_mut(s![..,ind_one..end_ind_one,..,ind_two..end_ind_two]);
-                precision_slice = precision_block.view_mut();
+                for k in 0..coll_i_size {
+                    for l in 0..coll_j_size {
+                        let k_offset = ind_one + k;
+                        let l_offset = ind_two + l;
 
+                        for t_one in 0..out_dimensions {
+                            for t_two in 0..out_dimensions {
+                                precision[[t_one, k_offset, t_two, l_offset]] = precision_block[[t_one, k, t_two, l]];
+                            }
+                        }
+                    }
+                }
                 ind_two = end_ind_two;
             }
-
             ind_one = end_ind_one;
         }
 
@@ -89,7 +147,6 @@ impl Model {
             out_dimensions,
             feature_collections,
             data,
-            update_key_counter,
             updates
         }
     }

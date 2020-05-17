@@ -28,11 +28,11 @@ impl CountSketch {
         for i in 0..in_dims {
             let r_one : i8 = rng.gen();
             let sign = ((r_one % 2) * 2 - 1) as f32;
-            signs[i] = sign;
+            signs.push(sign);
 
             let r_two : usize = rng.gen(); 
             let index = r_two % out_dims;
-            indices[i] = index;
+            indices.push(index);
         }
         
         CountSketch {
@@ -50,7 +50,7 @@ impl CountSketch {
     pub fn sketch(&self, v: &Array1<f32>) -> Array1<f32> {
         let mut result = Array::zeros((self.out_dims,));
         for i in 0..self.in_dims {
-            result[[self.indices[i],]] += self.signs[i] * v[[i,]]
+            result[[i,]] += self.signs[i] * v[[i,]]; 
         }
         result
     }

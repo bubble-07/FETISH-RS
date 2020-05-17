@@ -8,14 +8,14 @@ use ndarray_einsum_beta::*;
 use crate::feature_collection::*;
 use rand::prelude::*;
 
-const FOURIER_REG_STRENGTH : f32 = 1000.0;
+const FOURIER_REG_STRENGTH : f32 = 1.0;
 const FOURIER_FEATURE_MULTIPLIER : usize = 20;
 
 pub struct FourierFeatureCollection {
     in_dimensions : usize,
     reg_strength : f32,
     num_features : usize,
-    ws : Array2<f32> //Matrix which is in_dimensions x num_features
+    ws : Array2<f32> //Matrix which is num_features x in_dimensions
 }
 
 impl FourierFeatureCollection {
@@ -23,12 +23,12 @@ impl FourierFeatureCollection {
         let reg_strength = FOURIER_REG_STRENGTH;
         let num_features = FOURIER_FEATURE_MULTIPLIER * in_dimensions;
 
-        let mut ws = Array::zeros((in_dimensions, num_features));
+        let mut ws = Array::zeros((num_features, in_dimensions));
         let mut rng = rand::thread_rng();
         for i in 0..num_features {
             let feature = generator(&mut rng, in_dimensions);
             for j in 0..in_dimensions {
-                ws[[i,j]] = feature[[j,]];
+                ws[[i, j]] = feature[[j,]];
             }
         }
 

@@ -11,9 +11,9 @@ use ndarray_linalg::solveh::*;
 ///Data point [input, output pair]
 ///with an output precision matrix
 pub struct DataPoint {
-    in_vec: Array1<f32>,
-    out_vec: Array1<f32>,
-    out_precision: Array2<f32>
+    pub in_vec: Array1<f32>,
+    pub out_vec: Array1<f32>,
+    pub out_precision: Array2<f32>
 }
 
 ///Normal-inverse-gamma distribution representation
@@ -27,6 +27,13 @@ pub struct NormalInverseGamma {
     b: f32,
     t: usize,
     s: usize
+}
+
+impl NormalInverseGamma {
+    pub fn eval(&self, in_vec : &Array1<f32>) -> Array1<f32> {
+        einsum("ab,b->a", &[&self.mean, in_vec])
+              .unwrap().into_dimensionality::<Ix1>().unwrap()
+    }
 }
 
 impl NormalInverseGamma {
@@ -49,8 +56,8 @@ impl NormalInverseGamma {
 }
 
 ///Allows doing dist ^= dist to invert dist in place
-impl ops::BitXorAssign for NormalInverseGamma {
-    fn bitxor_assign(&mut self, rhs: Self) {
+impl ops::BitXorAssign<()> for NormalInverseGamma {
+    fn bitxor_assign(&mut self, rhs: ()) {
         self.precision_u *= -1.0;
         self.precision *= -1.0;
         self.sigma *= -1.0;
@@ -139,8 +146,8 @@ impl ops::SubAssign<&DataPoint> for NormalInverseGamma {
     }
 }
 
-impl ops::AddAssign<NormalInverseGamma> for NormalInverseGamma {
-    fn add_assign(&mut self, other: Self) {
+impl ops::AddAssign<&NormalInverseGamma> for NormalInverseGamma {
+    fn add_assign(&mut self, other: &NormalInverseGamma) {
         self.precision_u += &other.precision_u;
 
         let precision_out = &self.precision + &other.precision;
