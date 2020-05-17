@@ -108,11 +108,11 @@ impl NormalInverseGamma {
 
 
         let x_out_precision_y = einsum("s,tr,r->ts", 
-                               &[&data_point.in_vec, &data_point.out_precision, &data_point.out_vec])
+                               &[&data_point.in_vec, &out_precision, &data_point.out_vec])
                                 .unwrap().into_dimensionality::<Ix2>().unwrap();
 
         let y_T_out_precision_y = einsum("x,xy,y->", 
-                               &[&data_point.out_vec, &data_point.out_precision, &data_point.out_vec])
+                               &[&data_point.out_vec, &out_precision, &data_point.out_vec])
                                 .unwrap().into_dimensionality::<Ix0>().unwrap().into_scalar();
         
         let u_precision_u_zero = einsum("ab,ab->", &[&self.mean, &self.precision_u])

@@ -27,7 +27,7 @@ fn f(x : f32) -> f32 {
 }
 
 fn main() {
-    let num_samples = 10000;
+    let num_samples = 100;
 
     let mut model : Model = Model::new(1, 1);
     let mut rng = rand::thread_rng();
@@ -51,6 +51,22 @@ fn main() {
             out_precision
         };
         model += data_point;
+
+        let out_precision = Array::ones((1,1));
+
+        let mut in_vec = Array::zeros((1,));
+        in_vec[[0,]] = x;
+
+        let mut out_vec = Array::zeros((1,));
+        out_vec[[0,]] = y;
+
+        let data_point = DataPoint {
+            in_vec,
+            out_vec,
+            out_precision
+        };
+        model -= data_point;
+
     }
 
     fn model_fn(model : &Model, x : f64) -> f64 {

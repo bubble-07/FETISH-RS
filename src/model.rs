@@ -59,7 +59,7 @@ impl ops::AddAssign<DataPoint> for Model {
 
 impl ops::SubAssign<DataPoint> for Model {
     fn sub_assign(&mut self, other: DataPoint) {
-        self.data += &self.get_data(other);
+        self.data -= &self.get_data(other);
     }
 }
 
