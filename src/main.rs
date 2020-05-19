@@ -8,6 +8,8 @@ mod fourier_feature_collection;
 mod cauchy_fourier_features;
 mod enum_feature_collection;
 mod model;
+mod schmear;
+mod model_space;
 
 extern crate ndarray;
 extern crate ndarray_linalg;
@@ -15,12 +17,18 @@ extern crate ndarray_linalg;
 use ndarray::*;
 use ndarray_linalg::*;
 use ndarray_einsum_beta::*;
+use std::rc::*;
 
-
+use crate::feature_collection::*;
+use crate::linear_feature_collection::*;
+use crate::quadratic_feature_collection::*;
+use crate::fourier_feature_collection::*;
+use crate::cauchy_fourier_features::*;
+use crate::enum_feature_collection::*;
+use crate::bayes_utils::*;
 use crate::model::*;
 use plotters::prelude::*;
 use rand::prelude::*;
-use bayes_utils::*;
 
 fn f(x : f32) -> f32 {
     -x * x
@@ -29,7 +37,18 @@ fn f(x : f32) -> f32 {
 fn main() {
     let num_samples = 100;
 
-    let mut model : Model = Model::new(1, 1);
+    let in_dimensions = 1;
+    let out_dimensions = 1;
+
+    let linear_collection = LinearFeatureCollection::new(in_dimensions);
+    let quadratic_collection = QuadraticFeatureCollection::new(in_dimensions);
+    let fourier_collection = FourierFeatureCollection::new(in_dimensions, gen_cauchy_random);
+    let feature_collections = [EnumFeatureCollection::from(linear_collection),
+                               EnumFeatureCollection::from(quadratic_collection),
+                               EnumFeatureCollection::from(fourier_collection)];
+
+
+    let mut model : Model = Model::new(Rc::new(feature_collections), 1, 1);
     let mut rng = rand::thread_rng();
 
     for i in 0..num_samples {

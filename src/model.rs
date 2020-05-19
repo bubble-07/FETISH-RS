@@ -6,6 +6,7 @@ use ndarray_linalg::*;
 use ndarray_einsum_beta::*;
 
 use std::ops;
+use std::rc::*;
 
 use crate::feature_collection::*;
 use crate::linear_feature_collection::*;
@@ -23,16 +24,25 @@ type UpdateKey = usize;
 pub struct Model {
     in_dimensions : usize,
     out_dimensions : usize,
-    feature_collections : [EnumFeatureCollection; 3],
+    feature_collections : Rc<[EnumFeatureCollection; 3]>,
     data : NormalInverseGamma,
     updates : HashMap::<UpdateKey, NormalInverseGamma>
 }
 
-impl Model {
+pub fn to_features(feature_collections : &[EnumFeatureCollection; 3], in_vec : &Array1<f32>) -> Array1<f32> {
+    let comps = feature_collections.map(|coll| coll.get_features(in_vec));
+    stack(Axis(0), &[comps[0].view(), comps[1].view(), comps[2].view()]).unwrap()
+}
 
+pub fn to_jacobian(feature_collections : &[EnumFeatureCollection; 3], in_vec : &Array1<f32>) -> Array2<f32> {
+    let comps = feature_collections.map(|coll| coll.get_jacobian(in_vec));
+    stack(Axis(0), &[comps[0].view(), comps[1].view(), comps[2].view()]).unwrap()
+}
+
+
+impl Model {
     fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32> {
-        let comps = self.feature_collections.map(|coll| coll.get_features(in_vec));
-        stack(Axis(0), &[comps[0].view(), comps[1].view(), comps[2].view()]).unwrap()
+        to_features(&self.feature_collections, in_vec)
     }
 
     fn get_data(&self, in_data : DataPoint) -> DataPoint {
@@ -76,13 +86,8 @@ impl Model {
 }
 
 impl Model {
-    pub fn new(in_dimensions : usize, out_dimensions : usize) -> Model {
-        let linear_collection = LinearFeatureCollection::new(in_dimensions);
-        let quadratic_collection = QuadraticFeatureCollection::new(in_dimensions);
-        let fourier_collection = FourierFeatureCollection::new(in_dimensions, gen_cauchy_random);
-        let feature_collections = [EnumFeatureCollection::from(linear_collection),
-                                   EnumFeatureCollection::from(quadratic_collection),
-                                   EnumFeatureCollection::from(fourier_collection)];
+    pub fn new(feature_collections : Rc<[EnumFeatureCollection; 3]>,
+              in_dimensions : usize, out_dimensions : usize) -> Model {
 
         let updates : HashMap::<usize, NormalInverseGamma> = HashMap::new();
 
