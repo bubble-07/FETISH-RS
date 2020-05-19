@@ -18,6 +18,11 @@ pub trait FeatureCollection {
     ///vector of features for this feature space
     fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32>;
 
+    ///Given a vector in the input space of this feature space, return
+    ///the Jacobian matrix for the feature vector at that point
+    ///in the format f x s, for s the input space size
+    fn get_jacobian(&self, in_vec: &Array1<f32>) -> Array2<f32>;
+
     ///Returns a scalar proportional to the regularization strength
     ///on this feature collection
     fn get_regularization_strength(&self) -> f32;

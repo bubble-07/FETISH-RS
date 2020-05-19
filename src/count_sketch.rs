@@ -14,8 +14,8 @@ use rand::distributions::{Bernoulli, Distribution};
 pub struct CountSketch {
     in_dims : usize,
     out_dims : usize,
-    indices : Vec<usize>,
-    signs : Vec<f32>
+    pub indices : Vec<usize>,
+    pub signs : Vec<f32>
 }
 
 impl CountSketch {

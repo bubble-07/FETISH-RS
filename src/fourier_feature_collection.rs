@@ -50,6 +50,21 @@ impl FeatureCollection for FourierFeatureCollection {
         stack(Axis(0), &[sine.view(), cosine.view()]).unwrap()
     }
 
+    fn get_jacobian(&self, in_vec: &Array1<f32>) -> Array2<f32> {
+        //The derivative is of the form d/dx f(Wx) = J_f(Wx) W x
+        //only here, J_f(Wx) is the concatenation of two diagonal mats
+        //Get the dotted vector, and compute the components of J_f(Wx)
+        let dotted = self.ws.dot(in_vec);
+        let cos = dotted.mapv(f32::cos);
+        let neg_sine = -dotted.mapv(f32::sin);
+        
+        let part_one = einsum("ts,t->ts", &[&self.ws, &cos.view()]).unwrap();
+        let part_two = einsum("ts,t->ts", &[&self.ws, &neg_sine.view()]).unwrap();
+        
+        stack(Axis(0), &[part_one.view(), part_two.view()]).unwrap()
+            .into_dimensionality::<Ix2>().unwrap()
+    }
+
     fn get_in_dimensions(&self) -> usize {
         self.in_dimensions
     }

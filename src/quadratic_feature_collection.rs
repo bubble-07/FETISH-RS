@@ -60,6 +60,29 @@ fn from_complex(complex : Complex<f32>) -> f32 {
 
 impl FeatureCollection for QuadraticFeatureCollection {
 
+    fn get_jacobian(&self, in_vec: &Array1<f32>) -> Array2<f32> {
+        //Yield the t x s jacobian of the feature mapping
+        //since the feature mapping here is a circular convolution
+        //of sketched versions of the input features,
+        //we will actually wind up computing our output manually
+        let s = self.in_dimensions;
+        let t = self.get_dimension();
+
+        let mut result : Array2<f32> = Array::zeros((t, s));
+        for i in 0..s {
+            for j in 0..s {
+                let x = in_vec[[i,]];
+                let y = in_vec[[j,]];
+                let sign = self.sketch_one.signs[i] * self.sketch_two.signs[j];
+                let index = (self.sketch_one.indices[i] + self.sketch_two.indices[j]) % t;
+                
+                result[[index, i]] += sign * y;
+                result[[index, j]] += sign * x;
+            }
+        }
+        result
+    }
+
     fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32> {
         let first_sketch = self.sketch_one.sketch(in_vec);
         let second_sketch = self.sketch_two.sketch(in_vec);
