@@ -15,6 +15,7 @@ use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
 use crate::bayes_utils::*;
+use crate::schmear::*;
 use arraymap::ArrayMap;
 
 use std::collections::HashMap;
@@ -41,6 +42,10 @@ pub fn to_jacobian(feature_collections : &[EnumFeatureCollection; 3], in_vec : &
 
 
 impl Model {
+    pub fn get_schmear(&self) -> Schmear {
+        self.data.get_schmear()
+    }
+
     fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32> {
         to_features(&self.feature_collections, in_vec)
     }

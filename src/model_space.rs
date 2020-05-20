@@ -25,6 +25,7 @@ type ModelKey = usize;
 
 pub struct ModelSpace {
     in_dimensions : usize,
+    feature_dimensions : usize,
     out_dimensions : usize,
     feature_collections : Rc<[EnumFeatureCollection; 3]>,
     models : HashMap<ModelKey, Model>
@@ -38,6 +39,11 @@ impl ModelSpace {
 
     fn get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
         to_features(&self.feature_collections, in_vec)
+    }
+
+    pub fn apply_schmears(&self, f : &Schmear, x : &Schmear) -> Schmear {
+        let (f_mean, f_covar) = schmear_to_tensors(self, out_dimensions, feature_dimensions);
+        self.compute_out_schmear(&f_mean, &f_covar, x);
     }
 
     fn compute_out_schmear(&self, f_mean : &Array2<f32>, f_covar : &Array4<f32>,

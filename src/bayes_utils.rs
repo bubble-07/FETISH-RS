@@ -6,6 +6,7 @@ use ndarray::*;
 use ndarray_einsum_beta::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
+use crate::schmear::*;
 
 
 ///Data point [input, output pair]
@@ -27,6 +28,33 @@ pub struct NormalInverseGamma {
     b: f32,
     t: usize,
     s: usize
+}
+
+pub fn tensors_to_schmear(mean : &Array2<f32>, sigma : &Array4<f32>) -> Schmear {
+    let t = mean.shape()[0];
+    let s = mean.shape()[1];
+    let n = t * s;
+    
+    let flat_mean = mean.into_shape((n,)).unwrap();
+    let flat_sigma = sigma.into_shape((n,n)).unwrap();
+
+    Schmear {
+        mean : flat_mean,
+        covariance : flat_sigma
+    }
+}
+
+pub fn schmear_to_tensors(t : usize, s : usize, schmear : &Schmear) -> (Array2<f32>, Array4<f32>) {
+    let inflate_mean = schmear.mean.into_shape((t, s)).unwrap();
+    let inflate_sigma = schmear.covariance.into_shape((t, s, t, s)).unwrap();
+    (inflate_mean, inflate_sigma)
+}
+
+impl NormalInverseGamma {
+    pub fn get_schmear(&self) -> Schmear {
+        let scaled_sigma = self.sigma * (a / b);
+        tensors_to_schmear(&self.mean, &scaled_sigma)
+    }
 }
 
 impl NormalInverseGamma {
