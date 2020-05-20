@@ -34,9 +34,15 @@ pub fn tensors_to_schmear(mean : &Array2<f32>, sigma : &Array4<f32>) -> Schmear 
     let t = mean.shape()[0];
     let s = mean.shape()[1];
     let n = t * s;
+
+    let mut mean_copy = Array::zeros((t, s));
+    let mut sigma_copy = Array::zeros((t, s, t, s));
+
+    mean_copy.assign(mean);
+    sigma_copy.assign(sigma);
     
-    let flat_mean = mean.into_shape((n,)).unwrap();
-    let flat_sigma = sigma.into_shape((n,n)).unwrap();
+    let mut flat_mean = mean_copy.into_shape((n,)).unwrap();
+    let mut flat_sigma = sigma_copy.into_shape((n, n)).unwrap();
 
     Schmear {
         mean : flat_mean,
@@ -45,15 +51,24 @@ pub fn tensors_to_schmear(mean : &Array2<f32>, sigma : &Array4<f32>) -> Schmear 
 }
 
 pub fn schmear_to_tensors(t : usize, s : usize, schmear : &Schmear) -> (Array2<f32>, Array4<f32>) {
-    let inflate_mean = schmear.mean.into_shape((t, s)).unwrap();
-    let inflate_sigma = schmear.covariance.into_shape((t, s, t, s)).unwrap();
+    let n = t * s; 
+    
+    let mut mean_copy = Array::zeros((n,));
+    let mut sigma_copy = Array::zeros((n, n));
+    
+    mean_copy.assign(&schmear.mean);
+    sigma_copy.assign(&schmear.covariance);
+
+    let inflate_mean = mean_copy.into_shape((t, s)).unwrap();
+    let inflate_sigma = sigma_copy.into_shape((t, s, t, s)).unwrap();
     (inflate_mean, inflate_sigma)
 }
 
 impl NormalInverseGamma {
     pub fn get_schmear(&self) -> Schmear {
-        let scaled_sigma = self.sigma * (a / b);
-        tensors_to_schmear(&self.mean, &scaled_sigma)
+        let mut result = tensors_to_schmear(&self.mean, &self.sigma);
+        result.covariance *= (self.a / self.b);
+        result
     }
 }
 

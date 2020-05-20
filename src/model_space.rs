@@ -42,8 +42,8 @@ impl ModelSpace {
     }
 
     pub fn apply_schmears(&self, f : &Schmear, x : &Schmear) -> Schmear {
-        let (f_mean, f_covar) = schmear_to_tensors(self, out_dimensions, feature_dimensions);
-        self.compute_out_schmear(&f_mean, &f_covar, x);
+        let (f_mean, f_covar) = schmear_to_tensors(self.out_dimensions, self.feature_dimensions, f);
+        self.compute_out_schmear(&f_mean, &f_covar, x)
     }
 
     fn compute_out_schmear(&self, f_mean : &Array2<f32>, f_covar : &Array4<f32>,

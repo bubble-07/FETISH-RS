@@ -10,6 +10,7 @@ mod enum_feature_collection;
 mod model;
 mod schmear;
 mod model_space;
+mod type_ids;
 
 extern crate ndarray;
 extern crate ndarray_linalg;
