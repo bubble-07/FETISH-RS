@@ -11,6 +11,13 @@ mod model;
 mod schmear;
 mod model_space;
 mod type_ids;
+mod application_table;
+mod interpreter_state;
+mod func_impl;
+mod term;
+mod term_pointer;
+mod term_application;
+mod type_space;
 
 extern crate ndarray;
 extern crate ndarray_linalg;
