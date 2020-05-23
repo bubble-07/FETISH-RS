@@ -1,17 +1,27 @@
 use std::cmp::*;
 use std::fmt::*;
 use std::hash::*;
+use std::rc::*;
 
-#[derive(PartialEq, Hash, Eq, Debug)]
+#[derive(Eq, PartialEq, Hash, Debug)]
 pub struct FuncType {
-    pub arg_type : Box<TypeId>,
-    pub ret_type : Box<TypeId>
+    pub arg_type : Rc::<TypeId>,
+    pub ret_type : Rc::<TypeId>
 }
 
-#[derive(PartialEq, Hash, Eq, Debug)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone)]
 pub enum TypeId {
     FuncId(FuncType),
     VecId(usize)  
+}
+
+impl Clone for FuncType {
+    fn clone(&self) -> Self {
+        FuncType {
+            arg_type : Rc::clone(&self.arg_type),
+            ret_type : Rc::clone(&self.ret_type)
+        }
+    }
 }
 
 
