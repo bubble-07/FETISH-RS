@@ -21,9 +21,13 @@ impl TypeSpace {
         }
     }
 
+    pub fn get(&self, term_index : usize) -> &Term {
+        &self.terms[term_index]
+    }
+
     ///Adds a given term to this type-space if it doesn't
     ///already exist in that space
-    fn add(&mut self, term : Term) -> TermPointer {
+    pub fn add(&mut self, term : Term) -> TermPointer {
         if (self.term_to_index_map.contains_key(&term)) {
             let index : usize = *(self.term_to_index_map.get(&term).unwrap());
             TermPointer {
