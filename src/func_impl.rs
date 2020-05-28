@@ -51,6 +51,7 @@ impl<T : FuncImplYieldingTerm> FuncImpl for T {
 #[enum_dispatch(HasFuncSignature)]
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub enum EnumFuncImpl {    
+    BinaryFuncImpl, 
     MapImpl,
     ConstImpl,
     ComposeImpl,
@@ -58,6 +59,50 @@ pub enum EnumFuncImpl {
     SetHeadImpl,
     HeadImpl,
     RotateImpl
+}
+
+#[enum_dispatch]
+pub trait BinaryArrayOperator : Clone + PartialEq + Hash + Eq + Debug {
+    fn act(&self, arg_one : &Array1::<R32>, arg_two : &Array1::<R32>) -> Array1::<R32>;
+}
+
+#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+pub struct AddOperator {
+}
+
+impl BinaryArrayOperator for AddOperator {
+    fn act(&self, arg_one : &Array1::<R32>, arg_two : &Array1::<R32>) -> Array1::<R32> {
+        arg_one + arg_two
+    }
+}
+
+#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+pub struct SubOperator {
+}
+
+impl BinaryArrayOperator for SubOperator {
+    fn act(&self, arg_one : &Array1::<R32>, arg_two : &Array1::<R32>) -> Array1::<R32> {
+        arg_one - arg_two
+    }
+}
+
+#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+pub struct MulOperator {
+}
+
+impl BinaryArrayOperator for MulOperator {
+    fn act(&self, arg_one : &Array1::<R32>, arg_two : &Array1::<R32>) -> Array1::<R32> {
+        arg_one * arg_two
+    }
+}
+
+
+#[enum_dispatch(BinaryArrayOperator)]
+#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+pub enum EnumBinaryArrayOperator {
+    AddOperator, 
+    SubOperator,
+    MulOperator //For now, no "div", because we'd need to deal with nans
 }
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
@@ -238,6 +283,39 @@ impl FuncImpl for ConstImpl {
 }
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
+pub struct BinaryFuncImpl {
+    n : usize,
+    f : EnumBinaryArrayOperator
+}
+
+impl HasFuncSignature for BinaryFuncImpl {
+    fn required_arg_types(&self) -> Vec<TypeId> {
+        vec![TypeId::VecId(self.n), TypeId::VecId(self.n)]
+    }
+    fn ret_type(&self) -> TypeId {
+        TypeId::VecId(self.n)
+    }
+}
+
+impl FuncImplYieldingTerm for BinaryFuncImpl {
+    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, Term) {
+        let arg_one_term = state.get(&args[0]);
+        let arg_two_term = state.get(&args[1]);
+        if let Term::VectorTerm(arg_one_vec) = arg_one_term {
+            if let Term::VectorTerm(arg_two_vec) = arg_two_term {
+                let result_vec = self.f.act(arg_one_vec, arg_two_vec);
+                let result_term = Term::VectorTerm(result_vec); 
+                (state, result_term)
+            } else {
+                panic!();
+            }
+        } else {
+            panic!();
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct MapImpl {
     n : usize
 }
@@ -254,6 +332,7 @@ impl HasFuncSignature for MapImpl {
         TypeId::VecId(self.n)
     }
 }
+
 impl FuncImplYieldingTerm for MapImpl {
     fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, Term) {
         let arg_vec_term : Term = state.get(&args[1]).clone();
