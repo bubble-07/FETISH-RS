@@ -12,6 +12,22 @@ pub struct ApplicationTable {
 }
 
 impl ApplicationTable {
+    pub fn new(func_space : &TypeId) -> ApplicationTable {
+        let func_space_clone = func_space.clone();
+        if let TypeId::FuncId(func_type) = func_space {
+            let arg_space = (*func_type.arg_type).clone();
+            let result_space = (*func_type.ret_type).clone();
+            ApplicationTable {
+                func_space : func_space_clone,
+                arg_space,
+                result_space,
+                table : HashMap::new()
+            }
+        } else {
+            panic!();
+        }
+    }
+
     pub fn has_computed(&self, term_app : &TermApplication) -> bool {
         let term_pair : (usize, usize) = term_app.get_index_pair();
         self.table.contains_key(&term_pair)

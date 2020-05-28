@@ -14,9 +14,10 @@ pub struct InterpreterState {
 
 impl InterpreterState {
 
-    pub fn store_term(&mut self, type_id : &TypeId, term : Term) -> TermPointer {
+    pub fn store_term(mut self, type_id : &TypeId, term : Term) -> (InterpreterState, TermPointer) {
         let mut type_space : &mut TypeSpace = self.type_spaces.get_mut(type_id).unwrap();
-        type_space.add(term)
+        let result = type_space.add(term);
+        (self, result)
     }
 
     pub fn get(&self, term_ptr : &TermPointer) -> &Term {
@@ -26,7 +27,7 @@ impl InterpreterState {
     pub fn evaluate(mut self, term_app : &TermApplication) -> (InterpreterState, TermPointer) {
         let func_type_id : &TypeId = term_app.get_func_type();
 
-        let mut application_table : &mut ApplicationTable = self.application_tables.get_mut(func_type_id).unwrap();
+        let application_table : &ApplicationTable = self.application_tables.get(func_type_id).unwrap();
 
         if (application_table.has_computed(&term_app)) {
             let result : TermPointer = application_table.get_computed(&term_app);

@@ -9,6 +9,20 @@ pub struct FuncType {
     pub ret_type : Rc::<TypeId>
 }
 
+pub fn getFuncIdFromRcs(a : &Rc::<TypeId>, b : &Rc::<TypeId>) -> TypeId {
+    TypeId::FuncId(FuncType {
+        arg_type : a.clone(),
+        ret_type : b.clone()
+    })
+}
+
+pub fn getFuncId(a : TypeId, b : TypeId) -> TypeId {
+    TypeId::FuncId(FuncType {
+        arg_type : Rc::new(a),
+        ret_type : Rc::new(b)
+    })
+}
+
 #[derive(Eq, PartialEq, Hash, Debug, Clone)]
 pub enum TypeId {
     FuncId(FuncType),
