@@ -42,19 +42,14 @@ impl InterpreterState {
                 let mut args_copy : Vec<TermPointer> = args.clone();
                 args_copy.push(arg_ptr);
 
-                let result_tuple : (InterpreterState, Term) = if (func_impl.ready_to_evaluate(&args_copy)) {
+                let result_tuple : (InterpreterState, TermPointer) = if (func_impl.ready_to_evaluate(&args_copy)) {
                     func_impl.evaluate(self, args_copy)
                 } else {
                     let result : Term = Term::PartiallyAppliedTerm(func_impl, args_copy);
-                    (self, result)
+                    let ret_type_id : &TypeId = term_app.get_ret_type();
+                    self.store_term(ret_type_id, result)
                 };
-
-                let (mut zelf, result_term) = result_tuple;
-
-                let ret_type_id : &TypeId = term_app.get_ret_type();
-                let ret_type_space : &mut TypeSpace = zelf.type_spaces.get_mut(ret_type_id).unwrap();
-
-                let result_ptr : TermPointer = ret_type_space.add(result_term);
+                let (mut zelf, result_ptr) = result_tuple;
 
                 let mut application_table : &mut ApplicationTable = zelf.application_tables.get_mut(func_type_id).unwrap();
 

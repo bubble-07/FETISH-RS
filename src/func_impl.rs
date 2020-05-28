@@ -19,10 +19,9 @@ use std::fmt::*;
 use std::hash::*;
 
 #[enum_dispatch]
-pub trait FuncImpl : Clone + PartialEq + Hash + Eq + Debug {
+pub trait HasFuncSignature : Clone + PartialEq + Hash + Eq + Debug {
     fn ret_type(&self) -> TypeId;
     fn required_arg_types(&self) -> Vec::<TypeId>;
-    fn evaluate(&self, state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, Term);
 
     fn ready_to_evaluate(&self, args : &Vec::<TermPointer>) -> bool {
         let expected_num : usize =  self.required_arg_types().len();
@@ -30,7 +29,26 @@ pub trait FuncImpl : Clone + PartialEq + Hash + Eq + Debug {
     }
 }
 
+#[enum_dispatch]
+pub trait FuncImpl : HasFuncSignature {
+    fn evaluate(&self, state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, TermPointer);
+}
+
+trait FuncImplYieldingTerm : HasFuncSignature {
+    fn evaluate_yield_term(&self, state : InterpreterState, 
+                                  args : Vec::<TermPointer>) -> (InterpreterState, Term);
+}
+
+impl<T : FuncImplYieldingTerm> FuncImpl for T {
+    fn evaluate(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, TermPointer) {
+        let (state_mod_one, term) = self.evaluate_yield_term(state, args);
+        let ret_type : TypeId = self.ret_type();
+        state_mod_one.store_term(&ret_type, term)
+    }
+}
+
 #[enum_dispatch(FuncImpl)]
+#[enum_dispatch(HasFuncSignature)]
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub enum EnumFuncImpl {    
     MapImpl,
@@ -47,14 +65,17 @@ pub struct RotateImpl {
     n : usize
 }
 
-impl FuncImpl for RotateImpl {
+impl HasFuncSignature for RotateImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![TypeId::VecId(self.n)]
     }
     fn ret_type(&self) -> TypeId {
         TypeId::VecId(self.n)
     }
-    fn evaluate(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
+}
+
+impl FuncImplYieldingTerm for RotateImpl {
+    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
         let arg_term : &Term = state.get(&args[0]);
         if let Term::VectorTerm(arg_vec) = arg_term {
             let arg_vec_head : R32 = arg_vec[[0,]];
@@ -75,14 +96,16 @@ pub struct SetHeadImpl {
     n : usize
 }
 
-impl FuncImpl for SetHeadImpl {
+impl HasFuncSignature for SetHeadImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![TypeId::VecId(self.n), TypeId::VecId(1)]
     }
     fn ret_type(&self) -> TypeId {
         TypeId::VecId(1)
     }
-    fn evaluate(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
+}
+impl FuncImplYieldingTerm for SetHeadImpl {
+    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
         let arg_term : &Term = state.get(&args[0]);
         let val_term : &Term = state.get(&args[1]);
         if let Term::VectorTerm(arg_vec) = arg_term {
@@ -106,14 +129,16 @@ pub struct HeadImpl {
     n : usize
 }
 
-impl FuncImpl for HeadImpl {
+impl HasFuncSignature for HeadImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![TypeId::VecId(self.n)]
     }
     fn ret_type(&self) -> TypeId {
         TypeId::VecId(1)
     }
-    fn evaluate(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
+}
+impl FuncImplYieldingTerm for HeadImpl {
+    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
         let arg_term : &Term = state.get(&args[0]);
         if let Term::VectorTerm(arg_vec) = arg_term {
             let ret_val : R32 = arg_vec[[0,]];
@@ -135,7 +160,7 @@ pub struct ComposeImpl {
     ret_type : TypeId
 }
 
-impl FuncImpl for ComposeImpl {
+impl HasFuncSignature for ComposeImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
         let func_one : TypeId = getFuncId(self.middle_type.clone(), self.ret_type.clone()); 
         let func_two : TypeId = getFuncId(self.in_type.clone(), self.middle_type.clone());
@@ -144,7 +169,10 @@ impl FuncImpl for ComposeImpl {
     fn ret_type(&self) -> TypeId {
         self.ret_type.clone()
     }
-    fn evaluate(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
+}
+
+impl FuncImpl for ComposeImpl {
+    fn evaluate(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, TermPointer) {
         let func_one : TermPointer = args[0].clone();
         let func_two : TermPointer = args[1].clone();
         let arg : TermPointer = args[2].clone();
@@ -157,9 +185,7 @@ impl FuncImpl for ComposeImpl {
             func_ptr : func_one,
             arg_ptr : middle_ptr
         };
-        let (state_mod_two, ret_ptr) = state_mod_one.evaluate(&application_two);
-        let result : Term = state_mod_two.get(&ret_ptr).clone();
-        (state_mod_two, result) 
+        state_mod_one.evaluate(&application_two)
     }
 }
 
@@ -168,14 +194,16 @@ pub struct FillImpl {
     n : usize
 }
 
-impl FuncImpl for FillImpl {
+impl HasFuncSignature for FillImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![TypeId::VecId(1)]
     }
     fn ret_type(&self) -> TypeId {
         TypeId::VecId(self.n)
     }
-    fn evaluate(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
+}
+impl FuncImplYieldingTerm for FillImpl {
+    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
         let arg_term : &Term = state.get(&args[0]);
         if let Term::VectorTerm(arg_vec) = arg_term {
             let arg_val : R32 = arg_vec[[0,]];
@@ -194,16 +222,18 @@ pub struct ConstImpl {
     ignored_type : TypeId
 }
 
-impl FuncImpl for ConstImpl {
+impl HasFuncSignature for ConstImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![self.ret_type.clone(), self.ignored_type.clone()]
     }
     fn ret_type(&self) -> TypeId {
         self.ret_type.clone()
     }
-    fn evaluate(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, Term) {
-        let result_term : Term = state.get(&args[1]).clone();
-        (state, result_term)
+}
+impl FuncImpl for ConstImpl {
+    fn evaluate(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, TermPointer) {
+        let result_ptr : TermPointer = args[1].clone();
+        (state, result_ptr)
     }
 }
 
@@ -212,7 +242,7 @@ pub struct MapImpl {
     n : usize
 }
 
-impl FuncImpl for MapImpl {
+impl HasFuncSignature for MapImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
         let vec_one = Rc::new(TypeId::VecId(1));
         let vec_n = TypeId::VecId(self.n);
@@ -223,7 +253,9 @@ impl FuncImpl for MapImpl {
     fn ret_type(&self) -> TypeId {
         TypeId::VecId(self.n)
     }
-    fn evaluate(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, Term) {
+}
+impl FuncImplYieldingTerm for MapImpl {
+    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, Term) {
         let arg_vec_term : Term = state.get(&args[1]).clone();
         let unary_vec_type = TypeId::VecId(1);
         if let Term::VectorTerm(arg_vec) = arg_vec_term {
