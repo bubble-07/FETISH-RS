@@ -18,6 +18,7 @@ arraymap="0.1.1"
 plotters="0.2"
 lapack-src = {version = "0.4.0", default-features = false, features = ["openblas"]}
 noisy_float="0.1.12"
+lazy_static="1.4.0"
 #blas-src = { version = "0.2.0", default-features = false, features = ["openblas"] }
 #openblas-src = { version = "0.6.0", default-features = false, features = ["cblas"] }
 

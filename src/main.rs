@@ -10,7 +10,7 @@ mod enum_feature_collection;
 mod model;
 mod schmear;
 mod model_space;
-mod type_ids;
+mod type_id;
 mod application_table;
 mod interpreter_state;
 mod func_impl;
@@ -19,6 +19,7 @@ mod term_pointer;
 mod term_application;
 mod type_space;
 
+extern crate lazy_static;
 extern crate ndarray;
 extern crate ndarray_linalg;
 

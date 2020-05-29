@@ -1,4 +1,4 @@
-use crate::type_ids::*;
+use crate::type_id::*;
 use crate::interpreter_state::*;
 use crate::term_application::*;
 use crate::term_pointer::*;
@@ -12,15 +12,13 @@ pub struct ApplicationTable {
 }
 
 impl ApplicationTable {
-    pub fn new(func_space : &TypeId) -> ApplicationTable {
-        let func_space_clone = func_space.clone();
-        if let TypeId::FuncId(func_type) = func_space {
-            let arg_space = (*func_type.arg_type).clone();
-            let result_space = (*func_type.ret_type).clone();
+    pub fn new(func_space : TypeId) -> ApplicationTable {
+        let func_type = get_type(func_space);
+        if let Type::FuncType(arg_space, result_space) = func_type {
             ApplicationTable {
-                func_space : func_space_clone,
-                arg_space,
-                result_space,
+                func_space : func_space,
+                arg_space : arg_space,
+                result_space : result_space,
                 table : HashMap::new()
             }
         } else {

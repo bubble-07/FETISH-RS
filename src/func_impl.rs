@@ -1,7 +1,7 @@
 extern crate ndarray;
 extern crate ndarray_linalg;
 
-use crate::type_ids::*;
+use crate::type_id::*;
 use crate::interpreter_state::*;
 use crate::term_pointer::*;
 use crate::term::*;
@@ -43,7 +43,7 @@ impl<T : FuncImplYieldingTerm> FuncImpl for T {
     fn evaluate(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, TermPointer) {
         let (state_mod_one, term) = self.evaluate_yield_term(state, args);
         let ret_type : TypeId = self.ret_type();
-        state_mod_one.store_term(&ret_type, term)
+        state_mod_one.store_term(ret_type, term)
     }
 }
 
@@ -107,16 +107,16 @@ pub enum EnumBinaryArrayOperator {
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct BinaryFuncImpl {
-    n : usize,
+    elem_type : TypeId,
     f : EnumBinaryArrayOperator
 }
 
 impl HasFuncSignature for BinaryFuncImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
-        vec![TypeId::VecId(self.n), TypeId::VecId(self.n)]
+        vec![self.elem_type, self.elem_type]
     }
     fn ret_type(&self) -> TypeId {
-        TypeId::VecId(self.n)
+        self.elem_type
     }
 }
 
@@ -140,15 +140,14 @@ impl FuncImplYieldingTerm for BinaryFuncImpl {
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct RotateImpl {
-    n : usize
 }
 
 impl HasFuncSignature for RotateImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
-        vec![TypeId::VecId(self.n)]
+        vec![*VECTOR_T]
     }
     fn ret_type(&self) -> TypeId {
-        TypeId::VecId(self.n)
+        *VECTOR_T
     }
 }
 
@@ -156,9 +155,10 @@ impl FuncImplYieldingTerm for RotateImpl {
     fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
         let arg_term : &Term = state.get(&args[0]);
         if let Term::VectorTerm(arg_vec) = arg_term {
+            let n = arg_vec.len();
             let arg_vec_head : R32 = arg_vec[[0,]];
-            let mut result_vec : Array1::<R32> = Array::from_elem((self.n,), arg_vec_head);
-            for i in 1..self.n {
+            let mut result_vec : Array1::<R32> = Array::from_elem((n,), arg_vec_head);
+            for i in 1..n {
                 result_vec[[i-1,]] = arg_vec[[i,]];
             }
             let result : Term = Term::VectorTerm(result_vec);
@@ -171,15 +171,14 @@ impl FuncImplYieldingTerm for RotateImpl {
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct SetHeadImpl {
-    n : usize
 }
 
 impl HasFuncSignature for SetHeadImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
-        vec![TypeId::VecId(self.n), TypeId::VecId(1)]
+        vec![*VECTOR_T, *SCALAR_T]
     }
     fn ret_type(&self) -> TypeId {
-        TypeId::VecId(1)
+        *SCALAR_T
     }
 }
 impl FuncImplYieldingTerm for SetHeadImpl {
@@ -204,15 +203,14 @@ impl FuncImplYieldingTerm for SetHeadImpl {
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct HeadImpl {
-    n : usize
 }
 
 impl HasFuncSignature for HeadImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
-        vec![TypeId::VecId(self.n)]
+        vec![*VECTOR_T]
     }
     fn ret_type(&self) -> TypeId {
-        TypeId::VecId(1)
+        *SCALAR_T
     }
 }
 impl FuncImplYieldingTerm for HeadImpl {
@@ -235,17 +233,17 @@ impl FuncImplYieldingTerm for HeadImpl {
 pub struct ComposeImpl {
     in_type : TypeId,
     middle_type : TypeId,
+    func_one : TypeId,
+    func_two : TypeId,
     ret_type : TypeId
 }
 
 impl HasFuncSignature for ComposeImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
-        let func_one : TypeId = getFuncId(self.middle_type.clone(), self.ret_type.clone()); 
-        let func_two : TypeId = getFuncId(self.in_type.clone(), self.middle_type.clone());
-        vec![func_one, func_two, self.in_type.clone()]
+        vec![self.func_one, self.func_two, self.in_type]
     }
     fn ret_type(&self) -> TypeId {
-        self.ret_type.clone()
+        self.ret_type
     }
 }
 
@@ -269,15 +267,14 @@ impl FuncImpl for ComposeImpl {
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct FillImpl {
-    n : usize
 }
 
 impl HasFuncSignature for FillImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
-        vec![TypeId::VecId(1)]
+        vec![*SCALAR_T]
     }
     fn ret_type(&self) -> TypeId {
-        TypeId::VecId(self.n)
+        *VECTOR_T
     }
 }
 impl FuncImplYieldingTerm for FillImpl {
@@ -285,7 +282,7 @@ impl FuncImplYieldingTerm for FillImpl {
         let arg_term : &Term = state.get(&args[0]);
         if let Term::VectorTerm(arg_vec) = arg_term {
             let arg_val : R32 = arg_vec[[0,]];
-            let ret_val : Array1::<R32> = Array::from_elem((self.n,), arg_val);
+            let ret_val : Array1::<R32> = Array::from_elem((DIM,), arg_val);
             let ret_term : Term = Term::VectorTerm(ret_val);
             (state, ret_term)
         } else {
@@ -317,32 +314,28 @@ impl FuncImpl for ConstImpl {
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct MapImpl {
-    n : usize
 }
 
 impl HasFuncSignature for MapImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
-        let vec_one = Rc::new(TypeId::VecId(1));
-        let vec_n = TypeId::VecId(self.n);
-        let unary_fn = getFuncIdFromRcs(&vec_one, &vec_one);
-
-        vec![unary_fn, vec_n]
+        vec![*UNARY_SCALAR_FUNC_T, *VECTOR_T]
     }
     fn ret_type(&self) -> TypeId {
-        TypeId::VecId(self.n)
+        *VECTOR_T
     }
 }
 
 impl FuncImplYieldingTerm for MapImpl {
     fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, Term) {
         let arg_vec_term : Term = state.get(&args[1]).clone();
-        let unary_vec_type = TypeId::VecId(1);
+        let unary_vec_type = *VECTOR_T;
         if let Term::VectorTerm(arg_vec) = arg_vec_term {
-            let mut result : Array1<R32> = Array::from_elem((self.n,), R32::new(0.0)); 
-            for i in 0..self.n {
+            let n = arg_vec.len();
+            let mut result : Array1<R32> = Array::from_elem((n,), R32::new(0.0)); 
+            for i in 0..n {
                 let boxed_scalar : Array1<R32> = Array::from_elem((1,), arg_vec[i]);
                 let arg_term = Term::VectorTerm(boxed_scalar);
-                let (state_mod_one, arg_ptr) = state.store_term(&unary_vec_type, arg_term);
+                let (state_mod_one, arg_ptr) = state.store_term(unary_vec_type, arg_term);
                 let term_app = TermApplication {
                     func_ptr : args[0].clone(),
                     arg_ptr 

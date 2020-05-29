@@ -1,7 +1,7 @@
 use std::cmp::*;
 use std::fmt::*;
 use std::hash::*;
-use crate::type_ids::*;
+use crate::type_id::*;
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct TermPointer {
