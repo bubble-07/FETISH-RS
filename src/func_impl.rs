@@ -19,7 +19,7 @@ use std::fmt::*;
 use std::hash::*;
 
 #[enum_dispatch]
-pub trait HasFuncSignature : Clone + PartialEq + Hash + Eq + Debug {
+pub trait HasFuncSignature {
     fn ret_type(&self) -> TypeId;
     fn required_arg_types(&self) -> Vec::<TypeId>;
 
@@ -103,6 +103,39 @@ pub enum EnumBinaryArrayOperator {
     AddOperator, 
     SubOperator,
     MulOperator //For now, no "div", because we'd need to deal with nans
+}
+
+#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+pub struct BinaryFuncImpl {
+    n : usize,
+    f : EnumBinaryArrayOperator
+}
+
+impl HasFuncSignature for BinaryFuncImpl {
+    fn required_arg_types(&self) -> Vec<TypeId> {
+        vec![TypeId::VecId(self.n), TypeId::VecId(self.n)]
+    }
+    fn ret_type(&self) -> TypeId {
+        TypeId::VecId(self.n)
+    }
+}
+
+impl FuncImplYieldingTerm for BinaryFuncImpl {
+    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, Term) {
+        let arg_one_term = state.get(&args[0]);
+        let arg_two_term = state.get(&args[1]);
+        if let Term::VectorTerm(arg_one_vec) = arg_one_term {
+            if let Term::VectorTerm(arg_two_vec) = arg_two_term {
+                let result_vec = self.f.act(arg_one_vec, arg_two_vec);
+                let result_term = Term::VectorTerm(result_vec); 
+                (state, result_term)
+            } else {
+                panic!();
+            }
+        } else {
+            panic!();
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
@@ -279,39 +312,6 @@ impl FuncImpl for ConstImpl {
     fn evaluate(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, TermPointer) {
         let result_ptr : TermPointer = args[1].clone();
         (state, result_ptr)
-    }
-}
-
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
-pub struct BinaryFuncImpl {
-    n : usize,
-    f : EnumBinaryArrayOperator
-}
-
-impl HasFuncSignature for BinaryFuncImpl {
-    fn required_arg_types(&self) -> Vec<TypeId> {
-        vec![TypeId::VecId(self.n), TypeId::VecId(self.n)]
-    }
-    fn ret_type(&self) -> TypeId {
-        TypeId::VecId(self.n)
-    }
-}
-
-impl FuncImplYieldingTerm for BinaryFuncImpl {
-    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, Term) {
-        let arg_one_term = state.get(&args[0]);
-        let arg_two_term = state.get(&args[1]);
-        if let Term::VectorTerm(arg_one_vec) = arg_one_term {
-            if let Term::VectorTerm(arg_two_vec) = arg_two_term {
-                let result_vec = self.f.act(arg_one_vec, arg_two_vec);
-                let result_term = Term::VectorTerm(result_vec); 
-                (state, result_term)
-            } else {
-                panic!();
-            }
-        } else {
-            panic!();
-        }
     }
 }
 
