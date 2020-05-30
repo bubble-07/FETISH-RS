@@ -9,6 +9,7 @@ mod fourier_feature_collection;
 mod cauchy_fourier_features;
 mod enum_feature_collection;
 mod model;
+mod inverse_schmear;
 mod schmear;
 mod model_space;
 mod type_id;
@@ -17,6 +18,7 @@ mod interpreter_state;
 mod func_impl;
 mod term;
 mod term_pointer;
+mod term_application_result;
 mod term_application;
 mod type_space;
 

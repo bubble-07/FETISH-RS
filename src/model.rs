@@ -18,6 +18,7 @@ use crate::bayes_utils::*;
 use crate::term_application::*;
 use crate::term_pointer::*;
 use crate::schmear::*;
+use crate::inverse_schmear::*;
 use arraymap::ArrayMap;
 
 use std::collections::HashMap;
@@ -46,6 +47,15 @@ pub fn to_jacobian(feature_collections : &[EnumFeatureCollection; 3], in_vec : &
 
 
 impl Model {
+    pub fn get_mean_as_vec(&self) -> Array1::<f32> {
+        //TODO: you can make this more efficient by directly accessing instead
+        self.get_schmear().mean
+    }
+    pub fn get_inverse_schmear(&self) -> InverseSchmear {
+        //TODO: This can be _much_ more efficient
+        self.get_schmear().inverse()
+    }
+
     pub fn get_schmear(&self) -> Schmear {
         self.data.get_schmear()
     }
@@ -83,22 +93,28 @@ impl ops::SubAssign<DataPoint> for Model {
 }
 
 impl Model {
-    fn update_data(&mut self, update_key : DataUpdateKey, data_point : DataPoint) {
+    pub fn has_data(&self, update_key : &DataUpdateKey) -> bool {
+        self.data_updates.contains_key(update_key)
+    }
+    pub fn update_data(&mut self, update_key : DataUpdateKey, data_point : DataPoint) {
         self.data += &data_point;
         self.data_updates.insert(update_key, data_point);
     }
-    fn downdate_data(&mut self, update_key : &DataUpdateKey) {
+    pub fn downdate_data(&mut self, update_key : &DataUpdateKey) {
         let added_point : DataPoint = self.data_updates.remove(update_key).unwrap();
         self.data -= &added_point;
     }
 }
 
 impl Model {
-    fn update_prior(&mut self, update_key : PriorUpdateKey, distr : NormalInverseGamma) {
+    pub fn has_prior(&self, update_key : &PriorUpdateKey) -> bool {
+        self.prior_updates.contains_key(update_key)
+    }
+    pub fn update_prior(&mut self, update_key : PriorUpdateKey, distr : NormalInverseGamma) {
         self.data += &distr;
         self.prior_updates.insert(update_key, distr);
     }
-    fn downdate_prior(&mut self, key : &PriorUpdateKey) {
+    pub fn downdate_prior(&mut self, key : &PriorUpdateKey) {
         let mut distr = self.prior_updates.remove(key).unwrap();
         distr ^= ();
         self.data += &distr;

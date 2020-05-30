@@ -67,6 +67,10 @@ lazy_static! {
     };
 }
 
+pub fn is_vector_type(id : TypeId) -> bool {
+    id == *VECTOR_T || id == *SCALAR_T
+}
+
 struct GlobalTypeInfo {
     info_vec : Vec::<Type>,
     ind_map : HashMap<Type, TypeId>

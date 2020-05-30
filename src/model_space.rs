@@ -33,6 +33,16 @@ pub struct ModelSpace {
 
 impl ModelSpace {
 
+    pub fn schmear_to_prior(&self, in_schmear : &Schmear) -> NormalInverseGamma {
+        let (mean, covar) = schmear_to_tensors(self.feature_dimensions, self.out_dimensions, in_schmear);
+        let precision = invert_hermitian_array4(&covar);
+        let s : usize = self.feature_dimensions;
+        let t : usize = self.out_dimensions;
+        let a : f32 = ((t * (s - 1)) as f32) * -0.5f32;
+        let b : f32 = 0.0f32;
+        NormalInverseGamma::new(mean, precision, a, b, t, s)
+    }
+
     fn get_jacobian(&self, in_vec: &Array1<f32>) -> Array2<f32> {
         to_jacobian(&self.feature_collections, in_vec)
     }

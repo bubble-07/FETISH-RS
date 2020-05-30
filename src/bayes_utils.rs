@@ -12,6 +12,7 @@ use crate::schmear::*;
 ///Data point [input, output pair]
 ///with an output precision matrix
 pub struct DataPoint {
+    //TODO: replace out_vec and out_precision with InverseSchmear
     pub in_vec: Array1<f32>,
     pub out_vec: Array1<f32>,
     pub out_precision: Array2<f32>
@@ -110,7 +111,7 @@ impl ops::BitXorAssign<()> for NormalInverseGamma {
     }
 }
 
-fn invert_hermitian_array4(in_array: &Array4<f32>) -> Array4<f32> {
+pub fn invert_hermitian_array4(in_array: &Array4<f32>) -> Array4<f32> {
     let t = in_array.shape()[0];
     let s = in_array.shape()[1];
     let as_matrix: Array2<f32> = in_array.clone().into_shape((t * s, t * s)).unwrap();

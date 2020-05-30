@@ -11,6 +11,10 @@ pub struct TermApplication {
 }
 
 impl TermApplication {
+    pub fn get_arg_type(&self) -> TypeId {
+        self.arg_ptr.type_id
+    }
+
     pub fn get_func_type(&self) -> TypeId {
         self.func_ptr.type_id
     }
