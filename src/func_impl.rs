@@ -313,6 +313,54 @@ impl FuncImpl for ConstImpl {
 }
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
+pub struct ReduceImpl {
+}
+
+impl HasFuncSignature for ReduceImpl {
+    fn required_arg_types(&self) -> Vec<TypeId> {
+        vec![*BINARY_SCALAR_FUNC_T, *SCALAR_T, *VECTOR_T]
+    }
+    fn ret_type(&self) -> TypeId {
+        *SCALAR_T
+    }
+}
+
+impl FuncImpl for ReduceImpl {
+    fn evaluate(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, TermPointer) {
+        let func_ptr : &TermPointer = &args[0];
+        let mut accum_ptr : TermPointer = args[1].clone();
+        let vec_term : Term = state.get(&args[2]).clone();
+        if let Term::VectorTerm(vec) = vec_term {
+            for i in 0..DIM {
+                //First, put the scalar term at this position into the interpreter state
+                let val : R32 = vec[[i,]];
+                let val_vec : Array1::<R32> = Array::from_elem((1,), val);
+                let val_term : Term = Term::VectorTerm(val_vec);
+                let (state_mod_one, val_ptr) = state.store_term(*SCALAR_T, val_term);
+                 
+                let term_app_one = TermApplication {
+                    func_ptr : func_ptr.clone(),
+                    arg_ptr : val_ptr
+                };
+                let (state_mod_two, curry_ptr) = state_mod_one.evaluate(&term_app_one);
+
+                let term_app_two = TermApplication {
+                    func_ptr : curry_ptr,
+                    arg_ptr : accum_ptr
+                };
+                let (state_mod_three, result_ptr) = state_mod_two.evaluate(&term_app_two);
+
+                accum_ptr = result_ptr;
+                state = state_mod_three;
+            }
+            (state, accum_ptr)
+        } else {
+            panic!();
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct MapImpl {
 }
 

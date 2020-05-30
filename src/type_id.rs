@@ -61,6 +61,10 @@ lazy_static! {
     pub static ref UNARY_SCALAR_FUNC_T : TypeId = {
         GLOBAL_TYPE_INFO.get(&Type::FuncType(*SCALAR_T, *SCALAR_T))
     };
+
+    pub static ref BINARY_SCALAR_FUNC_T : TypeId = {
+        GLOBAL_TYPE_INFO.get(&Type::FuncType(*SCALAR_T, *UNARY_SCALAR_FUNC_T))
+    };
 }
 
 struct GlobalTypeInfo {
