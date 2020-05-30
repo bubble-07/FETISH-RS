@@ -2,6 +2,7 @@ mod bayes_utils;
 mod linalg_utils;
 mod feature_collection;
 mod linear_feature_collection;
+mod embedder_state;
 mod count_sketch;
 mod quadratic_feature_collection;
 mod fourier_feature_collection;

@@ -72,12 +72,15 @@ impl ModelSpace {
         }
     }
 
-    fn add_model(&mut self, model_key : ModelKey) {
+    pub fn add_model(&mut self, model_key : ModelKey) {
         let model = Model::new(Rc::clone(&self.feature_collections), self.in_dimensions, self.out_dimensions);
         self.models.insert(model_key, model);
     }
     
-    fn get_model(&mut self, model_key : ModelKey) -> &mut Model {
+    pub fn get_model_mut(&mut self, model_key : ModelKey) -> &mut Model {
         self.models.get_mut(&model_key).unwrap()
+    }
+    pub fn get_model(&self, model_key : ModelKey) -> &Model {
+        self.models.get(&model_key).unwrap()
     }
 }

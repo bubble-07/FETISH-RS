@@ -15,19 +15,23 @@ use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
 use crate::bayes_utils::*;
+use crate::term_application::*;
+use crate::term_pointer::*;
 use crate::schmear::*;
 use arraymap::ArrayMap;
 
 use std::collections::HashMap;
 
-type UpdateKey = usize;
+type PriorUpdateKey = TermApplication;
+type DataUpdateKey = TermPointer;
 
 pub struct Model {
     in_dimensions : usize,
     out_dimensions : usize,
     feature_collections : Rc<[EnumFeatureCollection; 3]>,
     data : NormalInverseGamma,
-    updates : HashMap::<UpdateKey, NormalInverseGamma>
+    prior_updates : HashMap::<PriorUpdateKey, NormalInverseGamma>,
+    data_updates : HashMap::<DataUpdateKey, DataPoint>
 }
 
 pub fn to_features(feature_collections : &[EnumFeatureCollection; 3], in_vec : &Array1<f32>) -> Array1<f32> {
@@ -79,12 +83,23 @@ impl ops::SubAssign<DataPoint> for Model {
 }
 
 impl Model {
-    fn update_distr(&mut self, update_key : UpdateKey, distr : NormalInverseGamma) {
-        self.data += &distr;
-        self.updates.insert(update_key, distr);
+    fn update_data(&mut self, update_key : DataUpdateKey, data_point : DataPoint) {
+        self.data += &data_point;
+        self.data_updates.insert(update_key, data_point);
     }
-    fn downdate_distr(&mut self, key : &UpdateKey) {
-        let mut distr = self.updates.remove(key).unwrap();
+    fn downdate_data(&mut self, update_key : &DataUpdateKey) {
+        let added_point : DataPoint = self.data_updates.remove(update_key).unwrap();
+        self.data -= &added_point;
+    }
+}
+
+impl Model {
+    fn update_prior(&mut self, update_key : PriorUpdateKey, distr : NormalInverseGamma) {
+        self.data += &distr;
+        self.prior_updates.insert(update_key, distr);
+    }
+    fn downdate_prior(&mut self, key : &PriorUpdateKey) {
+        let mut distr = self.prior_updates.remove(key).unwrap();
         distr ^= ();
         self.data += &distr;
     }
@@ -94,7 +109,8 @@ impl Model {
     pub fn new(feature_collections : Rc<[EnumFeatureCollection; 3]>,
               in_dimensions : usize, out_dimensions : usize) -> Model {
 
-        let updates : HashMap::<usize, NormalInverseGamma> = HashMap::new();
+        let prior_updates : HashMap::<PriorUpdateKey, NormalInverseGamma> = HashMap::new();
+        let data_updates : HashMap::<DataUpdateKey, DataPoint> = HashMap::new();
 
         let mut total_feat_dims : usize = 0;
         for collection in feature_collections.iter() {
@@ -157,7 +173,8 @@ impl Model {
             out_dimensions,
             feature_collections,
             data,
-            updates
+            prior_updates,
+            data_updates
         }
     }
 }
