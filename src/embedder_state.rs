@@ -79,8 +79,7 @@ impl EmbedderState {
         let out_inv_schmear : InverseSchmear = ret_embedding.get_inverse_schmear();
         let data_point = DataPoint {
             in_vec : arg_mean,
-            out_vec : out_inv_schmear.mean,
-            out_precision : out_inv_schmear.precision
+            out_inv_schmear
         };
 
         let func_embedding : &mut Model = self.get_mut_embedding(term_app_res.get_func_ptr());

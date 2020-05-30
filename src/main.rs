@@ -38,6 +38,7 @@ use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
 use crate::bayes_utils::*;
+use crate::inverse_schmear::*;
 use crate::model::*;
 use plotters::prelude::*;
 use rand::prelude::*;
@@ -78,27 +79,13 @@ fn main() {
 
         let data_point = DataPoint {
             in_vec,
-            out_vec,
-            out_precision
+            out_inv_schmear : InverseSchmear {
+                mean : out_vec,
+                precision : out_precision
+            }
         };
         model += data_point;
-
-        let out_precision = Array::ones((1,1));
-
-        let mut in_vec = Array::zeros((1,));
-        in_vec[[0,]] = x;
-
-        let mut out_vec = Array::zeros((1,));
-        out_vec[[0,]] = y;
-
-        let data_point = DataPoint {
-            in_vec,
-            out_vec,
-            out_precision
-        };
-        model -= data_point;
-
-    }
+   }
 
     fn model_fn(model : &Model, x : f64) -> f64 {
         let mut x_arr : Array1<f32> = Array::ones((1,));

@@ -48,12 +48,10 @@ pub fn to_jacobian(feature_collections : &[EnumFeatureCollection; 3], in_vec : &
 
 impl Model {
     pub fn get_mean_as_vec(&self) -> Array1::<f32> {
-        //TODO: you can make this more efficient by directly accessing instead
-        self.get_schmear().mean
+        self.data.get_mean_as_vec()
     }
     pub fn get_inverse_schmear(&self) -> InverseSchmear {
-        //TODO: This can be _much_ more efficient
-        self.get_schmear().inverse()
+        self.data.get_inverse_schmear()
     }
 
     pub fn get_schmear(&self) -> Schmear {

@@ -7,15 +7,14 @@ use ndarray_einsum_beta::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
 use crate::schmear::*;
+use crate::inverse_schmear::*;
 
 
 ///Data point [input, output pair]
 ///with an output precision matrix
 pub struct DataPoint {
-    //TODO: replace out_vec and out_precision with InverseSchmear
     pub in_vec: Array1<f32>,
-    pub out_vec: Array1<f32>,
-    pub out_precision: Array2<f32>
+    pub out_inv_schmear : InverseSchmear
 }
 
 ///Normal-inverse-gamma distribution representation
@@ -31,23 +30,46 @@ pub struct NormalInverseGamma {
     s: usize
 }
 
-pub fn tensors_to_schmear(mean : &Array2<f32>, sigma : &Array4<f32>) -> Schmear {
+pub fn mean_to_array(mean : &Array2<f32>) -> Array1<f32> {
     let t = mean.shape()[0];
     let s = mean.shape()[1];
     let n = t * s;
 
     let mut mean_copy = Array::zeros((t, s));
+    mean_copy.assign(mean);
+
+    let mut flat_mean = mean_copy.into_shape((n,)).unwrap();
+    flat_mean
+}
+
+fn tensors_to_schmeary(mean : &Array2<f32>, sigma : &Array4<f32>) -> (Array1<f32>, Array2<f32>) {
+    let t = mean.shape()[0];
+    let s = mean.shape()[1];
+    let n = t * s;
+
     let mut sigma_copy = Array::zeros((t, s, t, s));
 
-    mean_copy.assign(mean);
     sigma_copy.assign(sigma);
     
-    let mut flat_mean = mean_copy.into_shape((n,)).unwrap();
     let mut flat_sigma = sigma_copy.into_shape((n, n)).unwrap();
 
+    let flat_mean : Array1<f32> = mean_to_array(mean);
+    (flat_mean, flat_sigma)
+}
+
+pub fn tensors_to_schmear(mean : &Array2<f32>, sigma : &Array4<f32>) -> Schmear {
+    let (mean, covariance) = tensors_to_schmeary(mean, sigma);
     Schmear {
-        mean : flat_mean,
-        covariance : flat_sigma
+        mean,
+        covariance
+    }
+}
+
+pub fn tensors_to_inv_schmear(mean : &Array2<f32>, precision : &Array4<f32>) -> InverseSchmear {
+    let (mean, precision) = tensors_to_schmeary(mean, precision);
+    InverseSchmear {
+        mean,
+        precision
     }
 }
 
@@ -66,9 +88,17 @@ pub fn schmear_to_tensors(t : usize, s : usize, schmear : &Schmear) -> (Array2<f
 }
 
 impl NormalInverseGamma {
+    pub fn get_mean_as_vec(&self) -> Array1::<f32> {
+        mean_to_array(&self.mean)
+    }
     pub fn get_schmear(&self) -> Schmear {
         let mut result = tensors_to_schmear(&self.mean, &self.sigma);
         result.covariance *= (self.a / self.b);
+        result
+    }
+    pub fn get_inverse_schmear(&self) -> InverseSchmear {
+        let mut result = tensors_to_inv_schmear(&self.mean, &self.precision);
+        result.precision *= (self.b / self.a);
         result
     }
 }
@@ -123,8 +153,8 @@ pub fn invert_hermitian_array4(in_array: &Array4<f32>) -> Array4<f32> {
 impl NormalInverseGamma {
 
     fn update(&mut self, data_point : &DataPoint, downdate : bool) {
-        let U = crate::linalg_utils::sqrtm(&data_point.out_precision);
-        let out_precision = (if downdate == true {-1.0} else {1.0}) * &data_point.out_precision;
+        let U = crate::linalg_utils::sqrtm(&data_point.out_inv_schmear.precision);
+        let out_precision = (if downdate == true {-1.0} else {1.0}) * &data_point.out_inv_schmear.precision;
         
         let precision_contrib = einsum("ac,b,d->abcd", &[&out_precision, &data_point.in_vec, &data_point.in_vec])
                                 .unwrap().into_dimensionality::<Ix4>().unwrap();
@@ -151,12 +181,14 @@ impl NormalInverseGamma {
         self.sigma += &sigma_diff_scaled;
 
 
+        let data_out_mean : &Array1::<f32> = &data_point.out_inv_schmear.mean;
+
         let x_out_precision_y = einsum("s,tr,r->ts", 
-                               &[&data_point.in_vec, &out_precision, &data_point.out_vec])
+                               &[&data_point.in_vec, &out_precision, data_out_mean])
                                 .unwrap().into_dimensionality::<Ix2>().unwrap();
 
         let y_T_out_precision_y = einsum("x,xy,y->", 
-                               &[&data_point.out_vec, &out_precision, &data_point.out_vec])
+                               &[data_out_mean, &out_precision, data_out_mean])
                                 .unwrap().into_dimensionality::<Ix0>().unwrap().into_scalar();
         
         let u_precision_u_zero = einsum("ab,ab->", &[&self.mean, &self.precision_u])
