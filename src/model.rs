@@ -134,12 +134,18 @@ impl Model {
         let mut mean : Array2<f32> = Array::zeros((out_dimensions, total_feat_dims));
         let mut ind_one : usize = 0;
 
-        for collection in feature_collections.iter() {
-            let coll_size : usize = collection.get_dimension();
-            let end_ind_one = ind_one + coll_size;
-            let mut mean_slice = mean.slice_mut(s![..,ind_one..end_ind_one]);
-            let mut mean_block : Array2<f32> = collection.blank_mean(out_dimensions);
-            mean_slice = mean_block.view_mut();
+        for (i, collection_i) in feature_collections.iter().enumerate() {
+            let coll_i_size : usize = collection_i.get_dimension();
+            let end_ind_one = ind_one + coll_i_size;
+
+            let mean_block : Array2<f32> = collection_i.blank_mean(out_dimensions);
+            for t in 0..out_dimensions {
+                for k in 0..coll_i_size {
+                    let k_offset = ind_one + k;
+                    mean[[t, k_offset]] = mean_block[[t, k]];
+                }
+            }
+
             ind_one = end_ind_one;
         }
 

@@ -15,7 +15,7 @@ pub struct Schmear {
 }
 
 impl Schmear {
-    pub fn inverse(&self) -> InverseSchmear {
+    fn inverse(&self) -> InverseSchmear {
         InverseSchmear {
             mean : self.mean.clone(),
             precision : self.covariance.clone().invh().unwrap()

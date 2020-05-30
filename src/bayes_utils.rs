@@ -38,8 +38,7 @@ pub fn mean_to_array(mean : &Array2<f32>) -> Array1<f32> {
     let mut mean_copy = Array::zeros((t, s));
     mean_copy.assign(mean);
 
-    let mut flat_mean = mean_copy.into_shape((n,)).unwrap();
-    flat_mean
+    mean_copy.into_shape((n,)).unwrap()
 }
 
 fn tensors_to_schmeary(mean : &Array2<f32>, sigma : &Array4<f32>) -> (Array1<f32>, Array2<f32>) {
@@ -51,9 +50,9 @@ fn tensors_to_schmeary(mean : &Array2<f32>, sigma : &Array4<f32>) -> (Array1<f32
 
     sigma_copy.assign(sigma);
     
-    let mut flat_sigma = sigma_copy.into_shape((n, n)).unwrap();
-
+    let flat_sigma = sigma_copy.into_shape((n, n)).unwrap();
     let flat_mean : Array1<f32> = mean_to_array(mean);
+
     (flat_mean, flat_sigma)
 }
 

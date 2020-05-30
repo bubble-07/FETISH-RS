@@ -34,13 +34,13 @@ pub trait FuncImpl : HasFuncSignature {
     fn evaluate(&self, state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, TermPointer);
 }
 
-trait FuncImplYieldingTerm : HasFuncSignature {
+pub trait FuncImplYieldingTerm : HasFuncSignature {
     fn evaluate_yield_term(&self, state : InterpreterState, 
                                   args : Vec::<TermPointer>) -> (InterpreterState, Term);
 }
 
 impl<T : FuncImplYieldingTerm> FuncImpl for T {
-    fn evaluate(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, TermPointer) {
+    fn evaluate(&self, state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, TermPointer) {
         let (state_mod_one, term) = self.evaluate_yield_term(state, args);
         let ret_type : TypeId = self.ret_type();
         state_mod_one.store_term(ret_type, term)
@@ -121,7 +121,7 @@ impl HasFuncSignature for BinaryFuncImpl {
 }
 
 impl FuncImplYieldingTerm for BinaryFuncImpl {
-    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, Term) {
+    fn evaluate_yield_term(&self, state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, Term) {
         let arg_one_term = state.get(&args[0]);
         let arg_two_term = state.get(&args[1]);
         if let Term::VectorTerm(arg_one_vec) = arg_one_term {
@@ -152,7 +152,7 @@ impl HasFuncSignature for RotateImpl {
 }
 
 impl FuncImplYieldingTerm for RotateImpl {
-    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
+    fn evaluate_yield_term(&self, state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
         let arg_term : &Term = state.get(&args[0]);
         if let Term::VectorTerm(arg_vec) = arg_term {
             let n = arg_vec.len();
@@ -182,7 +182,7 @@ impl HasFuncSignature for SetHeadImpl {
     }
 }
 impl FuncImplYieldingTerm for SetHeadImpl {
-    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
+    fn evaluate_yield_term(&self, state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
         let arg_term : &Term = state.get(&args[0]);
         let val_term : &Term = state.get(&args[1]);
         if let Term::VectorTerm(arg_vec) = arg_term {
@@ -214,7 +214,7 @@ impl HasFuncSignature for HeadImpl {
     }
 }
 impl FuncImplYieldingTerm for HeadImpl {
-    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
+    fn evaluate_yield_term(&self, state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
         let arg_term : &Term = state.get(&args[0]);
         if let Term::VectorTerm(arg_vec) = arg_term {
             let ret_val : R32 = arg_vec[[0,]];
@@ -248,7 +248,7 @@ impl HasFuncSignature for ComposeImpl {
 }
 
 impl FuncImpl for ComposeImpl {
-    fn evaluate(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, TermPointer) {
+    fn evaluate(&self, state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, TermPointer) {
         let func_one : TermPointer = args[0].clone();
         let func_two : TermPointer = args[1].clone();
         let arg : TermPointer = args[2].clone();
@@ -278,7 +278,7 @@ impl HasFuncSignature for FillImpl {
     }
 }
 impl FuncImplYieldingTerm for FillImpl {
-    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
+    fn evaluate_yield_term(&self, state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
         let arg_term : &Term = state.get(&args[0]);
         if let Term::VectorTerm(arg_vec) = arg_term {
             let arg_val : R32 = arg_vec[[0,]];
@@ -306,7 +306,7 @@ impl HasFuncSignature for ConstImpl {
     }
 }
 impl FuncImpl for ConstImpl {
-    fn evaluate(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, TermPointer) {
+    fn evaluate(&self, state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, TermPointer) {
         let result_ptr : TermPointer = args[1].clone();
         (state, result_ptr)
     }

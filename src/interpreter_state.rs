@@ -15,7 +15,7 @@ pub struct InterpreterState {
 impl InterpreterState {
 
     pub fn store_term(mut self, type_id : TypeId, term : Term) -> (InterpreterState, TermPointer) {
-        let mut type_space : &mut TypeSpace = self.type_spaces.get_mut(&type_id).unwrap();
+        let type_space : &mut TypeSpace = self.type_spaces.get_mut(&type_id).unwrap();
         let result = type_space.add(term);
         (self, result)
     }
@@ -24,7 +24,7 @@ impl InterpreterState {
         self.type_spaces.get(&term_ptr.type_id).unwrap().get(term_ptr.index)
     }
 
-    pub fn evaluate(mut self, term_app : &TermApplication) -> (InterpreterState, TermPointer) {
+    pub fn evaluate(self, term_app : &TermApplication) -> (InterpreterState, TermPointer) {
         let func_type_id : TypeId = term_app.get_func_type();
 
         let application_table : &ApplicationTable = self.application_tables.get(&func_type_id).unwrap();
@@ -51,7 +51,7 @@ impl InterpreterState {
                 };
                 let (mut zelf, result_ptr) = result_tuple;
 
-                let mut application_table : &mut ApplicationTable = zelf.application_tables.get_mut(&func_type_id).unwrap();
+                let application_table : &mut ApplicationTable = zelf.application_tables.get_mut(&func_type_id).unwrap();
 
                 application_table.link(term_app, &result_ptr);
 

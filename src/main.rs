@@ -1,3 +1,9 @@
+#![allow(dead_code)]
+#![allow(non_snake_case)]
+#![allow(unused_imports)]
+#![allow(unused_parens)]
+#![allow(unused_variables)]
+
 mod bayes_utils;
 mod linalg_utils;
 mod feature_collection;
@@ -65,8 +71,8 @@ fn main() {
     let mut rng = rand::thread_rng();
 
     for i in 0..num_samples {
-        let mut x : f32 = rng.gen();
-        let mut noise : f32 = rng.gen();
+        let x : f32 = rng.gen();
+        let noise : f32 = rng.gen();
         let y = f(x) + (noise - 0.5) * 0.1;
 
         let out_precision = Array::ones((1,1));

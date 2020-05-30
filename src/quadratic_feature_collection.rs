@@ -37,7 +37,7 @@ impl QuadraticFeatureCollection {
         let mut ifftplanner = FFTplanner::<f32>::new(true);
 
         let fft = fftplanner.plan_fft(out_dimensions);
-        let ifft = fftplanner.plan_fft(out_dimensions);
+        let ifft = ifftplanner.plan_fft(out_dimensions);
 
         QuadraticFeatureCollection {
             in_dimensions,
@@ -106,6 +106,12 @@ impl FeatureCollection for QuadraticFeatureCollection {
 
         //Turn first_fft into the result inverse-fft
         self.ifft.process(&mut second_fft, &mut first_fft);
+
+        //Normalize [since the fft library does unnormalized ffts]
+        let scale_fac : f32 = 1.0 / (out_dim as f32);
+        for i in 0..out_dim {
+            first_fft[i] *= scale_fac;
+        }
         
         Array::from(first_fft).mapv(from_complex)
     }
