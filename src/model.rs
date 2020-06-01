@@ -17,6 +17,7 @@ use crate::enum_feature_collection::*;
 use crate::bayes_utils::*;
 use crate::term_application::*;
 use crate::term_pointer::*;
+use crate::term_reference::*;
 use crate::schmear::*;
 use crate::inverse_schmear::*;
 use arraymap::ArrayMap;
@@ -24,7 +25,7 @@ use arraymap::ArrayMap;
 use std::collections::HashMap;
 
 type PriorUpdateKey = TermApplication;
-type DataUpdateKey = TermPointer;
+type DataUpdateKey = TermReference;
 
 pub struct Model {
     in_dimensions : usize,

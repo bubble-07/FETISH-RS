@@ -5,6 +5,7 @@
 #![allow(unused_variables)]
 
 mod bayes_utils;
+mod array_utils;
 mod linalg_utils;
 mod feature_collection;
 mod linear_feature_collection;
@@ -24,6 +25,7 @@ mod interpreter_state;
 mod func_impl;
 mod term;
 mod term_pointer;
+mod term_reference;
 mod term_application_result;
 mod term_application;
 mod type_space;

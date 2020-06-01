@@ -4,6 +4,7 @@ extern crate ndarray_linalg;
 use crate::type_id::*;
 use crate::interpreter_state::*;
 use crate::term_pointer::*;
+use crate::term_reference::*;
 use crate::term::*;
 use crate::term_application::*;
 use enum_dispatch::*;
@@ -23,7 +24,7 @@ pub trait HasFuncSignature {
     fn ret_type(&self) -> TypeId;
     fn required_arg_types(&self) -> Vec::<TypeId>;
 
-    fn ready_to_evaluate(&self, args : &Vec::<TermPointer>) -> bool {
+    fn ready_to_evaluate(&self, args : &Vec::<TermReference>) -> bool {
         let expected_num : usize =  self.required_arg_types().len();
         expected_num == args.len()
     }
@@ -31,20 +32,7 @@ pub trait HasFuncSignature {
 
 #[enum_dispatch]
 pub trait FuncImpl : HasFuncSignature {
-    fn evaluate(&self, state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, TermPointer);
-}
-
-pub trait FuncImplYieldingTerm : HasFuncSignature {
-    fn evaluate_yield_term(&self, state : InterpreterState, 
-                                  args : Vec::<TermPointer>) -> (InterpreterState, Term);
-}
-
-impl<T : FuncImplYieldingTerm> FuncImpl for T {
-    fn evaluate(&self, state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, TermPointer) {
-        let (state_mod_one, term) = self.evaluate_yield_term(state, args);
-        let ret_type : TypeId = self.ret_type();
-        state_mod_one.store_term(ret_type, term)
-    }
+    fn evaluate(&self, state : InterpreterState, args : Vec::<TermReference>) -> (InterpreterState, TermReference);
 }
 
 #[enum_dispatch(FuncImpl)]
@@ -120,15 +108,13 @@ impl HasFuncSignature for BinaryFuncImpl {
     }
 }
 
-impl FuncImplYieldingTerm for BinaryFuncImpl {
-    fn evaluate_yield_term(&self, state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, Term) {
-        let arg_one_term = state.get(&args[0]);
-        let arg_two_term = state.get(&args[1]);
-        if let Term::VectorTerm(arg_one_vec) = arg_one_term {
-            if let Term::VectorTerm(arg_two_vec) = arg_two_term {
-                let result_vec = self.f.act(arg_one_vec, arg_two_vec);
-                let result_term = Term::VectorTerm(result_vec); 
-                (state, result_term)
+impl FuncImpl for BinaryFuncImpl {
+    fn evaluate(&self, state : InterpreterState, args : Vec::<TermReference>) -> (InterpreterState, TermReference) {
+        if let TermReference::VecRef(arg_one_vec) = &args[0] {
+            if let TermReference::VecRef(arg_two_vec) = &args[1] {
+                let result_vec = self.f.act(&arg_one_vec, &arg_two_vec);
+                let result_ref = TermReference::VecRef(result_vec);
+                (state, result_ref)
             } else {
                 panic!();
             }
@@ -151,17 +137,16 @@ impl HasFuncSignature for RotateImpl {
     }
 }
 
-impl FuncImplYieldingTerm for RotateImpl {
-    fn evaluate_yield_term(&self, state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
-        let arg_term : &Term = state.get(&args[0]);
-        if let Term::VectorTerm(arg_vec) = arg_term {
+impl FuncImpl for RotateImpl {
+    fn evaluate(&self, state : InterpreterState, args : Vec<TermReference>) -> (InterpreterState, TermReference) {
+        if let TermReference::VecRef(arg_vec) = &args[0] {
             let n = arg_vec.len();
             let arg_vec_head : R32 = arg_vec[[0,]];
             let mut result_vec : Array1::<R32> = Array::from_elem((n,), arg_vec_head);
             for i in 1..n {
                 result_vec[[i-1,]] = arg_vec[[i,]];
             }
-            let result : Term = Term::VectorTerm(result_vec);
+            let result : TermReference = TermReference::VecRef(result_vec);
             (state, result)
         } else {
             panic!();
@@ -181,16 +166,14 @@ impl HasFuncSignature for SetHeadImpl {
         *SCALAR_T
     }
 }
-impl FuncImplYieldingTerm for SetHeadImpl {
-    fn evaluate_yield_term(&self, state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
-        let arg_term : &Term = state.get(&args[0]);
-        let val_term : &Term = state.get(&args[1]);
-        if let Term::VectorTerm(arg_vec) = arg_term {
-            if let Term::VectorTerm(val_vec) = val_term {
+impl FuncImpl for SetHeadImpl {
+    fn evaluate(&self, state : InterpreterState, args : Vec<TermReference>) -> (InterpreterState, TermReference) {
+        if let TermReference::VecRef(arg_vec) = &args[0] {
+            if let TermReference::VecRef(val_vec) = &args[1] {
                 let val : R32 = val_vec[[0,]];
                 let mut result_vec : Array1<R32> = arg_vec.clone();
                 result_vec[[0,]] = val;
-                let result : Term = Term::VectorTerm(result_vec);
+                let result = TermReference::VecRef(result_vec);
                 (state, result)
             } else {
                 panic!();
@@ -213,14 +196,13 @@ impl HasFuncSignature for HeadImpl {
         *SCALAR_T
     }
 }
-impl FuncImplYieldingTerm for HeadImpl {
-    fn evaluate_yield_term(&self, state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
-        let arg_term : &Term = state.get(&args[0]);
-        if let Term::VectorTerm(arg_vec) = arg_term {
+impl FuncImpl for HeadImpl {
+    fn evaluate(&self, state : InterpreterState, args : Vec<TermReference>) -> (InterpreterState, TermReference) {
+        if let TermReference::VecRef(arg_vec) = &args[0] {
             let ret_val : R32 = arg_vec[[0,]];
             let result_array : Array1::<R32> = Array::from_elem((1,), ret_val);
-            let result : Term = Term::VectorTerm(result_array);
 
+            let result = TermReference::VecRef(result_array);
             (state, result)
         } else {
             panic!();
@@ -248,20 +230,26 @@ impl HasFuncSignature for ComposeImpl {
 }
 
 impl FuncImpl for ComposeImpl {
-    fn evaluate(&self, state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, TermPointer) {
-        let func_one : TermPointer = args[0].clone();
-        let func_two : TermPointer = args[1].clone();
-        let arg : TermPointer = args[2].clone();
-        let application_one = TermApplication {
-            func_ptr : func_two,
-            arg_ptr : arg
-        };
-        let (state_mod_one, middle_ptr) = state.evaluate(&application_one);
-        let application_two = TermApplication {
-            func_ptr : func_one,
-            arg_ptr : middle_ptr
-        };
-        state_mod_one.evaluate(&application_two)
+    fn evaluate(&self, state : InterpreterState, args : Vec<TermReference>) -> (InterpreterState, TermReference) {
+        if let TermReference::FuncRef(func_one) = &args[0] {
+            if let TermReference::FuncRef(func_two) = &args[1] {
+                let arg : TermReference = args[2].clone();
+                let application_one = TermApplication {
+                    func_ptr : func_two.clone(),
+                    arg_ref : arg
+                };
+                let (state_mod_one, middle_ref) = state.evaluate(&application_one);
+                let application_two = TermApplication {
+                    func_ptr : func_one.clone(),
+                    arg_ref : middle_ref
+                };
+                state_mod_one.evaluate(&application_two)
+            } else {
+                panic!();
+            }
+        } else {
+            panic!();
+        }
     }
 }
 
@@ -277,14 +265,14 @@ impl HasFuncSignature for FillImpl {
         *VECTOR_T
     }
 }
-impl FuncImplYieldingTerm for FillImpl {
-    fn evaluate_yield_term(&self, state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, Term) {
-        let arg_term : &Term = state.get(&args[0]);
-        if let Term::VectorTerm(arg_vec) = arg_term {
+impl FuncImpl for FillImpl {
+    fn evaluate(&self, state : InterpreterState, args : Vec<TermReference>) -> (InterpreterState, TermReference) {
+        if let TermReference::VecRef(arg_vec) = &args[0] {
             let arg_val : R32 = arg_vec[[0,]];
             let ret_val : Array1::<R32> = Array::from_elem((DIM,), arg_val);
-            let ret_term : Term = Term::VectorTerm(ret_val);
-            (state, ret_term)
+
+            let result = TermReference::VecRef(ret_val);
+            (state, result)
         } else {
             panic!();
         }
@@ -306,8 +294,8 @@ impl HasFuncSignature for ConstImpl {
     }
 }
 impl FuncImpl for ConstImpl {
-    fn evaluate(&self, state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, TermPointer) {
-        let result_ptr : TermPointer = args[1].clone();
+    fn evaluate(&self, state : InterpreterState, args : Vec::<TermReference>) -> (InterpreterState, TermReference) {
+        let result_ptr : TermReference = args[1].clone();
         (state, result_ptr)
     }
 }
@@ -326,34 +314,40 @@ impl HasFuncSignature for ReduceImpl {
 }
 
 impl FuncImpl for ReduceImpl {
-    fn evaluate(&self, mut state : InterpreterState, args : Vec<TermPointer>) -> (InterpreterState, TermPointer) {
-        let func_ptr : &TermPointer = &args[0];
-        let mut accum_ptr : TermPointer = args[1].clone();
-        let vec_term : Term = state.get(&args[2]).clone();
-        if let Term::VectorTerm(vec) = vec_term {
-            for i in 0..DIM {
-                //First, put the scalar term at this position into the interpreter state
-                let val : R32 = vec[[i,]];
-                let val_vec : Array1::<R32> = Array::from_elem((1,), val);
-                let val_term : Term = Term::VectorTerm(val_vec);
-                let (state_mod_one, val_ptr) = state.store_term(*SCALAR_T, val_term);
-                 
-                let term_app_one = TermApplication {
-                    func_ptr : func_ptr.clone(),
-                    arg_ptr : val_ptr
-                };
-                let (state_mod_two, curry_ptr) = state_mod_one.evaluate(&term_app_one);
+    fn evaluate(&self, mut state : InterpreterState, args : Vec<TermReference>) -> (InterpreterState, TermReference) {
+        let mut accum_ref : TermReference = args[1].clone();
+        if let TermReference::FuncRef(func_ptr) = &args[0] {
+            if let TermReference::VecRef(vec) = &args[2] {
+                for i in 0..DIM {
+                    //First, put the scalar term at this position into a term ref
+                    let val : R32 = vec[[i,]];
+                    let val_vec : Array1::<R32> = Array::from_elem((1,), val);
+                    let val_ref = TermReference::VecRef(val_vec);
+                     
+                    let term_app_one = TermApplication {
+                        func_ptr : func_ptr.clone(),
+                        arg_ref : val_ref
+                    };
+                    let (state_mod_one, curry_ref) = state.evaluate(&term_app_one);
 
-                let term_app_two = TermApplication {
-                    func_ptr : curry_ptr,
-                    arg_ptr : accum_ptr
-                };
-                let (state_mod_three, result_ptr) = state_mod_two.evaluate(&term_app_two);
+                    if let TermReference::FuncRef(curry_ptr) = curry_ref {
+                        let term_app_two = TermApplication {
+                            func_ptr : curry_ptr,
+                            arg_ref : accum_ref
+                        };
+                        let (state_mod_two, result_ref) = state_mod_one.evaluate(&term_app_two);
 
-                accum_ptr = result_ptr;
-                state = state_mod_three;
+                        accum_ref = result_ref;
+                        state = state_mod_two;
+                    } else {
+                        panic!();
+                    }
+                }
+
+                (state, accum_ref)
+            } else {
+                panic!();
             }
-            (state, accum_ptr)
         } else {
             panic!();
         }
@@ -373,29 +367,32 @@ impl HasFuncSignature for MapImpl {
     }
 }
 
-impl FuncImplYieldingTerm for MapImpl {
-    fn evaluate_yield_term(&self, mut state : InterpreterState, args : Vec::<TermPointer>) -> (InterpreterState, Term) {
-        let arg_vec_term : Term = state.get(&args[1]).clone();
+impl FuncImpl for MapImpl {
+    fn evaluate(&self, mut state : InterpreterState, args : Vec::<TermReference>) -> (InterpreterState, TermReference) {
         let unary_vec_type = *VECTOR_T;
-        if let Term::VectorTerm(arg_vec) = arg_vec_term {
-            let n = arg_vec.len();
-            let mut result : Array1<R32> = Array::from_elem((n,), R32::new(0.0)); 
-            for i in 0..n {
-                let boxed_scalar : Array1<R32> = Array::from_elem((1,), arg_vec[i]);
-                let arg_term = Term::VectorTerm(boxed_scalar);
-                let (state_mod_one, arg_ptr) = state.store_term(unary_vec_type, arg_term);
-                let term_app = TermApplication {
-                    func_ptr : args[0].clone(),
-                    arg_ptr 
-                };
-                let (state_mod_two, result_ptr) = state_mod_one.evaluate(&term_app);
-                if let Term::VectorTerm(result_scalar_vec) = state_mod_two.get(&result_ptr) {
-                    result[[i,]] = result_scalar_vec[[0,]];
+        if let TermReference::FuncRef(func_ptr) = &args[0] {
+            if let TermReference::VecRef(arg_vec) = &args[1] {
+                let n = arg_vec.len();
+                let mut result : Array1<R32> = Array::from_elem((n,), R32::new(0.0)); 
+                for i in 0..n {
+                    let boxed_scalar : Array1<R32> = Array::from_elem((1,), arg_vec[i]);
+                    let arg_ref = TermReference::VecRef(boxed_scalar);
+
+                    let term_app = TermApplication {
+                        func_ptr : func_ptr.clone(),
+                        arg_ref : arg_ref
+                    };
+                    let (state_mod_one, result_ref) = state.evaluate(&term_app);
+                    if let TermReference::VecRef(result_scalar_vec) = result_ref {
+                        result[[i,]] = result_scalar_vec[[0,]];
+                    }
+                    state = state_mod_one;
                 }
-                state = state_mod_two;
+                let result_ref = TermReference::VecRef(result);
+                (state, result_ref)
+            } else {
+                panic!();
             }
-            let result_term = Term::VectorTerm(result);
-            (state, result_term)
         } else {
             panic!();
         }
