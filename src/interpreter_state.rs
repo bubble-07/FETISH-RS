@@ -6,6 +6,8 @@ use crate::term::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::term_application::*;
+use crate::term_application_result::*;
+use std::collections::HashSet;
 use crate::func_impl::*;
 
 pub struct InterpreterState {
@@ -23,6 +25,33 @@ impl InterpreterState {
 
     pub fn get(&self, term_ptr : &TermPointer) -> &PartiallyAppliedTerm {
         self.type_spaces.get(&term_ptr.type_id).unwrap().get(term_ptr.index)
+    }
+
+    pub fn get_app_results_with_arg(&self, arg : &TermReference) -> Vec<TermApplicationResult> {
+        let mut result : Vec<TermApplicationResult> = Vec::new();
+        for table in self.application_tables.values() {
+            let mut temp = table.get_app_results_with_arg(arg).clone();
+            result.append(&mut temp);
+        }
+        result
+    }
+
+    pub fn get_app_results_with_func(&self, func : &TermPointer) -> Vec<TermApplicationResult> {
+        let mut result : Vec<TermApplicationResult> = Vec::new();
+        for table in self.application_tables.values() {
+            let mut temp = table.get_app_results_with_func(func).clone();
+            result.append(&mut temp);
+        }
+        result
+    }
+
+    pub fn get_app_results_with_result(&self, result_term : &TermReference) -> Vec<TermApplicationResult> {
+        let mut result : Vec<TermApplicationResult> = Vec::new();
+        for table in self.application_tables.values() {
+            let mut temp = table.get_app_results_with_result(result_term).clone();
+            result.append(&mut temp);
+        }
+        result
     }
 
     pub fn evaluate(self, term_app : &TermApplication) -> (InterpreterState, TermReference) {

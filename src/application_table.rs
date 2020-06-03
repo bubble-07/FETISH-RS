@@ -1,15 +1,20 @@
 use crate::type_id::*;
 use crate::interpreter_state::*;
 use crate::term_application::*;
+use crate::term_application_result::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
 use std::collections::HashMap;
+use multimap::MultiMap;
 
 pub struct ApplicationTable {
     func_space : TypeId,
     arg_space : TypeId,
     result_space : TypeId,
-    table : HashMap::<TermApplication, TermReference>
+    table : HashMap::<TermApplication, TermReference>,
+    result_to_application_map :  MultiMap::<TermReference, TermApplicationResult>,
+    arg_to_application_map : MultiMap::<TermReference, TermApplicationResult>,
+    func_to_application_map : MultiMap::<TermPointer, TermApplicationResult>
 }
 
 impl ApplicationTable {
@@ -20,7 +25,10 @@ impl ApplicationTable {
                 func_space : func_space,
                 arg_space : arg_space,
                 result_space : result_space,
-                table : HashMap::new()
+                table : HashMap::new(),
+                result_to_application_map : MultiMap::new(),
+                arg_to_application_map : MultiMap::new(),
+                func_to_application_map : MultiMap::new()
             }
         } else {
             panic!();
@@ -35,7 +43,27 @@ impl ApplicationTable {
         self.table.get(term_app).unwrap().clone()
     }
 
+    pub fn get_app_results_with_arg(&self, arg : &TermReference) -> &Vec<TermApplicationResult> {
+        self.arg_to_application_map.get_vec(arg).unwrap()
+    }
+
+    pub fn get_app_results_with_func(&self, func : &TermPointer) -> &Vec<TermApplicationResult> {
+        self.func_to_application_map.get_vec(func).unwrap()
+    }
+
+    pub fn get_app_results_with_result(&self, result : &TermReference) -> &Vec<TermApplicationResult> {
+        self.result_to_application_map.get_vec(result).unwrap()
+    }
+
     pub fn link(&mut self, term_app : TermApplication, result_ref : TermReference) {
+        let result = TermApplicationResult {
+            term_app : term_app.clone(),
+            result_ref : result_ref.clone()
+        };
+
+        self.result_to_application_map.insert(result_ref.clone(), result.clone());
+        self.arg_to_application_map.insert(term_app.arg_ref.clone(), result.clone());
+        self.func_to_application_map.insert(term_app.func_ptr.clone(), result.clone());
         self.table.insert(term_app, result_ref);
     }
 }

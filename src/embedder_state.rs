@@ -6,7 +6,7 @@ use ndarray_linalg::*;
 use ndarray_einsum_beta::*;
 use crate::array_utils::*;
 use noisy_float::prelude::*;
-
+use std::collections::HashSet;
 use std::collections::HashMap;
 use crate::interpreter_state::*;
 use crate::type_id::*;
@@ -56,14 +56,14 @@ impl EmbedderState {
         embedding.get_schmear()
     }
 
-    fn get_inverse_schmer_from_ptr(&self, term_ptr : &TermPointer) -> InverseSchmear {
+    fn get_inverse_schmear_from_ptr(&self, term_ptr : &TermPointer) -> InverseSchmear {
         let embedding : &Model = self.get_embedding(term_ptr);
         embedding.get_inverse_schmear()
     }
 
-    fn get_inverse_schmer_from_ref(&self, term_ref : &TermReference) -> InverseSchmear {
+    fn get_inverse_schmear_from_ref(&self, term_ref : &TermReference) -> InverseSchmear {
         match term_ref {
-            TermReference::FuncRef(func_ptr) => self.get_inverse_schmer_from_ptr(func_ptr),
+            TermReference::FuncRef(func_ptr) => self.get_inverse_schmear_from_ptr(func_ptr),
             TermReference::VecRef(vec) => InverseSchmear::ident_precision_from_noisy(vec)
         }
     }
@@ -79,7 +79,45 @@ impl EmbedderState {
         let embedding : &Model = self.get_embedding(term_ptr);
         embedding.get_mean_as_vec()
     }
-     
+
+    //Propagagtes prior updates downwards
+
+    //Propagates data updates upwards
+    fn propagate_data_recursive(&mut self, interpreter_state : &InterpreterState, 
+                                results : HashSet::<TermApplicationResult>,
+                                modified : &mut HashSet::<TermPointer>) {
+        let mut follow_up : HashSet::<TermPointer> = HashSet::new();
+        for elem in results.iter() {
+            self.propagate_data(elem.clone());
+            let func_ptr : TermPointer = elem.get_func_ptr(); 
+            follow_up.insert(func_ptr.clone());
+            modified.insert(func_ptr);
+        }
+        if (follow_up.len() > 0) {
+            self.propagate_data_recursive_helper(interpreter_state, follow_up, modified);
+        }
+    }
+
+    fn propagate_data_recursive_helper(&mut self, interpreter_state : &InterpreterState, 
+                                       modified : HashSet::<TermPointer>,
+                                       storage : &mut HashSet::<TermPointer>) {
+        let mut follow_up : HashSet::<TermApplicationResult> = HashSet::new();
+        for elem in modified.iter() {
+            let elem_ref = TermReference::FuncRef(elem.clone());
+
+            let mut args : Vec<TermApplicationResult> = interpreter_state.get_app_results_with_arg(&elem_ref).clone();
+            for arg in args.drain(..) {
+                follow_up.insert(arg);
+            }
+            let mut rets : Vec<TermApplicationResult> = interpreter_state.get_app_results_with_result(&elem_ref).clone();
+            for ret in rets.drain(..) {
+                follow_up.insert(ret);
+            }
+        }
+        if (follow_up.len() > 0) {
+            self.propagate_data_recursive(interpreter_state, follow_up, storage);
+        }
+    }
 
     //Given a TermApplicationResult, compute the estimated output from the application
     //and use it to update the model for the result. If an existing update
@@ -114,7 +152,7 @@ impl EmbedderState {
         let ret_ref = term_app_res.get_ret_ref();
 
         let arg_mean : Array1::<f32> = self.get_mean_from_ref(&arg_ref);
-        let out_inv_schmear : InverseSchmear = self.get_inverse_schmer_from_ref(&ret_ref);
+        let out_inv_schmear : InverseSchmear = self.get_inverse_schmear_from_ref(&ret_ref);
 
         let data_point = DataPoint {
             in_vec : arg_mean,
