@@ -81,26 +81,57 @@ impl EmbedderState {
     }
 
     //Propagagtes prior updates downwards
+    fn propagate_prior_recursive(&mut self, interpreter_state : &InterpreterState,
+                                 modified : HashSet::<TermPointer>,
+                                 all_modified : &mut HashSet::<TermPointer>) {
+        let mut follow_up : HashSet::<TermApplicationResult> = HashSet::new();
+        for elem in modified.iter() {
+            let mut funcs : Vec<TermApplicationResult> = interpreter_state.get_app_results_with_func(&elem).clone();
+            for func in funcs.drain(..) {
+                follow_up.insert(func);
+            }
+        }
+        if (follow_up.len() > 0) {
+            self.propagate_prior_recursive_helper(interpreter_state, follow_up, all_modified);
+        }
+    }
+
+    fn propagate_prior_recursive_helper(&mut self, interpreter_state : &InterpreterState,
+                                        modified : HashSet::<TermApplicationResult>,
+                                        all_modified : &mut HashSet::<TermPointer>) {
+        let mut follow_up : HashSet::<TermPointer> = HashSet::new();
+        for elem in modified.iter() {
+            let ret_ref : TermReference = elem.get_ret_ref();
+            if let TermReference::FuncRef(ret_func_ptr) = ret_ref {
+                self.propagate_prior(elem.clone());
+                follow_up.insert(ret_func_ptr.clone()); 
+                all_modified.insert(ret_func_ptr);
+            }
+        }
+        if (follow_up.len() > 0) {
+            self.propagate_prior_recursive(interpreter_state, follow_up, all_modified);
+        }
+    }
 
     //Propagates data updates upwards
     fn propagate_data_recursive(&mut self, interpreter_state : &InterpreterState, 
                                 results : HashSet::<TermApplicationResult>,
-                                modified : &mut HashSet::<TermPointer>) {
+                                all_modified : &mut HashSet::<TermPointer>) {
         let mut follow_up : HashSet::<TermPointer> = HashSet::new();
         for elem in results.iter() {
             self.propagate_data(elem.clone());
             let func_ptr : TermPointer = elem.get_func_ptr(); 
             follow_up.insert(func_ptr.clone());
-            modified.insert(func_ptr);
+            all_modified.insert(func_ptr);
         }
         if (follow_up.len() > 0) {
-            self.propagate_data_recursive_helper(interpreter_state, follow_up, modified);
+            self.propagate_data_recursive_helper(interpreter_state, follow_up, all_modified);
         }
     }
 
     fn propagate_data_recursive_helper(&mut self, interpreter_state : &InterpreterState, 
                                        modified : HashSet::<TermPointer>,
-                                       storage : &mut HashSet::<TermPointer>) {
+                                       all_modified : &mut HashSet::<TermPointer>) {
         let mut follow_up : HashSet::<TermApplicationResult> = HashSet::new();
         for elem in modified.iter() {
             let elem_ref = TermReference::FuncRef(elem.clone());
@@ -115,7 +146,7 @@ impl EmbedderState {
             }
         }
         if (follow_up.len() > 0) {
-            self.propagate_data_recursive(interpreter_state, follow_up, storage);
+            self.propagate_data_recursive(interpreter_state, follow_up, all_modified);
         }
     }
 
