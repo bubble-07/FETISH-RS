@@ -12,6 +12,7 @@ Cargo.lock
 #vim swap files
 *.swp
 
+*.png
 
 #Added by cargo
 
