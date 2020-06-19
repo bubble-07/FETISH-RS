@@ -14,6 +14,7 @@ rustfft="3.0.1"
 rand="0.7.3"
 rand_distr="0.2.2"
 enum_dispatch="0.3.0"
+argmin={version = "0.3.1", features = ["ndarrayl"] }
 arraymap="0.1.1"
 plotters="0.2"
 lapack-src = {version = "0.4.0", default-features = false, features = ["openblas"]}
