@@ -8,7 +8,11 @@ use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
 use crate::schmear::*;
 use crate::inverse_schmear::*;
+use crate::cauchy_fourier_features::*;
 
+use rand::prelude::*;
+use rand_distr::{Cauchy, Distribution};
+use rand_distr::StandardNormal;
 
 ///Data point [input, output pair]
 ///with an output precision matrix
@@ -87,6 +91,36 @@ pub fn schmear_to_tensors(t : usize, s : usize, schmear : &Schmear) -> (Array2<f
 }
 
 impl NormalInverseGamma {
+
+    pub fn sample(&self, rng : &mut ThreadRng) -> Array2::<f32> {
+        let t = self.mean.shape()[0];
+        let s = self.mean.shape()[1];
+
+        let vec_sample = self.sample_as_vec(rng);
+
+        let result = vec_sample.into_shape((t, s)).unwrap();
+
+        result
+    }
+
+    pub fn sample_as_vec(&self, rng : &mut ThreadRng) -> Array1::<f32> {
+        let t = self.mean.shape()[0];
+        let s = self.mean.shape()[1];
+        let std_norm_samp = gen_standard_normal_random(rng, t * s);
+        let my_schmear : Schmear = tensors_to_schmear(&self.mean, &self.sigma);
+        let mut result : Array1<f32> = einsum("ab,b->a", &[&my_schmear.covariance, &std_norm_samp])
+                                         .unwrap().into_dimensionality::<Ix1>().unwrap();
+        
+        //Great, now we need to sample from the inverse-gamma part
+        //to determine a multiplier for the covariance
+        let inv_gamma_sample = gen_inverse_gamma_random(rng, self.a, self.b);
+        result *= inv_gamma_sample;
+
+        //Add the mean to offset it right
+        result += &my_schmear.mean;
+        result
+    }
+
     pub fn get_mean_as_vec(&self) -> Array1::<f32> {
         mean_to_array(&self.mean)
     }

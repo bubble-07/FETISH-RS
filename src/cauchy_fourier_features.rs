@@ -6,7 +6,7 @@ use ndarray_linalg::*;
 use ndarray_einsum_beta::*;
 
 use rand::prelude::*;
-use rand_distr::{Cauchy, Distribution};
+use rand_distr::{Cauchy, Distribution, Gamma};
 use rand_distr::StandardNormal;
 
 const CAUCHY_SCALING : f32 = 1.0;
@@ -37,6 +37,20 @@ fn generate_cauchy_random<R : Rng + ?Sized>(rng : &mut R, dims : usize) -> Array
     result *= norm;
 
     result
+}
+
+fn generate_inverse_gamma_random<R : Rng + ?Sized>(rng : &mut R, a : f32, b : f32) -> f32 {
+    let gamma = Gamma::<f32>::new(a, b).unwrap();
+    let inv_result = gamma.sample(rng);
+    (1.0 / inv_result)
+}
+
+pub fn gen_inverse_gamma_random(rng : &mut ThreadRng, a : f32, b : f32) -> f32 {
+    generate_inverse_gamma_random(rng, a, b)
+}
+
+pub fn gen_standard_normal_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {
+    generate_standard_normal_random(rng, dims)
 }
 
 pub fn gen_cauchy_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {

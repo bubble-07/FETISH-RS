@@ -10,6 +10,7 @@ use ndarray_linalg::solveh::*;
 use noisy_float::prelude::*;
 
 use crate::inverse_schmear::*;
+use crate::cauchy_fourier_features::*;
 
 pub struct Schmear {
     pub mean : Array1<f32>,

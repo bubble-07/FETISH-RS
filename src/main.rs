@@ -29,6 +29,7 @@ mod term_reference;
 mod term_application_result;
 mod term_application;
 mod type_space;
+mod sampled_function;
 
 extern crate lazy_static;
 extern crate ndarray;

@@ -20,7 +20,9 @@ use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::schmear::*;
 use crate::inverse_schmear::*;
+use crate::sampled_function::*;
 use arraymap::ArrayMap;
+use rand::prelude::*;
 
 use std::collections::HashMap;
 
@@ -48,6 +50,17 @@ pub fn to_jacobian(feature_collections : &[EnumFeatureCollection; 3], in_vec : &
 
 
 impl Model {
+    pub fn sample(&self, rng : &mut ThreadRng) -> SampledFunction {
+        let mat = self.data.sample(rng);
+        SampledFunction {
+            in_dimensions : self.in_dimensions,
+            mat : mat,
+            feature_collections : self.feature_collections.clone()
+        }
+    }
+    pub fn sample_as_vec(&self, rng : &mut ThreadRng) -> Array1::<f32> {
+        self.data.sample_as_vec(rng)
+    }
     pub fn get_mean_as_vec(&self) -> Array1::<f32> {
         self.data.get_mean_as_vec()
     }
