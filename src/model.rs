@@ -48,6 +48,135 @@ pub fn to_jacobian(feature_collections : &[EnumFeatureCollection; 3], in_vec : &
     stack(Axis(0), &[comps[0].view(), comps[1].view(), comps[2].view()]).unwrap()
 }
 
+impl Model {
+
+    //Find a better function and a better argument in the case where both
+    //have schmears
+    pub fn find_better_app(&self, arg : &Model, target : &Array1<f32>) -> (InverseSchmear, InverseSchmear) {
+        let func_inv_schmear = self.data.get_inverse_schmear();
+        let arg_inv_schmear = arg.data.get_inverse_schmear();
+        let u_x : Array1<f32> = arg_inv_schmear.mean;
+        let p_x : Array2<f32> = arg_inv_schmear.precision;
+        let u_f : Array2<f32> = self.data.get_mean();
+
+        //t x z x t x z
+        let p_f : Array4<f32> = self.data.get_precision();
+
+        //z
+        let k = self.get_features(&u_x);
+        let k_t_k = einsum("a,a->", &[&k, &k]).unwrap()
+                    .into_dimensionality::<Ix0>().unwrap().into_scalar();
+        let alpha = 1.0f32 / k_t_k;
+
+        let u_f_k : Array1<f32> = einsum("ab,b->a", &[&u_f, &k]).unwrap()
+                                  .into_dimensionality::<Ix1>().unwrap();
+        //t
+        let r = target - &u_f_k;
+        //z x s
+        let J = to_jacobian(&self.feature_collections, &u_x);
+
+        //t x z
+        let mut a : Array2<f32> = einsum("a,b->ab", &[&r, &k]).unwrap()
+                              .into_dimensionality::<Ix2>().unwrap();
+
+        a *= alpha;
+
+        //t x s
+        let u_f_J : Array2<f32> = einsum("ab,bc->ac", &[&u_f, &J]).unwrap()
+                              .into_dimensionality::<Ix2>().unwrap();
+
+        //t x z x s
+        let J_r : Array3<f32> = einsum("zs,t->tzs", &[&J, &r]).unwrap()
+                              .into_dimensionality::<Ix3>().unwrap();
+
+        //t x z x s
+        let k_u_f_J : Array3<f32> = einsum("z,ts->tzs", &[&k, &u_f_J]).unwrap()
+                              .into_dimensionality::<Ix3>().unwrap();
+
+        
+        //t x z x s
+        let B : Array3<f32> = alpha * (J_r - k_u_f_J);
+
+        //t x z x s
+        let B_t_p_f : Array3<f32> = einsum("tzs,tzab->abs", &[&B, &p_f]).unwrap()
+                              .into_dimensionality::<Ix3>().unwrap();
+        
+        //s x s
+        let B_t_p_f_B : Array2<f32> = einsum("tza,tzb->ab", &[&B_t_p_f, &B]).unwrap()
+                              .into_dimensionality::<Ix2>().unwrap();
+
+        //B_t_p_f_B + p_x : s x s
+        let inner : Array2<f32> = B_t_p_f_B + &p_x;
+        let inner_inv = inner.invh().unwrap();
+
+
+        //inner_inv : s x s,
+        //B_t_p_f : t x z x s
+        //a : t x z
+        let inner_inv_B_t_p_f_a : Array1<f32> = einsum("os,tzs,tz->o", &[&inner_inv, &B_t_p_f, &a]).unwrap()
+                               .into_dimensionality::<Ix1>().unwrap();
+
+        let delta_x : Array1<f32> = -inner_inv_B_t_p_f_a;
+         
+        //Now that we have estimated what the change in x should
+        //be [under the linear approximation by the jacobian]
+        //we just need to find the smallest corresponding
+        //change in f which exactly makes (u_f + d_f)(u_x + d_x) = y
+        
+        let new_x : Array1<f32> = u_x + delta_x;
+        let new_k : Array1<f32> = self.get_features(&new_x);
+
+        let new_k_sq_norm : f32 = einsum("a,a->", &[&new_k, &new_k]).unwrap()
+                                  .into_dimensionality::<Ix0>().unwrap().into_scalar();
+
+        let u_f_new_k : Array1<f32> = einsum("ab,b->a", &[&u_f, &new_k]).unwrap()
+                                      .into_dimensionality::<Ix1>().unwrap();
+
+        let norm_new_k : Array1<f32> = (1.0f32 / new_k_sq_norm) * new_k;
+
+        
+        let t : Array1<f32> = target - &u_f_new_k;
+
+        let delta_f : Array2<f32> = einsum("t,s->ts", &[&t, &norm_new_k]).unwrap()
+                                      .into_dimensionality::<Ix2>().unwrap();
+
+        let new_f = u_f + delta_f;
+
+        let result_f = InverseSchmear {
+            mean : mean_to_array(&new_f),
+            precision : func_inv_schmear.precision.clone()
+        };
+        
+        let result_x = InverseSchmear {
+            mean : new_x,
+            precision : p_x
+        };
+
+        (result_f, result_x) 
+    }
+
+    //Find a better function in the case where the argument is a vector
+    pub fn find_better_func(&self, arg : &Array1<f32>, target : &Array1<f32>) -> InverseSchmear {
+        let k = self.get_features(arg);
+        let k_t_k = einsum("a,a->", &[&k, &k]).unwrap()
+                          .into_dimensionality::<Ix0>().unwrap().into_scalar();
+        let k_normed = k * (1.0f32 / k_t_k);
+
+        let func_inv_schmear = self.data.get_inverse_schmear();
+        let new_out = self.eval(arg);
+        let r = target - &new_out;
+
+        let delta_f : Array2<f32> = einsum("t,s->ts", &[&r, &k_normed]).unwrap()
+                                    .into_dimensionality::<Ix2>().unwrap();
+        let new_f = func_inv_schmear.mean + mean_to_array(&delta_f);
+
+        InverseSchmear {
+            mean : new_f,
+            precision : func_inv_schmear.precision.clone()
+        }
+    }
+}
+
 
 impl Model {
     pub fn sample(&self, rng : &mut ThreadRng) -> SampledFunction {

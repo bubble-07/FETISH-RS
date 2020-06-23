@@ -124,6 +124,9 @@ impl NormalInverseGamma {
     pub fn get_mean_as_vec(&self) -> Array1::<f32> {
         mean_to_array(&self.mean)
     }
+    pub fn get_mean(&self) -> Array2::<f32> {
+        self.mean.clone()
+    }
     pub fn get_schmear(&self) -> Schmear {
         let mut result = tensors_to_schmear(&self.mean, &self.sigma);
         result.covariance *= (self.a / self.b);
@@ -133,6 +136,9 @@ impl NormalInverseGamma {
         let mut result = tensors_to_inv_schmear(&self.mean, &self.precision);
         result.precision *= (self.b / self.a);
         result
+    }
+    pub fn get_precision(&self) -> Array4<f32> {
+        self.precision.clone() * (self.b / self.a)
     }
 }
 
