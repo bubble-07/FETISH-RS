@@ -11,8 +11,8 @@ use std::collections::HashSet;
 use crate::func_impl::*;
 
 pub struct InterpreterState {
-    application_tables : HashMap::<TypeId, ApplicationTable>,
-    type_spaces : HashMap::<TypeId, TypeSpace>
+    pub application_tables : HashMap::<TypeId, ApplicationTable>,
+    pub type_spaces : HashMap::<TypeId, TypeSpace>
 }
 
 impl InterpreterState {
@@ -94,5 +94,75 @@ impl InterpreterState {
 
             (zelf, result_ref)
         }
+    }
+
+    pub fn add_init(&mut self, func : EnumFuncImpl) -> TermPointer {
+        let func_type_id : TypeId = func.func_type();
+        let type_space : &mut TypeSpace = self.type_spaces.get_mut(&func_type_id).unwrap();
+        type_space.add_init(func)
+    }
+
+    pub fn new() -> InterpreterState {
+        //Initialize hashmaps for each type in the global type table 
+        let mut application_tables = HashMap::<TypeId, ApplicationTable>::new();
+        let mut type_spaces = HashMap::<TypeId, TypeSpace>::new();
+
+        for i in 0..total_num_types() {
+            let type_id : TypeId = i as TypeId;
+            if let Type::FuncType(arg_type, ret_type) = get_type(type_id) {
+                application_tables.insert(type_id, ApplicationTable::new(type_id));
+                type_spaces.insert(type_id, TypeSpace::new(type_id));
+            }
+        }
+
+        let mut result = InterpreterState {
+            application_tables,
+            type_spaces
+        };
+
+        //Now populate the type spaces with the known function implementations
+        //using TypeSpace#add(PartiallyAppliedTerm)
+        
+        //Binary functions
+        for type_id in [*SCALAR_T, *VECTOR_T].iter() {
+            for op in [EnumBinaryArrayOperator::AddOperator(AddOperator {}),
+                       EnumBinaryArrayOperator::SubOperator(SubOperator {}),
+                       EnumBinaryArrayOperator::MulOperator(MulOperator {})].iter() {
+                let func_impl = BinaryFuncImpl {
+                    elem_type : *type_id,
+                    f : op.clone()
+                };
+                result.add_init(EnumFuncImpl::BinaryFuncImpl(func_impl));
+            }
+        }
+
+        result.add_init(EnumFuncImpl::MapImpl(MapImpl {}));
+        result.add_init(EnumFuncImpl::FillImpl(FillImpl {}));
+        result.add_init(EnumFuncImpl::SetHeadImpl(SetHeadImpl {}));
+        result.add_init(EnumFuncImpl::HeadImpl(HeadImpl {}));
+        result.add_init(EnumFuncImpl::RotateImpl(RotateImpl {}));
+        result.add_init(EnumFuncImpl::ReduceImpl(ReduceImpl {}));
+
+        //Constant functions
+        for one_id in [*SCALAR_T, *VECTOR_T].iter() {
+            for two_id in [*SCALAR_T, *VECTOR_T].iter() {
+                let func_impl = ConstImpl {
+                    ret_type : *one_id,
+                    ignored_type : *two_id
+                };
+                result.add_init(EnumFuncImpl::ConstImpl(func_impl));
+            }
+        }
+        
+        //Function composition
+        for one_id in [*SCALAR_T, *VECTOR_T].iter() {
+            for two_id in [*SCALAR_T, *VECTOR_T].iter() {
+                for three_id in [*SCALAR_T, *VECTOR_T].iter() {
+                    let func_impl = ComposeImpl::new(*one_id, *two_id, *three_id);
+                    result.add_init(EnumFuncImpl::ComposeImpl(func_impl));
+                }
+            }
+        }
+        result
     }
 }

@@ -28,6 +28,18 @@ pub trait HasFuncSignature {
         let expected_num : usize =  self.required_arg_types().len();
         expected_num == args.len()
     }
+
+    fn func_type(&self) -> TypeId {
+        let mut reverse_arg_types : Vec<TypeId> = self.required_arg_types();
+        reverse_arg_types.reverse();
+
+        let mut result : TypeId = self.ret_type();
+        for arg_type_id in reverse_arg_types.drain(..) {
+            let result_type : Type = Type::FuncType(arg_type_id, result);
+            result = get_type_id(&result_type);
+        }
+        result
+    }
 }
 
 #[enum_dispatch]
@@ -46,7 +58,8 @@ pub enum EnumFuncImpl {
     FillImpl,
     SetHeadImpl,
     HeadImpl,
-    RotateImpl
+    RotateImpl,
+    ReduceImpl
 }
 
 #[enum_dispatch]
@@ -95,8 +108,8 @@ pub enum EnumBinaryArrayOperator {
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct BinaryFuncImpl {
-    elem_type : TypeId,
-    f : EnumBinaryArrayOperator
+    pub elem_type : TypeId,
+    pub f : EnumBinaryArrayOperator
 }
 
 impl HasFuncSignature for BinaryFuncImpl {
@@ -220,6 +233,20 @@ pub struct ComposeImpl {
     ret_type : TypeId
 }
 
+impl ComposeImpl {
+    pub fn new(in_type : TypeId, middle_type : TypeId, ret_type : TypeId) -> ComposeImpl {
+        let func_one : TypeId = get_type_id(&Type::FuncType(middle_type, ret_type));
+        let func_two : TypeId = get_type_id(&Type::FuncType(in_type, middle_type));
+        ComposeImpl {
+            in_type,
+            middle_type,
+            func_one,
+            func_two,
+            ret_type
+        }
+    }
+}
+
 impl HasFuncSignature for ComposeImpl {
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![self.func_one, self.func_two, self.in_type]
@@ -281,8 +308,8 @@ impl FuncImpl for FillImpl {
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct ConstImpl {
-    ret_type : TypeId,
-    ignored_type : TypeId
+    pub ret_type : TypeId,
+    pub ignored_type : TypeId
 }
 
 impl HasFuncSignature for ConstImpl {

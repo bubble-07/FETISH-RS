@@ -36,6 +36,25 @@ pub struct ModelSpace {
 
 impl ModelSpace {
 
+    pub fn new(in_dimensions : usize, out_dimensions : usize) -> ModelSpace {
+        let feature_collections = get_feature_collections(in_dimensions);
+        let rc_feature_collections = Rc::new(feature_collections);
+
+        let mut total_feat_dims : usize = 0;
+        for collection in rc_feature_collections.iter() {
+            total_feat_dims += collection.get_dimension();
+        }
+
+        let model_space = ModelSpace {
+            in_dimensions : in_dimensions,
+            feature_dimensions : total_feat_dims,
+            out_dimensions : out_dimensions,
+            feature_collections : rc_feature_collections,
+            models : HashMap::new()
+        };
+        model_space
+    }
+
     pub fn thompson_sample_vec(&self, rng : &mut ThreadRng, inv_schmear : &InverseSchmear) -> 
                               (ModelKey, Array1<f32>, f32) {
         let mut result_key : ModelKey = 0 as ModelKey;

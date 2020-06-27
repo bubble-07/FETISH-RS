@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use lazy_static::*;
+use topological_sort::*;
 
 pub const DIM : usize = 10;
 
@@ -57,6 +58,18 @@ lazy_static! {
     pub static ref VECTOR_T : TypeId = {
         GLOBAL_TYPE_INFO.get(&Type::VecType(DIM))
     };
+
+    pub static ref UNARY_VEC_FUNC_T : TypeId = {
+        GLOBAL_TYPE_INFO.get(&Type::FuncType(*VECTOR_T, *VECTOR_T))
+    };
+
+    pub static ref SCALAR_TO_VEC_FUNC_T : TypeId = {
+        GLOBAL_TYPE_INFO.get(&Type::FuncType(*SCALAR_T, *VECTOR_T))
+    };
+
+    pub static ref VEC_TO_SCALAR_FUNC_T : TypeId = {
+        GLOBAL_TYPE_INFO.get(&Type::FuncType(*VECTOR_T, *SCALAR_T))
+    };
     
     pub static ref UNARY_SCALAR_FUNC_T : TypeId = {
         GLOBAL_TYPE_INFO.get(&Type::FuncType(*SCALAR_T, *SCALAR_T))
@@ -74,6 +87,10 @@ pub fn is_vector_type(id : TypeId) -> bool {
 struct GlobalTypeInfo {
     info_vec : Vec::<Type>,
     ind_map : HashMap<Type, TypeId>
+}
+
+pub fn total_num_types() -> usize {
+    GLOBAL_TYPE_INFO.info_vec.len()
 }
 
 impl GlobalTypeInfo {

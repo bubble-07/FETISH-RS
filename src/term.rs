@@ -14,3 +14,13 @@ pub struct PartiallyAppliedTerm {
     pub func_impl : EnumFuncImpl,
     pub args : Vec<TermReference> 
 }
+
+impl PartiallyAppliedTerm {
+    pub fn new(func_impl : EnumFuncImpl) -> PartiallyAppliedTerm {
+        PartiallyAppliedTerm {
+            func_impl,
+            args : Vec::new()
+        }
+    }
+}
+

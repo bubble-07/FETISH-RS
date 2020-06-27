@@ -8,6 +8,7 @@ use crate::array_utils::*;
 use noisy_float::prelude::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
+use std::rc::*;
 use crate::interpreter_state::*;
 use crate::type_id::*;
 use crate::application_table::*;
@@ -23,12 +24,51 @@ use crate::model::*;
 use crate::model_space::*;
 use crate::schmear::*;
 use crate::inverse_schmear::*;
+use crate::feature_collection::*;
+use crate::enum_feature_collection::*;
+use topological_sort::TopologicalSort;
 
 pub struct EmbedderState {
     model_spaces : HashMap::<TypeId, ModelSpace>
 }
 
 impl EmbedderState {
+
+    pub fn new() -> EmbedderState {
+        let mut model_spaces = HashMap::<TypeId, ModelSpace>::new();
+        
+        let mut dimensions = HashMap::<TypeId, usize>::new();
+        let mut topo_sort = TopologicalSort::<TypeId>::new();
+        for i in 0..total_num_types() {
+            let type_id : TypeId = i as TypeId;
+            match get_type(type_id) {
+                Type::FuncType(arg_type_id, ret_type_id) => {
+                    topo_sort.add_dependency(arg_type_id, type_id);
+                    topo_sort.add_dependency(ret_type_id, type_id);
+                },
+                Type::VecType(dim) => {
+                    dimensions.insert(type_id, dim);
+                }
+            };
+        }
+        
+        while (topo_sort.len() > 0) {
+            let mut type_ids : Vec<TypeId> = topo_sort.pop_all();
+            for func_type_id in type_ids.drain(..) {
+                if let Type::FuncType(arg_type_id, ret_type_id) = get_type(func_type_id) {
+                    let arg_dimension = *dimensions.get(&arg_type_id).unwrap();
+                    let ret_dimension = *dimensions.get(&ret_type_id).unwrap();
+
+                    let model_space = ModelSpace::new(arg_dimension, ret_dimension);
+                    model_spaces.insert(func_type_id, model_space);
+                }
+            }
+        }
+
+        EmbedderState {
+            model_spaces
+        }
+    }
 
     pub fn get_embedding(&self, term_ptr : &TermPointer) -> &Model {
         let space : &ModelSpace = self.model_spaces.get(&term_ptr.type_id).unwrap();

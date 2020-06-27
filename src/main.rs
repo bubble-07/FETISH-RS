@@ -30,6 +30,7 @@ mod term_application_result;
 mod term_application;
 mod type_space;
 mod sampled_function;
+mod optimizer_state;
 
 extern crate lazy_static;
 extern crate ndarray;
@@ -62,12 +63,7 @@ fn main() {
     let in_dimensions = 1;
     let out_dimensions = 1;
 
-    let linear_collection = LinearFeatureCollection::new(in_dimensions);
-    let quadratic_collection = QuadraticFeatureCollection::new(in_dimensions);
-    let fourier_collection = FourierFeatureCollection::new(in_dimensions, gen_cauchy_random);
-    let feature_collections = [EnumFeatureCollection::from(linear_collection),
-                               EnumFeatureCollection::from(quadratic_collection),
-                               EnumFeatureCollection::from(fourier_collection)];
+    let feature_collections = get_feature_collections(in_dimensions);
 
 
     let mut model : Model = Model::new(Rc::new(feature_collections), 1, 1);

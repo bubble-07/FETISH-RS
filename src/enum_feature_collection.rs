@@ -19,3 +19,13 @@ pub enum EnumFeatureCollection {
     QuadraticFeatureCollection,
     FourierFeatureCollection
 }
+
+pub fn get_feature_collections(in_dimensions : usize) -> [EnumFeatureCollection; 3] {
+    let linear_collection = LinearFeatureCollection::new(in_dimensions);
+    let quadratic_collection = QuadraticFeatureCollection::new(in_dimensions);
+    let fourier_collection = FourierFeatureCollection::new(in_dimensions, gen_cauchy_random);
+    let feature_collections = [EnumFeatureCollection::from(linear_collection),
+                               EnumFeatureCollection::from(quadratic_collection),
+                               EnumFeatureCollection::from(fourier_collection)];
+    feature_collections
+}
