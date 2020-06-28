@@ -134,8 +134,7 @@ impl OptimizerState {
                         func_ptr : better_func,
                         arg_ref : better_arg
                     };
-                    let (new_state, result_ref) = self.interpreter_state.evaluate(&better_application);
-                    self.interpreter_state = new_state;
+                    let result_ref = self.interpreter_state.evaluate(&better_application);
                     if let TermReference::FuncRef(ret_ptr) = result_ref {
                         ret_ptr
                     } else {

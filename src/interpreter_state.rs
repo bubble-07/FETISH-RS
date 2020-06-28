@@ -17,10 +17,10 @@ pub struct InterpreterState {
 
 impl InterpreterState {
 
-    pub fn store_term(mut self, type_id : TypeId, term : PartiallyAppliedTerm) -> (InterpreterState, TermPointer) {
+    pub fn store_term(&mut self, type_id : TypeId, term : PartiallyAppliedTerm) -> TermPointer {
         let type_space : &mut TypeSpace = self.type_spaces.get_mut(&type_id).unwrap();
         let result = type_space.add(term);
-        (self, result)
+        result
     }
 
     pub fn get(&self, term_ptr : &TermPointer) -> &PartiallyAppliedTerm {
@@ -54,14 +54,14 @@ impl InterpreterState {
         result
     }
 
-    pub fn evaluate(self, term_app : &TermApplication) -> (InterpreterState, TermReference) {
+    pub fn evaluate(&mut self, term_app : &TermApplication) -> TermReference {
         let func_type_id : TypeId = term_app.get_func_type();
 
         let application_table : &ApplicationTable = self.application_tables.get(&func_type_id).unwrap();
 
         if (application_table.has_computed(&term_app)) {
             let result : TermReference = application_table.get_computed(&term_app);
-            (self, result)
+            result
         } else {
             let func_term : PartiallyAppliedTerm = {
                 let func_space : &TypeSpace = self.type_spaces.get(&func_type_id).unwrap();
@@ -74,7 +74,7 @@ impl InterpreterState {
 
             args_copy.push(arg_ref);
 
-            let result_tuple : (InterpreterState, TermReference) = if (func_impl.ready_to_evaluate(&args_copy)) {
+            let result_ref : TermReference = if (func_impl.ready_to_evaluate(&args_copy)) {
                 func_impl.evaluate(self, args_copy)
             } else {
                 let result = PartiallyAppliedTerm {
@@ -82,17 +82,14 @@ impl InterpreterState {
                     args : args_copy
                 };
                 let ret_type_id : TypeId = term_app.get_ret_type();
-                let (szelf, ret_ptr) = self.store_term(ret_type_id, result);
+                let ret_ptr = self.store_term(ret_type_id, result);
                 let ret_ref = TermReference::FuncRef(ret_ptr);
-                (szelf, ret_ref)
+                ret_ref
             };
-            let (mut zelf, result_ref) = result_tuple;
-
-            let application_table : &mut ApplicationTable = zelf.application_tables.get_mut(&func_type_id).unwrap();
+            let application_table : &mut ApplicationTable = self.application_tables.get_mut(&func_type_id).unwrap();
 
             application_table.link(term_app.clone(), result_ref.clone());
-
-            (zelf, result_ref)
+            result_ref
         }
     }
 
