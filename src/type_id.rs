@@ -48,6 +48,18 @@ lazy_static! {
             }
         }
 
+        //Fill in the ret_types table
+        for i in 0..total_num_types() {
+            let type_id = i as TypeId;
+            if let Type::FuncType(arg_type_id, ret_type_id) = get_type(type_id) {
+                if (!types.ret_map.contains_key(&ret_type_id)) {
+                    types.ret_map.insert(ret_type_id, Vec::new());
+                }
+                let vec : &mut Vec::<(TypeId, TypeId)> = types.ret_map.get_mut(&ret_type_id).unwrap();
+                vec.push((type_id, arg_type_id));
+            }
+        }
+
         types
     };
 
@@ -86,7 +98,8 @@ pub fn is_vector_type(id : TypeId) -> bool {
 
 struct GlobalTypeInfo {
     info_vec : Vec::<Type>,
-    ind_map : HashMap<Type, TypeId>
+    ind_map : HashMap<Type, TypeId>,
+    ret_map : HashMap::<TypeId, Vec::<(TypeId, TypeId)>>
 }
 
 pub fn total_num_types() -> usize {
@@ -97,7 +110,8 @@ impl GlobalTypeInfo {
     fn new() -> Self {
         GlobalTypeInfo {
             info_vec : Vec::new(),
-            ind_map : HashMap::new()
+            ind_map : HashMap::new(),
+            ret_map : HashMap::new()
         }
     }
     fn add(&mut self, info : Type) -> TypeId {
@@ -116,6 +130,13 @@ impl GlobalTypeInfo {
     fn get_type(&self, id : TypeId) -> Type {
         self.info_vec[id].clone()
     }
+    fn get_application_type_ids(&self, id : TypeId) -> Vec::<(TypeId, TypeId)> {
+        self.ret_map.get(&id).unwrap().clone()
+    }
+}
+
+pub fn get_application_type_ids(id : TypeId) -> Vec::<(TypeId, TypeId)> {
+    GLOBAL_TYPE_INFO.get_application_type_ids(id)
 }
 
 pub fn get_type_id(kind : &Type) -> TypeId {

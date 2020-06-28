@@ -30,16 +30,23 @@ use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
 
-
-pub struct OptimizerState {
-    interpreter_state : InterpreterState,
-    embedder_state : EmbedderState,
+pub struct OptimizerStateWithTarget {
+    optimizer_state : OptimizerState,
     target_inv_schmear : InverseSchmear,
     target_type_id : TypeId
 }
 
-impl OptimizerState {
-    fn new(data_points : Vec::<(Array1<f32>, Array1<f32>)>) -> OptimizerState {
+pub struct OptimizerState {
+    interpreter_state : InterpreterState,
+    embedder_state : EmbedderState,
+}
+
+impl OptimizerStateWithTarget {
+    pub fn optimize_evaluate_step(&mut self) -> TermPointer {
+        self.optimizer_state.optimize_evaluate_step(self.target_type_id, &self.target_inv_schmear)
+    }
+
+    fn new(data_points : Vec::<(Array1<f32>, Array1<f32>)>) -> OptimizerStateWithTarget {
 
         //Step 1: find the embedding of the target term
 
@@ -73,18 +80,80 @@ impl OptimizerState {
 
         let target_inv_schmear : InverseSchmear = target_model.get_inverse_schmear();
 
-        
-        //Step 2: Initialize the interpreter state
-        let interpreter_state = InterpreterState::new();
-
-        //Step 3: initialize the embedder state
-        let embedder_state = EmbedderState::new();
-
-        OptimizerState {
-            interpreter_state,
-            embedder_state,
+        let optimizer_state = OptimizerState::new();
+        OptimizerStateWithTarget {
+            optimizer_state,
             target_inv_schmear,
             target_type_id
+        }
+    }
+}
+
+impl OptimizerState {
+    fn optimize_evaluate_step(&mut self, target_type_id : TypeId, target_inv_schmear : &InverseSchmear)
+                                     -> TermPointer {
+        //Sample for the best term in the space of the target 
+        let (term_pointer, term_dist) = self.embedder_state.thompson_sample_term(target_type_id, target_inv_schmear);
+
+        //Now, iterate through all term applications yielding the type of the target
+        let mut application_type_ids : Vec::<(TypeId, TypeId)> = get_application_type_ids(target_type_id);
+        let mut best_dist : f32 = f32::INFINITY;
+        let mut best_application_and_types : Option<(TermApplication, TypeId, TypeId)> = Option::None;
+        
+        for (func_type_id, arg_type_id) in application_type_ids.drain(..) {
+            let (application, dist) = self.embedder_state.thompson_sample_app(func_type_id, arg_type_id, 
+                                                                              target_inv_schmear);
+            if (dist < best_dist) {
+                best_application_and_types = Option::Some((application, func_type_id, arg_type_id));
+                best_dist = dist;
+            }
+        }
+        match best_application_and_types {
+            Option::None => term_pointer,
+            Option::Some(application_and_types) => {
+                let (application, func_type_id, arg_type_id) = application_and_types;
+                if (best_dist < term_dist) {
+                    let target_mean = &target_inv_schmear.mean;
+                    let (func_target, maybe_arg_target) = 
+                        self.embedder_state.find_better_app(&application, target_mean);
+
+                    let better_func = self.optimize_evaluate_step(func_type_id, &func_target);
+
+                    let better_arg : TermReference = match (maybe_arg_target) {
+                        Some(arg_target) => {
+                            let better_arg = self.optimize_evaluate_step(arg_type_id, &arg_target);
+                            TermReference::FuncRef(better_arg)
+                        },
+                        None => {
+                            //In this case, we just optimized the function choice
+                            //since the argument choice was already the best possible
+                            application.arg_ref 
+                        }
+                    };
+                    let better_application = TermApplication {
+                        func_ptr : better_func,
+                        arg_ref : better_arg
+                    };
+                    let (new_state, result_ref) = self.interpreter_state.evaluate(&better_application);
+                    self.interpreter_state = new_state;
+                    if let TermReference::FuncRef(ret_ptr) = result_ref {
+                        ret_ptr
+                    } else {
+                        //This should not happen, because we should never be using the optimizer
+                        //to attempt to find applications yielding bare vectors
+                        panic!();
+                    }
+                } else {
+                    term_pointer
+                }
+            }
+        }
+
+    }
+    fn new() -> OptimizerState {
+        OptimizerState {
+            interpreter_state : InterpreterState::new(),
+            embedder_state : EmbedderState::new()
         }
     }
 }

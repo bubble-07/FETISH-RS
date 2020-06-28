@@ -55,6 +55,7 @@ impl ModelSpace {
         model_space
     }
 
+    //Samples a function applied to a bare vec
     pub fn thompson_sample_vec(&self, rng : &mut ThreadRng, inv_schmear : &InverseSchmear) -> 
                               (ModelKey, Array1<f32>, f32) {
         let mut result_key : ModelKey = 0 as ModelKey;
@@ -74,6 +75,7 @@ impl ModelSpace {
         (result_key, result_vec, result_dist)
     }
 
+    //Samples a bare term
     pub fn thompson_sample_term(&self, rng : &mut ThreadRng, inv_schmear : &InverseSchmear) -> (ModelKey, f32) {
         let mut result_key : ModelKey = 0 as ModelKey;
         let mut result_dist = f32::INFINITY;
@@ -89,6 +91,7 @@ impl ModelSpace {
         (result_key, result_dist)
     }
 
+    //Samples an application of terms
     pub fn thompson_sample_app(&self, rng : &mut ThreadRng, other : &ModelSpace, inv_schmear : &InverseSchmear) ->
                               (ModelKey, ModelKey, f32) {
         let mut result_func_key : ModelKey = 0 as ModelKey;

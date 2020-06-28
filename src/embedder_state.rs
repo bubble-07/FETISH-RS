@@ -70,6 +70,71 @@ impl EmbedderState {
         }
     }
 
+    pub fn thompson_sample_term(&self, type_id : TypeId, inv_schmear : &InverseSchmear) -> (TermPointer, f32) {
+        let space : &ModelSpace = self.model_spaces.get(&type_id).unwrap();
+        let mut rng = rand::thread_rng();
+        let (term_ind, dist) = space.thompson_sample_term(&mut rng, inv_schmear);
+        let term_pointer = TermPointer {
+            type_id : type_id,
+            index : term_ind
+        };
+        (term_pointer, dist)
+    }
+
+    pub fn thompson_sample_app(&self, func_id : TypeId, arg_id : TypeId, inv_schmear : &InverseSchmear)
+                              -> (TermApplication, f32) {
+        let func_space : &ModelSpace = self.model_spaces.get(&func_id).unwrap();
+        let mut rng = rand::thread_rng();
+        //Now we have two cases, depending on whether/not the argument type is a vector type
+        if is_vector_type(arg_id) {
+            let (func_ind, vec, dist) = func_space.thompson_sample_vec(&mut rng, inv_schmear);
+            let func_pointer = TermPointer {
+                type_id : func_id,
+                index : func_ind
+            };
+            let vector_ref = TermReference::VecRef(to_noisy(&vec));
+            let term_application = TermApplication {
+                func_ptr : func_pointer,
+                arg_ref : vector_ref
+            };
+            (term_application, dist) 
+        } else {
+            let arg_space : &ModelSpace = self.model_spaces.get(&arg_id).unwrap();
+            let (func_ind, arg_ind, dist) = func_space.thompson_sample_app(&mut rng, arg_space, inv_schmear); 
+            let func_pointer = TermPointer {
+                type_id : func_id,
+                index : func_ind
+            };
+            let arg_pointer = TermPointer {
+                type_id : arg_id,
+                index : arg_ind
+            };
+            let term_application = TermApplication {
+                func_ptr : func_pointer,
+                arg_ref : TermReference::FuncRef(arg_pointer)
+            };
+            (term_application, dist)
+        }
+    }
+
+    pub fn find_better_app(&self, term_application : &TermApplication, target : &Array1<f32>) ->
+                          (InverseSchmear, Option::<InverseSchmear>) {
+        let func_ptr = &term_application.func_ptr;
+        let func_model = self.get_embedding(func_ptr);
+        let arg_ref = &term_application.arg_ref;
+        match arg_ref {
+            TermReference::FuncRef(arg_ptr) => {
+                let arg_model = self.get_embedding(arg_ptr);
+                let (func_schmear, arg_schmear) = func_model.find_better_app(arg_model, target);
+                (func_schmear, Option::Some(arg_schmear))
+            },
+            TermReference::VecRef(vec) => {
+                let func_schmear = func_model.find_better_func(&from_noisy(vec), target);
+                (func_schmear, Option::None)
+            }
+        }
+    }
+
     pub fn get_embedding(&self, term_ptr : &TermPointer) -> &Model {
         let space : &ModelSpace = self.model_spaces.get(&term_ptr.type_id).unwrap();
         space.get_model(term_ptr.index)

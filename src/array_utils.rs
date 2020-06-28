@@ -15,5 +15,11 @@ pub fn from_noisy(vec : &Array1<R32>) -> Array1<f32> {
     mean
 }
 
-//pub fn to_noisy(vec : Array1<f32>) -> Array<R32> {
-//}
+pub fn to_noisy(vec : &Array1<f32>) -> Array1<R32> {
+    let n = vec.len();
+    let mut result : Array1::<R32> = Array::zeros((n,));
+    for i in 0..n {
+        result[[i,]] = r32(vec[[i,]]);
+    }
+    result
+}
