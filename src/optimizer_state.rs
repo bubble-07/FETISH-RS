@@ -5,6 +5,7 @@ use ndarray::*;
 use ndarray_linalg::*;
 use ndarray_einsum_beta::*;
 
+use std::collections::HashSet;
 use std::rc::*;
 use crate::type_id::*;
 use crate::application_table::*;
@@ -13,7 +14,6 @@ use crate::term::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::term_application::*;
-use crate::term_application_result::*;
 use crate::func_impl::*;
 use crate::bayes_utils::*;
 use crate::model::*;
@@ -29,6 +29,7 @@ use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
+use crate::term_application_result::*;
 
 pub struct OptimizerStateWithTarget {
     optimizer_state : OptimizerState,
@@ -42,8 +43,20 @@ pub struct OptimizerState {
 }
 
 impl OptimizerStateWithTarget {
+    pub fn step(&mut self) -> TermPointer {
+        let result : TermPointer = self.optimize_evaluate_step();
+        self.bayesian_update_step();
+        result
+    }
+
     pub fn optimize_evaluate_step(&mut self) -> TermPointer {
         self.optimizer_state.optimize_evaluate_step(self.target_type_id, &self.target_inv_schmear)
+    }
+    pub fn bayesian_update_step(&mut self) {
+        self.optimizer_state.bayesian_update_step();
+    }
+    pub fn init_step(&mut self) {
+        self.optimizer_state.init_step();
     }
 
     fn new(data_points : Vec::<(Array1<f32>, Array1<f32>)>) -> OptimizerStateWithTarget {
@@ -90,6 +103,23 @@ impl OptimizerStateWithTarget {
 }
 
 impl OptimizerState {
+    pub fn init_step(&mut self) {
+        self.embedder_state.init_embeddings(&self.interpreter_state);
+    }
+    pub fn bayesian_update_step(&mut self) {
+        self.embedder_state.init_embeddings(&self.interpreter_state);
+        let mut data_updated_terms : HashSet<TermPointer> = HashSet::new();
+        let mut prior_updated_terms : HashSet<TermPointer> = HashSet::new();
+
+        let mut updated_apps : HashSet::<TermApplicationResult> = HashSet::new();
+        for term_app_result in self.interpreter_state.new_term_app_results.drain(..) {
+            updated_apps.insert(term_app_result); 
+        }
+
+        self.embedder_state.propagate_data_recursive(&self.interpreter_state, updated_apps, &mut data_updated_terms);
+        self.embedder_state.propagate_prior_recursive(&self.interpreter_state, data_updated_terms, &mut prior_updated_terms);
+    }
+
     fn optimize_evaluate_step(&mut self, target_type_id : TypeId, target_inv_schmear : &InverseSchmear)
                                      -> TermPointer {
         //Sample for the best term in the space of the target 

@@ -174,4 +174,7 @@ impl ModelSpace {
     pub fn get_model(&self, model_key : ModelKey) -> &Model {
         self.models.get(&model_key).unwrap()
     }
+    pub fn has_model(&self, model_key : ModelKey) -> bool {
+        self.models.contains_key(&model_key)
+    }
 }

@@ -12,10 +12,22 @@ use crate::func_impl::*;
 
 pub struct InterpreterState {
     pub application_tables : HashMap::<TypeId, ApplicationTable>,
-    pub type_spaces : HashMap::<TypeId, TypeSpace>
+    pub type_spaces : HashMap::<TypeId, TypeSpace>,
+    pub new_term_app_results : Vec::<TermApplicationResult>
 }
 
 impl InterpreterState {
+
+    pub fn get_all_term_ptrs(&self) -> Vec::<TermPointer> {
+        let mut result : Vec::<TermPointer> = Vec::new();
+        for type_space in self.type_spaces.values() {
+            let mut to_add = type_space.get_all_term_ptrs();
+            for elem in to_add.drain(..) {
+                result.push(elem);
+            }
+        }
+        result
+    }
 
     pub fn store_term(&mut self, type_id : TypeId, term : PartiallyAppliedTerm) -> TermPointer {
         let type_space : &mut TypeSpace = self.type_spaces.get_mut(&type_id).unwrap();
@@ -88,6 +100,12 @@ impl InterpreterState {
             };
             let application_table : &mut ApplicationTable = self.application_tables.get_mut(&func_type_id).unwrap();
 
+            let term_app_result = TermApplicationResult {
+                term_app : term_app.clone(),
+                result_ref : result_ref.clone()
+            };
+            self.new_term_app_results.push(term_app_result);
+
             application_table.link(term_app.clone(), result_ref.clone());
             result_ref
         }
@@ -114,7 +132,8 @@ impl InterpreterState {
 
         let mut result = InterpreterState {
             application_tables,
-            type_spaces
+            type_spaces,
+            new_term_app_results : Vec::new()
         };
 
         //Now populate the type spaces with the known function implementations

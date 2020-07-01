@@ -135,6 +135,20 @@ impl EmbedderState {
         }
     }
 
+    pub fn init_embeddings(&mut self, interpreter_state : &InterpreterState) {
+        let mut term_ptrs = interpreter_state.get_all_term_ptrs();
+        for term_ptr in term_ptrs.drain(..) {
+            if (!self.has_embedding(&term_ptr)) {
+                self.init_embedding(term_ptr);
+            }
+        }
+    }
+
+    pub fn has_embedding(&self, term_ptr : &TermPointer) -> bool {
+        let space : &ModelSpace = self.model_spaces.get(&term_ptr.type_id).unwrap();
+        space.has_model(term_ptr.index)
+    }
+
     pub fn get_embedding(&self, term_ptr : &TermPointer) -> &Model {
         let space : &ModelSpace = self.model_spaces.get(&term_ptr.type_id).unwrap();
         space.get_model(term_ptr.index)
@@ -186,7 +200,7 @@ impl EmbedderState {
     }
 
     //Propagagtes prior updates downwards
-    fn propagate_prior_recursive(&mut self, interpreter_state : &InterpreterState,
+    pub fn propagate_prior_recursive(&mut self, interpreter_state : &InterpreterState,
                                  modified : HashSet::<TermPointer>,
                                  all_modified : &mut HashSet::<TermPointer>) {
         let mut follow_up : HashSet::<TermApplicationResult> = HashSet::new();
@@ -219,7 +233,7 @@ impl EmbedderState {
     }
 
     //Propagates data updates upwards
-    fn propagate_data_recursive(&mut self, interpreter_state : &InterpreterState, 
+    pub fn propagate_data_recursive(&mut self, interpreter_state : &InterpreterState, 
                                 results : HashSet::<TermApplicationResult>,
                                 all_modified : &mut HashSet::<TermPointer>) {
         let mut follow_up : HashSet::<TermPointer> = HashSet::new();
