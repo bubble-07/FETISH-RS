@@ -18,8 +18,12 @@ lazy_static! {
         let reduce_temp_t = types.add(Type::FuncType(scalar_t, vector_to_scalar_func_t));
         let reduce_func_t = types.add(Type::FuncType(binary_scalar_func_t, reduce_temp_t));
         let fill_func_t = types.add(Type::FuncType(scalar_t, vector_t));
+        let scalar_to_vector_func_t = types.add(Type::FuncType(scalar_t, vector_t));
+        let set_head_func_t = types.add(Type::FuncType(vector_t, scalar_to_vector_func_t));
         //TODO: ensure that the types here are exactly closed w.r.t. all types
         //in func_impl
+        
+        println!("Adding composition types");
         
         //Add all composition types of vector functions
         for n in [1, DIM].iter() {
@@ -38,6 +42,8 @@ lazy_static! {
                 }
             }
         }
+
+        println!("Adding constant types");
         //Add in all constant functions
         for n in [1, DIM].iter() {
             let n_t = types.add(Type::VecType(*n));
@@ -49,9 +55,9 @@ lazy_static! {
         }
 
         //Fill in the ret_types table
-        for i in 0..total_num_types() {
+        for i in 0..types.info_vec.len() {
             let type_id = i as TypeId;
-            if let Type::FuncType(arg_type_id, ret_type_id) = get_type(type_id) {
+            if let Type::FuncType(arg_type_id, ret_type_id) = types.info_vec[type_id].clone() {
                 if (!types.ret_map.contains_key(&ret_type_id)) {
                     types.ret_map.insert(ret_type_id, Vec::new());
                 }
@@ -59,6 +65,7 @@ lazy_static! {
                 vec.push((type_id, arg_type_id));
             }
         }
+        println!("Type initialization complete");
 
         types
     };

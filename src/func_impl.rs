@@ -21,6 +21,7 @@ use std::hash::*;
 
 #[enum_dispatch]
 pub trait HasFuncSignature {
+    fn get_name(&self) -> String;
     fn ret_type(&self) -> TypeId;
     fn required_arg_types(&self) -> Vec::<TypeId>;
 
@@ -113,6 +114,13 @@ pub struct BinaryFuncImpl {
 }
 
 impl HasFuncSignature for BinaryFuncImpl {
+    fn get_name(&self) -> String {
+        String::from(match (self.f) {
+            EnumBinaryArrayOperator::AddOperator(_) => "+",
+            EnumBinaryArrayOperator::SubOperator(_) => "-",
+            EnumBinaryArrayOperator::MulOperator(_) => "*"
+        })
+    }
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![self.elem_type, self.elem_type]
     }
@@ -142,6 +150,9 @@ pub struct RotateImpl {
 }
 
 impl HasFuncSignature for RotateImpl {
+    fn get_name(&self) -> String {
+        String::from("rotate")
+    }
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![*VECTOR_T]
     }
@@ -172,11 +183,14 @@ pub struct SetHeadImpl {
 }
 
 impl HasFuncSignature for SetHeadImpl {
+    fn get_name(&self) -> String {
+        String::from("setHead")
+    }
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![*VECTOR_T, *SCALAR_T]
     }
     fn ret_type(&self) -> TypeId {
-        *SCALAR_T
+        *VECTOR_T
     }
 }
 impl FuncImpl for SetHeadImpl {
@@ -202,6 +216,9 @@ pub struct HeadImpl {
 }
 
 impl HasFuncSignature for HeadImpl {
+    fn get_name(&self) -> String {
+        String::from("head")
+    }
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![*VECTOR_T]
     }
@@ -248,6 +265,9 @@ impl ComposeImpl {
 }
 
 impl HasFuncSignature for ComposeImpl {
+    fn get_name(&self) -> String {
+        String::from("compose")
+    }
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![self.func_one, self.func_two, self.in_type]
     }
@@ -285,6 +305,9 @@ pub struct FillImpl {
 }
 
 impl HasFuncSignature for FillImpl {
+    fn get_name(&self) -> String {
+        String::from("fill")
+    }
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![*SCALAR_T]
     }
@@ -313,6 +336,9 @@ pub struct ConstImpl {
 }
 
 impl HasFuncSignature for ConstImpl {
+    fn get_name(&self) -> String {
+        String::from("const")
+    }
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![self.ret_type.clone(), self.ignored_type.clone()]
     }
@@ -332,6 +358,9 @@ pub struct ReduceImpl {
 }
 
 impl HasFuncSignature for ReduceImpl {
+    fn get_name(&self) -> String {
+        String::from("reduce")
+    }
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![*BINARY_SCALAR_FUNC_T, *SCALAR_T, *VECTOR_T]
     }
@@ -384,6 +413,9 @@ pub struct MapImpl {
 }
 
 impl HasFuncSignature for MapImpl {
+    fn get_name(&self) -> String {
+        String::from("map")
+    }
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![*UNARY_SCALAR_FUNC_T, *VECTOR_T]
     }

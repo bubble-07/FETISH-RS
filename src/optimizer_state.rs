@@ -32,13 +32,13 @@ use crate::enum_feature_collection::*;
 use crate::term_application_result::*;
 
 pub struct OptimizerStateWithTarget {
-    optimizer_state : OptimizerState,
+    pub optimizer_state : OptimizerState,
     target_inv_schmear : InverseSchmear,
     target_type_id : TypeId
 }
 
 pub struct OptimizerState {
-    interpreter_state : InterpreterState,
+    pub interpreter_state : InterpreterState,
     embedder_state : EmbedderState,
 }
 
@@ -59,13 +59,14 @@ impl OptimizerStateWithTarget {
         self.optimizer_state.init_step();
     }
 
-    fn new(data_points : Vec::<(Array1<f32>, Array1<f32>)>) -> OptimizerStateWithTarget {
+    pub fn new(data_points : Vec::<(Array1<f32>, Array1<f32>)>) -> OptimizerStateWithTarget {
 
         //Step 1: find the embedding of the target term
 
         if (data_points.is_empty()) {
             panic!(); 
         }
+        println!("Readying types");
         let in_dimensions : usize = data_points[0].0.shape()[0];
         let out_dimensions : usize = data_points[0].1.shape()[0];
 
@@ -73,12 +74,15 @@ impl OptimizerStateWithTarget {
         let out_type_id : TypeId = get_type_id(&Type::VecType(out_dimensions));
         let target_type_id : TypeId = get_type_id(&Type::FuncType(in_type_id, out_type_id));
 
+        println!("Readying feature collections");
         let feature_collections = get_feature_collections(in_dimensions);
         let rc_feature_collections = Rc::new(feature_collections);
         
         let mut target_model : Model = Model::new(rc_feature_collections, in_dimensions, out_dimensions);
 
         let out_precision = Array::eye(out_dimensions);
+
+        println!("Readying target");
         
         for (in_vec, out_vec) in data_points.iter() {
             let data_point = DataPoint {
@@ -93,6 +97,7 @@ impl OptimizerStateWithTarget {
 
         let target_inv_schmear : InverseSchmear = target_model.get_inverse_schmear();
 
+        println!("Readying interpreter state");
         let optimizer_state = OptimizerState::new();
         OptimizerStateWithTarget {
             optimizer_state,

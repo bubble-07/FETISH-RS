@@ -31,6 +31,7 @@ mod term_application;
 mod type_space;
 mod sampled_function;
 mod optimizer_state;
+mod displayable_with_state;
 
 extern crate lazy_static;
 extern crate ndarray;
@@ -42,72 +43,54 @@ use ndarray_einsum_beta::*;
 use std::rc::*;
 
 use crate::feature_collection::*;
-use crate::linear_feature_collection::*;
-use crate::quadratic_feature_collection::*;
-use crate::fourier_feature_collection::*;
-use crate::cauchy_fourier_features::*;
-use crate::enum_feature_collection::*;
+use crate::displayable_with_state::*;
+use crate::term_pointer::*;
 use crate::bayes_utils::*;
 use crate::inverse_schmear::*;
 use crate::model::*;
 use plotters::prelude::*;
 use rand::prelude::*;
+use crate::optimizer_state::*;
 
 fn f(x : f32) -> f32 {
-    -x * x
+    x * x
 }
 
 fn main() {
+    let num_iters = 100;
     let num_samples = 100;
-
     let in_dimensions = 1;
     let out_dimensions = 1;
 
-    let feature_collections = get_feature_collections(in_dimensions);
-
-
-    let mut model : Model = Model::new(Rc::new(feature_collections), 1, 1);
     let mut rng = rand::thread_rng();
+
+    let mut data_points : Vec::<(Array1<f32>, Array1<f32>)> = Vec::new();
 
     for i in 0..num_samples {
         let x : f32 = rng.gen();
-        let noise : f32 = rng.gen();
-        let y = f(x) + (noise - 0.5) * 0.1;
-
-        let out_precision = Array::ones((1,1));
+        let y = f(x);
 
         let mut in_vec = Array::zeros((1,));
         in_vec[[0,]] = x;
 
         let mut out_vec = Array::zeros((1,));
         out_vec[[0,]] = y;
+        
+        let tuple : (Array1<f32>, Array1<f32>) = (in_vec, out_vec);
 
-        let data_point = DataPoint {
-            in_vec,
-            out_inv_schmear : InverseSchmear {
-                mean : out_vec,
-                precision : out_precision
-            }
-        };
-        model += data_point;
-   }
-
-    fn model_fn(model : &Model, x : f64) -> f64 {
-        let mut x_arr : Array1<f32> = Array::ones((1,));
-        x_arr[[0,]] = x as f32;
-        let y_arr = model.eval(&x_arr);
-        y_arr[[0,]] as f64
+        data_points.push(tuple);
     }
 
-    let root_drawing_area = BitMapBackend::new("result.png", (1024, 768)).into_drawing_area();
-
-    root_drawing_area.fill(&WHITE);
-
-    let mut chart = ChartBuilder::on(&root_drawing_area)
-                            .build_ranged(-1.0..1.0, -1.0..1.0)
-                            .unwrap();
-    chart.draw_series(LineSeries::new(
-            (-100..100).map(|x| x as f64 / 100.0).map(|x| (x, model_fn(&model, x)) ), &RED
-            )).unwrap();
+    println!("Creating optimizer");
+    let mut optimizer_state = OptimizerStateWithTarget::new(data_points);
+    println!("Initializing optimizer");
+    optimizer_state.init_step();
+    println!("Running optimizer");
+    for i in 0..num_iters {
+        println!("Iter: {}", i);
+        let term_ptr : TermPointer = optimizer_state.step();
+        let term_str : String = term_ptr.display(&optimizer_state.optimizer_state.interpreter_state);
+        println!("{}", term_str);
+    }
 }
 
