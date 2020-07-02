@@ -35,6 +35,9 @@ pub struct ModelSpace {
 }
 
 impl ModelSpace {
+    pub fn get_dimensions(&self) -> usize {
+        self.feature_dimensions * self.out_dimensions
+    }
 
     pub fn new(in_dimensions : usize, out_dimensions : usize) -> ModelSpace {
         let feature_collections = get_feature_collections(in_dimensions);

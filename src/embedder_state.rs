@@ -35,6 +35,7 @@ pub struct EmbedderState {
 impl EmbedderState {
 
     pub fn new() -> EmbedderState {
+        println!("Readying embedder state");
         let mut model_spaces = HashMap::<TypeId, ModelSpace>::new();
         
         let mut dimensions = HashMap::<TypeId, usize>::new();
@@ -59,8 +60,11 @@ impl EmbedderState {
                     let arg_dimension = *dimensions.get(&arg_type_id).unwrap();
                     let ret_dimension = *dimensions.get(&ret_type_id).unwrap();
 
+                    println!("Creating model space with dims {} -> {}", arg_dimension, ret_dimension);
                     let model_space = ModelSpace::new(arg_dimension, ret_dimension);
+                    let model_dims = model_space.get_dimensions();
                     model_spaces.insert(func_type_id, model_space);
+                    dimensions.insert(func_type_id, model_dims);
                 }
             }
         }

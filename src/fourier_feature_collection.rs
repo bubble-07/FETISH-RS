@@ -7,9 +7,7 @@ use ndarray_einsum_beta::*;
 
 use crate::feature_collection::*;
 use rand::prelude::*;
-
-const FOURIER_REG_STRENGTH : f32 = 1.0;
-const FOURIER_FEATURE_MULTIPLIER : usize = 20;
+use crate::params::*;
 
 pub struct FourierFeatureCollection {
     in_dimensions : usize,

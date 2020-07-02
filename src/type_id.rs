@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use lazy_static::*;
 use topological_sort::*;
-
-pub const DIM : usize = 10;
+use crate::params::*;
 
 lazy_static! {
     static ref GLOBAL_TYPE_INFO : GlobalTypeInfo = {

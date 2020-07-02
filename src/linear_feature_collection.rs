@@ -6,8 +6,7 @@ use ndarray_linalg::*;
 use ndarray_einsum_beta::*;
 
 use crate::feature_collection::*;
-
-const LIN_REG_STRENGTH : f32 = 0.1;
+use crate::params::*;
 
 pub struct LinearFeatureCollection {
     in_dimensions : usize,

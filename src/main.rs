@@ -20,6 +20,7 @@ mod inverse_schmear;
 mod schmear;
 mod model_space;
 mod type_id;
+mod params;
 mod application_table;
 mod interpreter_state;
 mod func_impl;

@@ -13,9 +13,7 @@ use rustfft::FFTplanner;
 use rustfft::FFT;
 use rustfft::num_complex::Complex;
 use rustfft::num_traits::Zero;
-
-const QUAD_REG_STRENGTH : f32 = 5.0;
-const QUAD_FEATURE_MULTIPLIER : usize = 5;
+use crate::params::*;
 
 pub struct QuadraticFeatureCollection {
     in_dimensions : usize,
