@@ -26,7 +26,7 @@ pub struct QuadraticFeatureCollection {
 
 impl QuadraticFeatureCollection {
     pub fn new(in_dimensions : usize) -> QuadraticFeatureCollection {
-        let out_dimensions = in_dimensions * QUAD_FEATURE_MULTIPLIER;
+        let out_dimensions = num_quadratic_features(in_dimensions);
         let reg_strength = QUAD_REG_STRENGTH;
         let sketch_one = CountSketch::new(in_dimensions, out_dimensions);
         let sketch_two = CountSketch::new(in_dimensions, out_dimensions);

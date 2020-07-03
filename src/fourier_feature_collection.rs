@@ -19,7 +19,7 @@ pub struct FourierFeatureCollection {
 impl FourierFeatureCollection {
     pub fn new(in_dimensions: usize, generator : fn(&mut ThreadRng, usize) -> Array1<f32>) -> FourierFeatureCollection {
         let reg_strength = FOURIER_REG_STRENGTH;
-        let num_features = FOURIER_FEATURE_MULTIPLIER * in_dimensions;
+        let num_features = num_fourier_features(in_dimensions);
 
         let mut ws = Array::zeros((num_features, in_dimensions));
         let mut rng = rand::thread_rng();

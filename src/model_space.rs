@@ -47,6 +47,7 @@ impl ModelSpace {
         for collection in rc_feature_collections.iter() {
             total_feat_dims += collection.get_dimension();
         }
+        println!("And feature dims {}", total_feat_dims);
 
         let model_space = ModelSpace {
             in_dimensions : in_dimensions,

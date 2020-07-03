@@ -11,17 +11,19 @@ use crate::linear_feature_collection::*;
 use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
+use crate::sketched_linear_feature_collection::*;
 use crate::bayes_utils::*;
 
 #[enum_dispatch(FeatureCollection)]
 pub enum EnumFeatureCollection {
+    SketchedLinearFeatureCollection,
     LinearFeatureCollection,
     QuadraticFeatureCollection,
     FourierFeatureCollection
 }
 
 pub fn get_feature_collections(in_dimensions : usize) -> [EnumFeatureCollection; 3] {
-    let linear_collection = LinearFeatureCollection::new(in_dimensions);
+    let linear_collection = SketchedLinearFeatureCollection::new(in_dimensions);
     let quadratic_collection = QuadraticFeatureCollection::new(in_dimensions);
     let fourier_collection = FourierFeatureCollection::new(in_dimensions, gen_cauchy_random);
     let feature_collections = [EnumFeatureCollection::from(linear_collection),
