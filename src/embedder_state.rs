@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::collections::HashMap;
 use std::rc::*;
 use crate::interpreter_state::*;
+use crate::displayable_with_state::*;
 use crate::type_id::*;
 use crate::application_table::*;
 use crate::type_space::*;
@@ -139,9 +140,9 @@ impl EmbedderState {
         }
     }
 
-    pub fn init_embeddings(&mut self, interpreter_state : &InterpreterState) {
-        let mut term_ptrs = interpreter_state.get_all_term_ptrs();
-        for term_ptr in term_ptrs.drain(..) {
+    pub fn init_embeddings(&mut self, interpreter_state : &mut InterpreterState) {
+        println!("Initializing embeddings for {} new terms", interpreter_state.new_terms.len());
+        for term_ptr in interpreter_state.new_terms.drain(..) {
             if (!self.has_embedding(&term_ptr)) {
                 self.init_embedding(term_ptr);
             }

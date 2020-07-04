@@ -266,6 +266,8 @@ impl Model {
     pub fn new(feature_collections : Rc<[EnumFeatureCollection; 3]>,
               in_dimensions : usize, out_dimensions : usize) -> Model {
 
+        println!("Initializing model with dims {} -> {}", in_dimensions, out_dimensions);
+
         let prior_updates : HashMap::<PriorUpdateKey, NormalInverseGamma> = HashMap::new();
         let data_updates : HashMap::<DataUpdateKey, DataPoint> = HashMap::new();
 
@@ -273,6 +275,8 @@ impl Model {
         for collection in feature_collections.iter() {
             total_feat_dims += collection.get_dimension();
         }
+
+        println!("Initializing model mean");
 
         let mut mean : Array2<f32> = Array::zeros((out_dimensions, total_feat_dims));
         let mut ind_one : usize = 0;
@@ -282,15 +286,13 @@ impl Model {
             let end_ind_one = ind_one + coll_i_size;
 
             let mean_block : Array2<f32> = collection_i.blank_mean(out_dimensions);
-            for t in 0..out_dimensions {
-                for k in 0..coll_i_size {
-                    let k_offset = ind_one + k;
-                    mean[[t, k_offset]] = mean_block[[t, k]];
-                }
-            }
+
+            mean.slice_mut(s![.., ind_one..end_ind_one]).assign(&mean_block);
 
             ind_one = end_ind_one;
         }
+
+        println!("Initializing model precision");
 
         let mut precision : Array4<f32> = Array::zeros((out_dimensions, total_feat_dims, out_dimensions, total_feat_dims));
         let mut ind_one = 0;
@@ -312,22 +314,15 @@ impl Model {
                     collection_i.blank_interaction_precision(collection_j, out_dimensions)
                 };
 
-                for k in 0..coll_i_size {
-                    for l in 0..coll_j_size {
-                        let k_offset = ind_one + k;
-                        let l_offset = ind_two + l;
+                precision.slice_mut(s![.., ind_one..end_ind_one, .., ind_two..end_ind_two])
+                         .assign(&precision_block);
 
-                        for t_one in 0..out_dimensions {
-                            for t_two in 0..out_dimensions {
-                                precision[[t_one, k_offset, t_two, l_offset]] = precision_block[[t_one, k, t_two, l]];
-                            }
-                        }
-                    }
-                }
                 ind_two = end_ind_two;
             }
             ind_one = end_ind_one;
         }
+
+        println!("Initializing model initial distribution");
 
         let data = NormalInverseGamma::new(mean, precision, 0.5, 0.0, out_dimensions, in_dimensions);
     

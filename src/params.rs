@@ -8,9 +8,9 @@ pub const LIN_REG_STRENGTH : f32 = 0.1;
 pub const QUAD_REG_STRENGTH : f32 = 5.0;
 pub const QUAD_PADDING_MULTIPLIER : usize = 1;
 
-pub const DIM : usize = 10;
+pub const DIM : usize = 2;
 
-pub const TAPER_START : usize = 25;
+pub const TAPER_START : usize = 5;
 
 pub fn log_tapered_linear(k : usize, x : usize) -> usize {
     if (x < k) {

@@ -109,10 +109,10 @@ impl OptimizerStateWithTarget {
 
 impl OptimizerState {
     pub fn init_step(&mut self) {
-        self.embedder_state.init_embeddings(&self.interpreter_state);
+        self.embedder_state.init_embeddings(&mut self.interpreter_state);
     }
     pub fn bayesian_update_step(&mut self) {
-        self.embedder_state.init_embeddings(&self.interpreter_state);
+        self.embedder_state.init_embeddings(&mut self.interpreter_state);
         let mut data_updated_terms : HashSet<TermPointer> = HashSet::new();
         let mut prior_updated_terms : HashSet<TermPointer> = HashSet::new();
 

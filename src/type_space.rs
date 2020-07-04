@@ -21,18 +21,6 @@ impl TypeSpace {
             term_to_index_map : HashMap::new()
         }
     }
-
-    pub fn get_all_term_ptrs(&self) -> Vec::<TermPointer> {
-        let mut result : Vec::<TermPointer> = Vec::new();
-        for i in 0..self.terms.len() {
-            let elem = TermPointer {
-                type_id : self.my_type,
-                index : i
-            };
-            result.push(elem);
-        }
-        result
-    }
     
     pub fn get(&self, term_index : usize) -> &PartiallyAppliedTerm {
         &self.terms[term_index]

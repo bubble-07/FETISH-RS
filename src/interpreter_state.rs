@@ -13,25 +13,17 @@ use crate::func_impl::*;
 pub struct InterpreterState {
     pub application_tables : HashMap::<TypeId, ApplicationTable>,
     pub type_spaces : HashMap::<TypeId, TypeSpace>,
-    pub new_term_app_results : Vec::<TermApplicationResult>
+    pub new_term_app_results : Vec::<TermApplicationResult>,
+    pub new_terms : Vec::<TermPointer>
 }
 
 impl InterpreterState {
 
-    pub fn get_all_term_ptrs(&self) -> Vec::<TermPointer> {
-        let mut result : Vec::<TermPointer> = Vec::new();
-        for type_space in self.type_spaces.values() {
-            let mut to_add = type_space.get_all_term_ptrs();
-            for elem in to_add.drain(..) {
-                result.push(elem);
-            }
-        }
-        result
-    }
-
     pub fn store_term(&mut self, type_id : TypeId, term : PartiallyAppliedTerm) -> TermPointer {
         let type_space : &mut TypeSpace = self.type_spaces.get_mut(&type_id).unwrap();
         let result = type_space.add(term);
+
+        self.new_terms.push(result.clone());
         result
     }
 
@@ -114,7 +106,11 @@ impl InterpreterState {
     pub fn add_init(&mut self, func : EnumFuncImpl) -> TermPointer {
         let func_type_id : TypeId = func.func_type();
         let type_space : &mut TypeSpace = self.type_spaces.get_mut(&func_type_id).unwrap();
-        type_space.add_init(func)
+        let result = type_space.add_init(func);
+
+        self.new_terms.push(result.clone());
+
+        result
     }
 
     pub fn new() -> InterpreterState {
@@ -133,7 +129,8 @@ impl InterpreterState {
         let mut result = InterpreterState {
             application_tables,
             type_spaces,
-            new_term_app_results : Vec::new()
+            new_term_app_results : Vec::new(),
+            new_terms : Vec::new()
         };
 
         //Now populate the type spaces with the known function implementations
