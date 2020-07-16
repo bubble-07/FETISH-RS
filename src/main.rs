@@ -34,6 +34,7 @@ mod type_space;
 mod sampled_function;
 mod optimizer_state;
 mod displayable_with_state;
+mod randomized_svd;
 
 extern crate lazy_static;
 extern crate ndarray;

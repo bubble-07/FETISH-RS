@@ -12,6 +12,10 @@ pub const DIM : usize = 2;
 
 pub const TAPER_START : usize = 5;
 
+//Numerical algorithm constants
+pub const SVD_OVERSAMPLE : usize = 10;
+pub const SVD_RANGE_ITERS : usize = 7;
+
 pub fn log_tapered_linear(k : usize, x : usize) -> usize {
     if (x < k) {
         x
