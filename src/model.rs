@@ -14,11 +14,13 @@ use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
-use crate::bayes_utils::*;
+use crate::normal_inverse_wishart::*;
 use crate::term_application::*;
 use crate::term_pointer::*;
+use crate::params::*;
 use crate::term_reference::*;
 use crate::schmear::*;
+use crate::data_point::*;
 use crate::inverse_schmear::*;
 use crate::sampled_function::*;
 use arraymap::ArrayMap;
@@ -33,8 +35,8 @@ pub struct Model {
     in_dimensions : usize,
     out_dimensions : usize,
     feature_collections : Rc<[EnumFeatureCollection; 3]>,
-    data : NormalInverseGamma,
-    prior_updates : HashMap::<PriorUpdateKey, NormalInverseGamma>,
+    data : NormalInverseWishart,
+    prior_updates : HashMap::<PriorUpdateKey, NormalInverseWishart>,
     data_updates : HashMap::<DataUpdateKey, DataPoint>
 }
 
@@ -251,7 +253,7 @@ impl Model {
     pub fn has_prior(&self, update_key : &PriorUpdateKey) -> bool {
         self.prior_updates.contains_key(update_key)
     }
-    pub fn update_prior(&mut self, update_key : PriorUpdateKey, distr : NormalInverseGamma) {
+    pub fn update_prior(&mut self, update_key : PriorUpdateKey, distr : NormalInverseWishart) {
         self.data += &distr;
         self.prior_updates.insert(update_key, distr);
     }
@@ -268,7 +270,7 @@ impl Model {
 
         println!("Initializing model with dims {} -> {}", in_dimensions, out_dimensions);
 
-        let prior_updates : HashMap::<PriorUpdateKey, NormalInverseGamma> = HashMap::new();
+        let prior_updates : HashMap::<PriorUpdateKey, NormalInverseWishart> = HashMap::new();
         let data_updates : HashMap::<DataUpdateKey, DataPoint> = HashMap::new();
 
         let mut total_feat_dims : usize = 0;
@@ -294,7 +296,7 @@ impl Model {
 
         println!("Initializing model precision");
 
-        let mut precision : Array4<f32> = Array::zeros((out_dimensions, total_feat_dims, out_dimensions, total_feat_dims));
+        let mut in_precision : Array2<f32> = Array::zeros((total_feat_dims, total_feat_dims));
         let mut ind_one = 0;
 
         for (i, collection_i) in feature_collections.iter().enumerate() {
@@ -314,7 +316,7 @@ impl Model {
                     collection_i.blank_interaction_precision(collection_j, out_dimensions)
                 };
 
-                precision.slice_mut(s![.., ind_one..end_ind_one, .., ind_two..end_ind_two])
+                in_precision.slice_mut(s![ind_one..end_ind_one, ind_two..end_ind_two])
                          .assign(&precision_block);
 
                 ind_two = end_ind_two;
@@ -322,9 +324,13 @@ impl Model {
             ind_one = end_ind_one;
         }
 
+        let out_precision = (out_dimensions as f32) * OUT_REG_STRENGTH * Array::eye(out_dimensions);
+
+        let little_v = out_dimensions as f32;
+
         println!("Initializing model initial distribution");
 
-        let data = NormalInverseGamma::new(mean, precision, 0.5, 0.0, out_dimensions, in_dimensions);
+        let data = NormalInverseWishart::new(mean, in_precision, out_precision, little_v);
     
         Model {
             in_dimensions,

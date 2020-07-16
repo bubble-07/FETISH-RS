@@ -15,7 +15,6 @@ use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
 use crate::model::*;
-use crate::bayes_utils::*;
 use crate::schmear::*;
 use crate::sampled_function::*;
 use crate::inverse_schmear::*;

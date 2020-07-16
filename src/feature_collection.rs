@@ -34,18 +34,14 @@ pub trait FeatureCollection {
     }
 
     ///Gets the diagonal part of the prior precision matrix
-    fn blank_diagonal_precision(&self, out_dims : usize) -> Array4<f32> {
-        //Yield the kronecker product
+    fn blank_diagonal_precision(&self, out_dims : usize) -> Array2<f32> {
         let scalar = (self.get_dimension() as f32) * self.get_regularization_strength();
-        let in_eye = Array::eye(self.get_dimension()) * scalar;
-        let out_eye = Array::eye(out_dims);
-        einsum("ac,bd->abcd", &[&out_eye, &in_eye])
-            .unwrap().into_dimensionality::<Ix4>().unwrap()
+        Array:: eye(self.get_dimension()) * scalar
     }
 
     ///Gets the interaction part of the prior precision matrix
-    fn blank_interaction_precision(&self, other : &dyn FeatureCollection, out_dims : usize) -> Array4<f32> {
-        Array::zeros((out_dims, self.get_dimension(), out_dims, other.get_dimension()))
+    fn blank_interaction_precision(&self, other : &dyn FeatureCollection, out_dims : usize) -> Array2<f32> {
+        Array::zeros((self.get_dimension(), other.get_dimension()))
     }
 
 }

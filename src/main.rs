@@ -4,10 +4,13 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
-mod bayes_utils;
 mod array_utils;
 mod linalg_utils;
+mod normal_inverse_wishart;
 mod feature_collection;
+mod data_point;
+mod randomized_svd;
+mod normal_inverse_wishart_sampler;
 mod linear_feature_collection;
 mod sketched_linear_feature_collection;
 mod embedder_state;
@@ -17,6 +20,7 @@ mod fourier_feature_collection;
 mod cauchy_fourier_features;
 mod enum_feature_collection;
 mod model;
+mod wishart;
 mod inverse_schmear;
 mod schmear;
 mod model_space;
@@ -47,7 +51,6 @@ use std::rc::*;
 use crate::feature_collection::*;
 use crate::displayable_with_state::*;
 use crate::term_pointer::*;
-use crate::bayes_utils::*;
 use crate::inverse_schmear::*;
 use crate::model::*;
 use plotters::prelude::*;

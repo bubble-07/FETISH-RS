@@ -15,18 +15,19 @@ use crate::type_id::*;
 use crate::application_table::*;
 use crate::type_space::*;
 use crate::term::*;
+use crate::data_point::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::term_application::*;
 use crate::term_application_result::*;
 use crate::func_impl::*;
-use crate::bayes_utils::*;
 use crate::model::*;
 use crate::model_space::*;
 use crate::schmear::*;
 use crate::inverse_schmear::*;
 use crate::feature_collection::*;
 use crate::enum_feature_collection::*;
+use crate::normal_inverse_wishart::*;
 use topological_sort::TopologicalSort;
 
 pub struct EmbedderState {
@@ -286,7 +287,7 @@ impl EmbedderState {
         let ret_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_ret_type()).unwrap();
 
         let out_schmear : Schmear = func_space.apply_schmears(&func_schmear, &arg_schmear);
-        let out_prior : NormalInverseGamma = ret_space.schmear_to_prior(&out_schmear);
+        let out_prior : NormalInverseWishart = ret_space.schmear_to_prior(&out_schmear);
 
         if let TermReference::FuncRef(ret_ptr) = term_app_res.get_ret_ref() {
             //Actually perform the update

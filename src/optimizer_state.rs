@@ -15,7 +15,7 @@ use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::term_application::*;
 use crate::func_impl::*;
-use crate::bayes_utils::*;
+use crate::data_point::*;
 use crate::model::*;
 use crate::model_space::*;
 use crate::schmear::*;
