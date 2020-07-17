@@ -8,6 +8,7 @@ use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
 use noisy_float::prelude::*;
 use crate::array_utils::*;
+use crate::func_scatter_tensor::*;
 
 #[derive(Clone)]
 pub struct InverseSchmear {

@@ -15,14 +15,13 @@ use crate::params::*;
 
 //Note: This draws from https://docs.rs/crate/petal-decomposition/0.4.0/source/src/pca.rs
 
-pub fn randomized_rank_one_approx(input : &Array2<f32>, rng : &mut ThreadRng) -> (Array1<f32>, Array1<f32>) {
+pub fn randomized_rank_one_approx(input : &Array2<f32>, rng : &mut ThreadRng) -> (Array1<f32>, f32, Array1<f32>) {
     let t = input.shape()[0];
     let s = input.shape()[1];
     let (u, sigma, vt) = randomized_svd(input, 1, rng);
     let u_flat = u.into_shape((t,)).unwrap();
-    let mut v_flat = vt.into_shape((s,)).unwrap();
-    v_flat *= sigma[[0,]];
-    (u_flat, v_flat)
+    let v_flat = vt.into_shape((s,)).unwrap();
+    (u_flat, sigma[[0,]], v_flat)
 }
 
 fn randomized_svd(input : &Array2<f32>, n_components : usize, rng : &mut ThreadRng) -> 
