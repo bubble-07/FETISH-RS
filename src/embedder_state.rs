@@ -24,7 +24,9 @@ use crate::bayes_utils::*;
 use crate::model::*;
 use crate::model_space::*;
 use crate::schmear::*;
+use crate::func_schmear::*;
 use crate::inverse_schmear::*;
+use crate::func_inverse_schmear::*;
 use crate::feature_collection::*;
 use crate::enum_feature_collection::*;
 use topological_sort::TopologicalSort;
@@ -171,23 +173,23 @@ impl EmbedderState {
 
     fn get_schmear_from_ref(&self, term_ref : &TermReference) -> Schmear {
         match term_ref {
-            TermReference::FuncRef(func_ptr) => self.get_schmear_from_ptr(func_ptr),
+            TermReference::FuncRef(func_ptr) => self.get_schmear_from_ptr(func_ptr).flatten(),
             TermReference::VecRef(vec) => Schmear::from_vector(&vec)
         }
     }
-    fn get_schmear_from_ptr(&self, term_ptr : &TermPointer) -> Schmear {
+    fn get_schmear_from_ptr(&self, term_ptr : &TermPointer) -> FuncSchmear {
         let embedding : &Model = self.get_embedding(term_ptr);
         embedding.get_schmear()
     }
 
-    fn get_inverse_schmear_from_ptr(&self, term_ptr : &TermPointer) -> InverseSchmear {
+    fn get_inverse_schmear_from_ptr(&self, term_ptr : &TermPointer) -> FuncInverseSchmear {
         let embedding : &Model = self.get_embedding(term_ptr);
         embedding.get_inverse_schmear()
     }
 
     fn get_inverse_schmear_from_ref(&self, term_ref : &TermReference) -> InverseSchmear {
         match term_ref {
-            TermReference::FuncRef(func_ptr) => self.get_inverse_schmear_from_ptr(func_ptr),
+            TermReference::FuncRef(func_ptr) => self.get_inverse_schmear_from_ptr(func_ptr).flatten(),
             TermReference::VecRef(vec) => InverseSchmear::ident_precision_from_noisy(vec)
         }
     }
@@ -278,7 +280,7 @@ impl EmbedderState {
     //and use it to update the model for the result. If an existing update
     //exists for the given application of terms, this will first remove that update
     fn propagate_prior(&mut self, term_app_res : TermApplicationResult) {
-        let func_schmear : Schmear = self.get_schmear_from_ptr(&term_app_res.get_func_ptr());
+        let func_schmear : FuncSchmear = self.get_schmear_from_ptr(&term_app_res.get_func_ptr());
         let arg_schmear : Schmear = self.get_schmear_from_ref(&term_app_res.get_arg_ref());
        
         //Get the model space for the func type

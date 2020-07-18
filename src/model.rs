@@ -16,10 +16,14 @@ use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
 use crate::bayes_utils::*;
 use crate::term_application::*;
+use crate::func_scatter_tensor::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::schmear::*;
 use crate::inverse_schmear::*;
+use crate::func_schmear::*;
+use crate::func_inverse_schmear::*;
+
 use crate::sampled_function::*;
 use arraymap::ArrayMap;
 use rand::prelude::*;
@@ -54,13 +58,13 @@ impl Model {
     //have schmears
     pub fn find_better_app(&self, arg : &Model, target : &Array1<f32>) -> (InverseSchmear, InverseSchmear) {
         let func_inv_schmear = self.data.get_inverse_schmear();
-        let arg_inv_schmear = arg.data.get_inverse_schmear();
+        let arg_inv_schmear = arg.data.get_inverse_schmear().flatten();
         let u_x : Array1<f32> = arg_inv_schmear.mean;
         let p_x : Array2<f32> = arg_inv_schmear.precision;
         let u_f : Array2<f32> = self.data.get_mean();
 
         //t x z x t x z
-        let p_f : Array4<f32> = self.data.get_precision();
+        let p_f : FuncScatterTensor = self.data.get_precision();
 
         //z
         let k = self.get_features(&u_x);
@@ -85,24 +89,23 @@ impl Model {
         let u_f_J : Array2<f32> = einsum("ab,bc->ac", &[&u_f, &J]).unwrap()
                               .into_dimensionality::<Ix2>().unwrap();
 
-        //t x z x s
-        let J_r : Array3<f32> = einsum("zs,t->tzs", &[&J, &r]).unwrap()
+        //t x s x z
+        let J_r : Array3<f32> = einsum("zs,t->tsz", &[&J, &r]).unwrap()
                               .into_dimensionality::<Ix3>().unwrap();
 
-        //t x z x s
-        let k_u_f_J : Array3<f32> = einsum("z,ts->tzs", &[&k, &u_f_J]).unwrap()
+        //t x s x z
+        let k_u_f_J : Array3<f32> = einsum("z,ts->tsz", &[&k, &u_f_J]).unwrap()
                               .into_dimensionality::<Ix3>().unwrap();
 
         
-        //t x z x s
+        //t x s x z
         let B : Array3<f32> = alpha * (J_r - k_u_f_J);
 
-        //t x z x s
-        let B_t_p_f : Array3<f32> = einsum("tzs,tzab->abs", &[&B, &p_f]).unwrap()
-                              .into_dimensionality::<Ix3>().unwrap();
+        //t x s x z
+        let B_t_p_f = p_f.transform3(&B);
         
         //s x s
-        let B_t_p_f_B : Array2<f32> = einsum("tza,tzb->ab", &[&B_t_p_f, &B]).unwrap()
+        let B_t_p_f_B : Array2<f32> = einsum("taz,tbz->ab", &[&B_t_p_f, &B]).unwrap()
                               .into_dimensionality::<Ix2>().unwrap();
 
         //B_t_p_f_B + p_x : s x s
@@ -111,9 +114,9 @@ impl Model {
 
 
         //inner_inv : s x s,
-        //B_t_p_f : t x z x s
+        //B_t_p_f : t x s x z
         //a : t x z
-        let inner_inv_B_t_p_f_a : Array1<f32> = einsum("os,tzs,tz->o", &[&inner_inv, &B_t_p_f, &a]).unwrap()
+        let inner_inv_B_t_p_f_a : Array1<f32> = einsum("os,tsz,tz->o", &[&inner_inv, &B_t_p_f, &a]).unwrap()
                                .into_dimensionality::<Ix1>().unwrap();
 
         let delta_x : Array1<f32> = -inner_inv_B_t_p_f_a;
@@ -144,7 +147,7 @@ impl Model {
 
         let result_f = InverseSchmear {
             mean : mean_to_array(&new_f),
-            precision : func_inv_schmear.precision.clone()
+            precision : func_inv_schmear.precision.flatten()
         };
         
         let result_x = InverseSchmear {
@@ -168,12 +171,13 @@ impl Model {
 
         let delta_f : Array2<f32> = einsum("t,s->ts", &[&r, &k_normed]).unwrap()
                                     .into_dimensionality::<Ix2>().unwrap();
-        let new_f = func_inv_schmear.mean + mean_to_array(&delta_f);
+        let new_f = func_inv_schmear.mean + &delta_f;
 
-        InverseSchmear {
+        let result = FuncInverseSchmear {
             mean : new_f,
             precision : func_inv_schmear.precision.clone()
-        }
+        };
+        result.flatten()
     }
 }
 
@@ -193,11 +197,11 @@ impl Model {
     pub fn get_mean_as_vec(&self) -> Array1::<f32> {
         self.data.get_mean_as_vec()
     }
-    pub fn get_inverse_schmear(&self) -> InverseSchmear {
+    pub fn get_inverse_schmear(&self) -> FuncInverseSchmear {
         self.data.get_inverse_schmear()
     }
 
-    pub fn get_schmear(&self) -> Schmear {
+    pub fn get_schmear(&self) -> FuncSchmear {
         self.data.get_schmear()
     }
 
@@ -256,9 +260,8 @@ impl Model {
         self.prior_updates.insert(update_key, distr);
     }
     pub fn downdate_prior(&mut self, key : &PriorUpdateKey) {
-        let mut distr = self.prior_updates.remove(key).unwrap();
-        distr ^= ();
-        self.data += &distr;
+        let distr = self.prior_updates.remove(key).unwrap();
+        self.data -= &distr;
     }
 }
 
@@ -324,7 +327,8 @@ impl Model {
 
         println!("Initializing model initial distribution");
 
-        let data = NormalInverseGamma::new(mean, precision, 0.5, 0.0, out_dimensions, in_dimensions);
+        let factorized_precision = FuncScatterTensor::from_four_tensor(&precision);
+        let data = NormalInverseGamma::new(mean, factorized_precision, 0.5, 0.0, out_dimensions, in_dimensions);
     
         Model {
             in_dimensions,

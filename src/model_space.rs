@@ -14,11 +14,14 @@ use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
+use crate::func_scatter_tensor::*;
 use crate::model::*;
 use crate::bayes_utils::*;
 use crate::schmear::*;
+use crate::func_schmear::*;
 use crate::sampled_function::*;
 use crate::inverse_schmear::*;
+use crate::func_inverse_schmear::*;
 use arraymap::ArrayMap;
 use rand::prelude::*;
 
@@ -120,7 +123,8 @@ impl ModelSpace {
 
     pub fn schmear_to_prior(&self, in_schmear : &Schmear) -> NormalInverseGamma {
         let (mean, covar) = schmear_to_tensors(self.feature_dimensions, self.out_dimensions, in_schmear);
-        let precision = invert_hermitian_array4(&covar);
+        let sigma = FuncScatterTensor::from_four_tensor(&covar);
+        let precision = sigma.inverse();
         let s : usize = self.feature_dimensions;
         let t : usize = self.out_dimensions;
         let a : f32 = ((t * (s - 1)) as f32) * -0.5f32;
@@ -136,12 +140,11 @@ impl ModelSpace {
         to_features(&self.feature_collections, in_vec)
     }
 
-    pub fn apply_schmears(&self, f : &Schmear, x : &Schmear) -> Schmear {
-        let (f_mean, f_covar) = schmear_to_tensors(self.out_dimensions, self.feature_dimensions, f);
-        self.compute_out_schmear(&f_mean, &f_covar, x)
+    pub fn apply_schmears(&self, f : &FuncSchmear, x : &Schmear) -> Schmear {
+        self.compute_out_schmear(&f.mean, &f.covariance, x)
     }
 
-    fn compute_out_schmear(&self, f_mean : &Array2<f32>, f_covar : &Array4<f32>,
+    fn compute_out_schmear(&self, f_mean : &Array2<f32>, f_covar : &FuncScatterTensor,
                            x : &Schmear) -> Schmear {
         let x_mean = &x.mean;
         let x_covar = &x.covariance;
@@ -153,11 +156,11 @@ impl ModelSpace {
         let data_contrib = einsum("ts,sr,qr->tq", &[&jacobian, x_covar, &jacobian])
                             .unwrap().into_dimensionality::<Ix2>().unwrap();
 
-        
         //and the double-contraction of sigma_f by featurized x's
-        let model_contrib = einsum("tsrq,s,q->tr", &[f_covar, &feat_vec, &feat_vec])
-                            .unwrap().into_dimensionality::<Ix2>().unwrap();
-        
+        let feat_outer = einsum("s,q->sq", &[&feat_vec, &feat_vec]).unwrap()
+                            .into_dimensionality::<Ix2>().unwrap();
+        let model_contrib = f_covar.transform_in_out(&feat_outer);
+       
         let out_covar = data_contrib + model_contrib;
         let out_mean = einsum("ab,b->a", &[f_mean, x_mean])
                             .unwrap().into_dimensionality::<Ix1>().unwrap();

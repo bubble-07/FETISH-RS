@@ -7,12 +7,17 @@ use ndarray_einsum_beta::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
 use crate::schmear::*;
+use crate::func_schmear::*;
+use crate::func_scatter_tensor::*;
 use crate::inverse_schmear::*;
+use crate::func_inverse_schmear::*;
 use crate::cauchy_fourier_features::*;
 
 use rand::prelude::*;
 use rand_distr::{Cauchy, Distribution};
-use rand_distr::StandardNormal;
+use ndarray_rand::RandomExt;
+use ndarray_rand::rand_distr::StandardNormal;
+use ndarray_rand::rand_distr::ChiSquared;
 
 ///Data point [input, output pair]
 ///with an output precision matrix
@@ -26,8 +31,8 @@ pub struct DataPoint {
 pub struct NormalInverseGamma {
     mean: Array2<f32>,
     precision_u: Array2<f32>,
-    precision: Array4<f32>,
-    sigma : Array4<f32>,
+    precision : FuncScatterTensor,
+    sigma : FuncScatterTensor,
     a: f32,
     b: f32,
     t: usize,
@@ -92,32 +97,31 @@ pub fn schmear_to_tensors(t : usize, s : usize, schmear : &Schmear) -> (Array2<f
 
 impl NormalInverseGamma {
 
-    pub fn sample(&self, rng : &mut ThreadRng) -> Array2::<f32> {
+    pub fn sample_as_vec(&self, rng : &mut ThreadRng) -> Array1::<f32> {
         let t = self.mean.shape()[0];
         let s = self.mean.shape()[1];
 
-        let vec_sample = self.sample_as_vec(rng);
+        let sample = self.sample(rng);
 
-        let result = vec_sample.into_shape((t, s)).unwrap();
+        let result = sample.into_shape((t * s,)).unwrap();
 
         result
     }
 
-    pub fn sample_as_vec(&self, rng : &mut ThreadRng) -> Array1::<f32> {
+    pub fn sample(&self, rng : &mut ThreadRng) -> Array2::<f32> {
         let t = self.mean.shape()[0];
         let s = self.mean.shape()[1];
-        let std_norm_samp = gen_standard_normal_random(rng, t * s);
-        let my_schmear : Schmear = tensors_to_schmear(&self.mean, &self.sigma);
-        let mut result : Array1<f32> = einsum("ab,b->a", &[&my_schmear.covariance, &std_norm_samp])
-                                         .unwrap().into_dimensionality::<Ix1>().unwrap();
-        
+        let std_norm_samp = Array::random((t, s), StandardNormal);
+        let sqrt_covariance = self.sigma.sqrt();
+        let mut result : Array2<f32> = sqrt_covariance.transform(&std_norm_samp);
+       
         //Great, now we need to sample from the inverse-gamma part
         //to determine a multiplier for the covariance
         let inv_gamma_sample = gen_inverse_gamma_random(rng, self.a, self.b);
         result *= inv_gamma_sample;
 
         //Add the mean to offset it right
-        result += &my_schmear.mean;
+        result += &self.mean;
         result
     }
 
@@ -127,18 +131,30 @@ impl NormalInverseGamma {
     pub fn get_mean(&self) -> Array2::<f32> {
         self.mean.clone()
     }
-    pub fn get_schmear(&self) -> Schmear {
-        let mut result = tensors_to_schmear(&self.mean, &self.sigma);
-        result.covariance *= (self.a / self.b);
+
+    pub fn get_schmear(&self) -> FuncSchmear {
+        FuncSchmear {
+            mean : self.mean.clone(),
+            covariance : self.get_covariance()
+        }
+    }
+
+    pub fn get_inverse_schmear(&self) -> FuncInverseSchmear {
+        FuncInverseSchmear {
+            mean : self.mean.clone(),
+            precision : self.get_precision()
+        }
+    }
+
+    pub fn get_precision(&self) -> FuncScatterTensor {
+        let mut result = self.precision.clone();
+        result *= (self.b / self.a);
         result
     }
-    pub fn get_inverse_schmear(&self) -> InverseSchmear {
-        let mut result = tensors_to_inv_schmear(&self.mean, &self.precision);
-        result.precision *= (self.b / self.a);
+    pub fn get_covariance(&self) -> FuncScatterTensor {
+        let mut result = self.sigma.clone();
+        result *= (self.a / self.b);
         result
-    }
-    pub fn get_precision(&self) -> Array4<f32> {
-        self.precision.clone() * (self.b / self.a)
     }
 }
 
@@ -150,10 +166,9 @@ impl NormalInverseGamma {
 }
 
 impl NormalInverseGamma {
-    pub fn new(mean : Array2<f32>, precision : Array4<f32>, a : f32, b : f32, t : usize, s : usize) -> NormalInverseGamma {
-        let precision_u : Array2<f32> = einsum("abcd,cd->ab", &[&precision, &mean])
-                                        .unwrap().into_dimensionality::<Ix2>().unwrap();
-        let sigma = invert_hermitian_array4(&precision);
+    pub fn new(mean : Array2<f32>, precision : FuncScatterTensor, a : f32, b : f32, t : usize, s : usize) -> NormalInverseGamma {
+        let precision_u = precision.transform(&mean);
+        let sigma = precision.inverse();
         
         NormalInverseGamma {
             mean,
@@ -168,67 +183,38 @@ impl NormalInverseGamma {
     }
 }
 
-///Allows doing dist ^= dist to invert dist in place
-impl ops::BitXorAssign<()> for NormalInverseGamma {
-    fn bitxor_assign(&mut self, rhs: ()) {
-        self.precision_u *= -1.0;
-        self.precision *= -1.0;
-        self.sigma *= -1.0;
-        self.a *= -1.0;
-        self.a -= (self.t * self.s) as f32;
-        self.b *= -1.0;
-    }
-}
-
-pub fn invert_hermitian_array4(in_array: &Array4<f32>) -> Array4<f32> {
-    let t = in_array.shape()[0];
-    let s = in_array.shape()[1];
-    let as_matrix: Array2<f32> = in_array.clone().into_shape((t * s, t * s)).unwrap();
-    let as_matrix_inv: Array2<f32> = as_matrix.invh().unwrap();
-
-    as_matrix_inv.into_shape((t, s, t, s)).unwrap()
-}
-
 impl NormalInverseGamma {
 
     fn update(&mut self, data_point : &DataPoint, downdate : bool) {
-        let U = crate::linalg_utils::sqrtm(&data_point.out_inv_schmear.precision);
-        let out_precision = (if downdate == true {-1.0} else {1.0}) * &data_point.out_inv_schmear.precision;
-        
-        let precision_contrib = einsum("ac,b,d->abcd", &[&out_precision, &data_point.in_vec, &data_point.in_vec])
-                                .unwrap().into_dimensionality::<Ix4>().unwrap();
+        let out_precision = &data_point.out_inv_schmear.precision;
 
-        self.precision += &precision_contrib;
+        let in_precision : Array2<f32> = einsum("a,b->ab", &[&data_point.in_vec, &data_point.in_vec]).unwrap()
+                                         .into_dimensionality::<Ix2>().unwrap();
 
-        //Begin Woodbury formula inversion of sigma
-        let sigma_x_U = einsum("abcd,d,ce->abe", &[&self.sigma, &data_point.in_vec, &U])
-                                .unwrap();
-        let x_T_U_sigma = einsum("a,bc,cade->bde", &[&data_point.in_vec, &U, &self.sigma])
-                                .unwrap();
-        let x_T_U_sigma_x_U = einsum("abc,c,bd->ad", &[&x_T_U_sigma, &data_point.in_vec, &U])
-                                .unwrap().into_dimensionality::<Ix2>().unwrap();
+        let precision_contrib = FuncScatterTensor::from_in_and_out_scatter(in_precision, out_precision.clone());
 
-        let Z = Array::eye(self.t) + (if downdate == true {-1.0} else {1.0}) * x_T_U_sigma_x_U;
+        if (downdate) {
+            self.precision -= &precision_contrib;
+        } else {
+            self.precision += &precision_contrib;
+        }
 
-        let Z_inv = Z.invh().unwrap();
 
-        let sigma_diff = einsum("abe,ef,fcd", &[&sigma_x_U, &Z_inv, &x_T_U_sigma])
-                                .unwrap().into_dimensionality::<Ix4>().unwrap();
-
-        let sigma_diff_scaled = sigma_diff * (if downdate == true {1.0} else {-1.0});
-
-        self.sigma += &sigma_diff_scaled;
-
+        self.sigma = self.precision.inverse();
 
         let data_out_mean : &Array1::<f32> = &data_point.out_inv_schmear.mean;
 
-        let x_out_precision_y = einsum("s,tr,r->ts", 
-                               &[&data_point.in_vec, &out_precision, data_out_mean])
+        let mut x_out_precision_y = einsum("s,tr,r->ts", 
+                               &[&data_point.in_vec, out_precision, data_out_mean])
                                 .unwrap().into_dimensionality::<Ix2>().unwrap();
 
-        let y_T_out_precision_y = einsum("x,xy,y->", 
-                               &[data_out_mean, &out_precision, data_out_mean])
+        let mut y_T_out_precision_y = einsum("x,xy,y->", 
+                               &[data_out_mean, out_precision, data_out_mean])
                                 .unwrap().into_dimensionality::<Ix0>().unwrap().into_scalar();
+        if (downdate == true) {
+            x_out_precision_y *= -1.0f32;
+            y_T_out_precision_y *= -1.0f32;
+        }
         
         let u_precision_u_zero = einsum("ab,ab->", &[&self.mean, &self.precision_u])
                                 .unwrap().into_dimensionality::<Ix0>().unwrap().into_scalar();
@@ -238,8 +224,7 @@ impl NormalInverseGamma {
         self.b += 0.5 * u_precision_u_zero;
 
         self.precision_u += &x_out_precision_y;
-        self.mean = einsum("abcd,cd->ab", &[&self.sigma, &self.precision_u])
-                            .unwrap().into_dimensionality::<Ix2>().unwrap();
+        self.mean = self.sigma.transform(&self.precision_u);
 
         let u_precision_u_n = einsum("ab,ab->", &[&self.mean, &self.precision_u])
                                 .unwrap().into_dimensionality::<Ix0>().unwrap().into_scalar();
@@ -261,28 +246,31 @@ impl ops::SubAssign<&DataPoint> for NormalInverseGamma {
     }
 }
 
-impl ops::AddAssign<&NormalInverseGamma> for NormalInverseGamma {
-    fn add_assign(&mut self, other: &NormalInverseGamma) {
-        self.precision_u += &other.precision_u;
+impl NormalInverseGamma {
+    fn update_combine(&mut self, other : &NormalInverseGamma, downdate : bool) {
+        let mut precision_out = self.precision.clone();
+        if (downdate) {
+            self.precision_u -= &other.precision_u;
+            precision_out -= &other.precision;
+        } else {
+            self.precision_u += &other.precision_u;
+            precision_out += &other.precision;
+        }
 
-        let precision_out = &self.precision + &other.precision;
-
-        self.sigma = invert_hermitian_array4(&precision_out);
-
-        let mean_out : Array2<f32> = einsum("abcd,cd->ab", &[&self.sigma, &self.precision_u])
-                                        .unwrap().into_dimensionality::<Ix2>().unwrap();
+        self.sigma = precision_out.inverse();
+        let mean_out : Array2<f32> = self.sigma.transform(&self.precision_u);
 
         let mean_one_diff = &self.mean - &mean_out;
         let mean_two_diff = &other.mean - &mean_out;
 
-        let u_diff_l_u_diff_one = einsum("ab,abcd,cd->", &[&mean_one_diff, &self.precision, &mean_one_diff])
-                                        .unwrap().into_dimensionality::<Ix0>().unwrap().into_scalar();
-        let u_diff_l_u_diff_two = einsum("ab,abcd,cd->", &[&mean_two_diff, &other.precision, &mean_two_diff])
-                                        .unwrap().into_dimensionality::<Ix0>().unwrap().into_scalar();
+        let u_diff_l_u_diff_one = self.precision.inner_product(&mean_one_diff, &mean_one_diff);
+        let u_diff_l_u_diff_two = other.precision.inner_product(&mean_two_diff, &mean_two_diff);
         
-        self.b += other.b + 0.5 * (u_diff_l_u_diff_one + u_diff_l_u_diff_two);
+        let s = if (downdate) {-1.0f32} else {1.0f32};
+        
+        self.b += s * (other.b + 0.5 * (u_diff_l_u_diff_one + u_diff_l_u_diff_two));
 
-        self.a += other.a + 0.5 * ((self.t * self.s) as f32);
+        self.a += s * (other.a + 0.5 * ((self.t * self.s) as f32));
 
         self.precision = precision_out;
 
@@ -290,17 +278,13 @@ impl ops::AddAssign<&NormalInverseGamma> for NormalInverseGamma {
     }
 }
 
-
-fn zero_normal_inverse_gamma(t : usize, s : usize) -> NormalInverseGamma {
-    NormalInverseGamma {
-        mean: Array::zeros((t, s)),
-        precision_u: Array::zeros((t, s)),
-        precision: Array::zeros((t, s, t, s)),
-        sigma: Array::zeros((t, s, t, s)), //I know this is invalid
-        a: ((t * s) as f32) * -0.5f32,
-        b: 0.0,
-        t,
-        s
+impl ops::AddAssign<&NormalInverseGamma> for NormalInverseGamma {
+    fn add_assign(&mut self, other: &NormalInverseGamma) {
+        self.update_combine(other, false);
     }
 }
-
+impl ops::SubAssign<&NormalInverseGamma> for NormalInverseGamma {
+    fn sub_assign(&mut self, other : &NormalInverseGamma) {
+        self.update_combine(other, true);
+    }
+}

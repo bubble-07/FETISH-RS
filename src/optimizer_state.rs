@@ -95,7 +95,7 @@ impl OptimizerStateWithTarget {
             target_model += data_point;
         }
 
-        let target_inv_schmear : InverseSchmear = target_model.get_inverse_schmear();
+        let target_inv_schmear : InverseSchmear = target_model.get_inverse_schmear().flatten();
 
         println!("Readying interpreter state");
         let optimizer_state = OptimizerState::new();

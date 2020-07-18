@@ -20,6 +20,8 @@ mod cauchy_fourier_features;
 mod enum_feature_collection;
 mod model;
 mod inverse_schmear;
+mod func_schmear;
+mod func_inverse_schmear;
 mod schmear;
 mod model_space;
 mod type_id;
