@@ -297,7 +297,7 @@ impl Model {
 
         println!("Initializing model precision");
 
-        let mut precision : Array4<f32> = Array::zeros((out_dimensions, total_feat_dims, out_dimensions, total_feat_dims));
+        let mut in_precision : Array2<f32> = Array::zeros((total_feat_dims, total_feat_dims));
         let mut ind_one = 0;
 
         for (i, collection_i) in feature_collections.iter().enumerate() {
@@ -317,18 +317,19 @@ impl Model {
                     collection_i.blank_interaction_precision(collection_j, out_dimensions)
                 };
 
-                precision.slice_mut(s![.., ind_one..end_ind_one, .., ind_two..end_ind_two])
+                in_precision.slice_mut(s![ind_one..end_ind_one, ind_two..end_ind_two])
                          .assign(&precision_block);
 
                 ind_two = end_ind_two;
             }
             ind_one = end_ind_one;
         }
+        let out_precision : Array2<f32> = Array::eye(out_dimensions);
+        let precision = FuncScatterTensor::from_in_and_out_scatter(in_precision, out_precision);
 
         println!("Initializing model initial distribution");
 
-        let factorized_precision = FuncScatterTensor::from_four_tensor(&precision);
-        let data = NormalInverseGamma::new(mean, factorized_precision, 0.5, 0.0, out_dimensions, in_dimensions);
+        let data = NormalInverseGamma::new(mean, precision, 0.5, 0.0, out_dimensions, in_dimensions);
     
         Model {
             in_dimensions,

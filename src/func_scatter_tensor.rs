@@ -51,8 +51,8 @@ impl FuncScatterTensor {
         let reshaped_v = v.into_shape((s, s)).unwrap()
                           .into_dimensionality::<Ix2>().unwrap();
 
-        let in_scatter = get_closest_unit_norm_psd_matrix(&reshaped_u);
-        let out_scatter = get_closest_unit_norm_psd_matrix(&reshaped_v);
+        let out_scatter = get_closest_unit_norm_psd_matrix(&reshaped_u);
+        let in_scatter = get_closest_unit_norm_psd_matrix(&reshaped_v);
 
         FuncScatterTensor {
             in_scatter,
@@ -116,7 +116,7 @@ impl FuncScatterTensor {
 
     ///Transform a t x s mean matrix
     pub fn transform(&self, mean : &Array2<f32>) -> Array2<f32> {
-        let mut result : Array2<f32> = einsum("ab,cd,bd->ac", &[&self.out_scatter, &self.in_scatter, mean]).unwrap()
+        let mut result : Array2<f32> = einsum("ca,bd,ab->cd", &[&self.out_scatter, &self.in_scatter, mean]).unwrap()
                                    .into_dimensionality::<Ix2>().unwrap();
         result *= self.scale;
         result
@@ -124,7 +124,7 @@ impl FuncScatterTensor {
 
     ///Transform a t x s x m matrix to another t x s x m one
     pub fn transform3(&self, tensor : &Array3<f32>) -> Array3<f32> {
-        let mut result : Array3<f32> = einsum("ab,cd,bds->acs", &[&self.out_scatter, &self.in_scatter, tensor]).unwrap()
+        let mut result : Array3<f32> = einsum("ca,bd,abs->cds", &[&self.out_scatter, &self.in_scatter, tensor]).unwrap()
                                    .into_dimensionality::<Ix3>().unwrap();
         result *= self.scale;
         result
