@@ -50,37 +50,6 @@ pub fn mean_to_array(mean : &Array2<f32>) -> Array1<f32> {
     mean_copy.into_shape((n,)).unwrap()
 }
 
-fn tensors_to_schmeary(mean : &Array2<f32>, sigma : &Array4<f32>) -> (Array1<f32>, Array2<f32>) {
-    let t = mean.shape()[0];
-    let s = mean.shape()[1];
-    let n = t * s;
-
-    let mut sigma_copy = Array::zeros((t, s, t, s));
-
-    sigma_copy.assign(sigma);
-    
-    let flat_sigma = sigma_copy.into_shape((n, n)).unwrap();
-    let flat_mean : Array1<f32> = mean_to_array(mean);
-
-    (flat_mean, flat_sigma)
-}
-
-pub fn tensors_to_schmear(mean : &Array2<f32>, sigma : &Array4<f32>) -> Schmear {
-    let (mean, covariance) = tensors_to_schmeary(mean, sigma);
-    Schmear {
-        mean,
-        covariance
-    }
-}
-
-pub fn tensors_to_inv_schmear(mean : &Array2<f32>, precision : &Array4<f32>) -> InverseSchmear {
-    let (mean, precision) = tensors_to_schmeary(mean, precision);
-    InverseSchmear {
-        mean,
-        precision
-    }
-}
-
 pub fn schmear_to_tensors(t : usize, s : usize, schmear : &Schmear) -> (Array2<f32>, Array4<f32>) {
     let n = t * s; 
     

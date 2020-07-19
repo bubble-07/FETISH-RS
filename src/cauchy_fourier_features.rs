@@ -47,10 +47,6 @@ pub fn gen_inverse_gamma_random(rng : &mut ThreadRng, a : f32, b : f32) -> f32 {
     generate_inverse_gamma_random(rng, a, b)
 }
 
-pub fn gen_standard_normal_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {
-    generate_standard_normal_random(rng, dims)
-}
-
 pub fn gen_cauchy_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {
     generate_cauchy_random(rng, dims)
 }

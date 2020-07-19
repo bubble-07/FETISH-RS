@@ -27,11 +27,4 @@ impl Schmear {
             covariance : covariance
         }
     }
-
-    fn inverse(&self) -> InverseSchmear {
-        InverseSchmear {
-            mean : self.mean.clone(),
-            precision : self.covariance.clone().invh().unwrap()
-        }
-    }
 }
