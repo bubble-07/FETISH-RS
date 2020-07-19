@@ -3,9 +3,9 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
-use ndarray_einsum_beta::*;
 
 use crate::feature_collection::*;
+use crate::linalg_utils::*;
 use rand::prelude::*;
 use crate::params::*;
 
@@ -56,8 +56,8 @@ impl FeatureCollection for FourierFeatureCollection {
         let cos = dotted.mapv(f32::cos);
         let neg_sine = -dotted.mapv(f32::sin);
         
-        let part_one = einsum("ts,t->ts", &[&self.ws, &cos.view()]).unwrap();
-        let part_two = einsum("ts,t->ts", &[&self.ws, &neg_sine.view()]).unwrap();
+        let part_one = scale_rows(&self.ws, &cos);
+        let part_two = scale_rows(&self.ws, &neg_sine);
         
         stack(Axis(0), &[part_one.view(), part_two.view()]).unwrap()
             .into_dimensionality::<Ix2>().unwrap()

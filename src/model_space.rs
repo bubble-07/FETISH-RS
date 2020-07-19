@@ -3,7 +3,6 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
-use ndarray_einsum_beta::*;
 
 use std::ops;
 use std::rc::*;
@@ -15,6 +14,7 @@ use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
 use crate::func_scatter_tensor::*;
+use crate::linalg_utils::*;
 use crate::model::*;
 use crate::bayes_utils::*;
 use crate::schmear::*;
@@ -152,18 +152,16 @@ impl ModelSpace {
         let feat_vec = self.get_features(&x_mean);
         let jacobian = self.get_jacobian(&x_mean);
 
-        //There are two terms here for covariance -- J_f(x)^T sigma_x J_f(x)^T
-        let data_contrib = einsum("ts,sr,qr->tq", &[&jacobian, x_covar, &jacobian])
-                            .unwrap().into_dimensionality::<Ix2>().unwrap();
+        //There are two terms here for covariance -- J_f(x) sigma_x J_f(x)^T
+        let data_contrib = jacobian.dot(x_covar).dot(&jacobian.t());
 
         //and the double-contraction of sigma_f by featurized x's
-        let feat_outer = einsum("s,q->sq", &[&feat_vec, &feat_vec]).unwrap()
-                            .into_dimensionality::<Ix2>().unwrap();
+        let feat_outer = outer(&feat_vec, &feat_vec);
         let model_contrib = f_covar.transform_in_out(&feat_outer);
        
         let out_covar = data_contrib + model_contrib;
-        let out_mean = einsum("ab,b->a", &[f_mean, x_mean])
-                            .unwrap().into_dimensionality::<Ix1>().unwrap();
+        let out_mean = f_mean.dot(x_mean);
+
         Schmear {
             mean : out_mean,
             covariance : out_covar

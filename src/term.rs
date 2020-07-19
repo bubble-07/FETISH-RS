@@ -1,6 +1,5 @@
 use ndarray::*;
 use ndarray_linalg::*;
-use ndarray_einsum_beta::*;
 use crate::func_impl::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;

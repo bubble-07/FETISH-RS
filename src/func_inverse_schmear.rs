@@ -4,7 +4,6 @@ extern crate ndarray_linalg;
 use std::ops;
 use ndarray::*;
 use crate::array_utils::*;
-use ndarray_einsum_beta::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
 use noisy_float::prelude::*;

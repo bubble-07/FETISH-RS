@@ -37,7 +37,9 @@ impl FuncScatterTensor {
         let s = in_tensor.shape()[1];
         
         //first re-arrange to be t x t x s x s
-        let re_arranged = einsum("abcd->acbd", &[in_tensor]).unwrap();
+        let mut re_arranged = in_tensor.clone();
+        re_arranged.swap_axes(1, 2);
+
         //Now re-shape to be (t * t) x (s * s)
         let reshaped = re_arranged.into_shape((t * t, s * s)).unwrap()
                        .into_dimensionality::<Ix2>().unwrap();
@@ -73,58 +75,17 @@ impl FuncScatterTensor {
         result
     }
 
-    pub fn update_to_inverse_woodbury(&mut self, in_vec : &Array1<f32>, out_precision : &Array2<f32>,
-                                      downdate : bool) {
-        let t : usize = out_precision.shape()[0];
-        let s : usize = in_vec.shape()[0];
-
-        let U = sqrtm(&out_precision);
-
-        let in_scatter_in_vec : Array1<f32> = einsum("ab,b->a", &[&self.in_scatter, in_vec]).unwrap()
-                                              .into_dimensionality::<Ix1>().unwrap();
-
-        let out_scatter_U : Array2<f32> = einsum("ab,bc->ac", &[&self.out_scatter, &U]).unwrap()
-                                              .into_dimensionality::<Ix2>().unwrap();
-
-        let mut x_T_U_sigma = einsum("db,e->bde", &[&out_scatter_U, &in_scatter_in_vec]).unwrap();
-        x_T_U_sigma *= self.scale;
-        
-
-        let x_T_U_sigma_x_U = einsum("abc,c,bd->ad", &[&x_T_U_sigma, in_vec, &U])
-                                .unwrap().into_dimensionality::<Ix2>().unwrap();
-
-        let Z = Array::eye(t) + (if downdate == true {-1.0} else {1.0}) * x_T_U_sigma_x_U;
-        let Z_inv = Z.invh().unwrap();
-        
-        let out_diff = einsum("ae,ef,cf->ac", &[&out_scatter_U, &Z_inv, &out_scatter_U]).unwrap()
-                             .into_dimensionality::<Ix2>().unwrap();
-        let in_diff = einsum("b,d->bd", &[&in_scatter_in_vec, &in_scatter_in_vec]).unwrap()
-                             .into_dimensionality::<Ix2>().unwrap();
-        let scale_diff = self.scale * self.scale;
-
-
-        let mut total_diff = FuncScatterTensor {
-            in_scatter : in_diff,
-            out_scatter : out_diff,
-            scale : scale_diff
-        };
-        total_diff.renormalize();
-        //"downdate" is inverted here, because in the woodbury formula, there's a minus sign on the
-        //delta to the inverse matrix
-        self.update(&total_diff, !downdate);
-    }
-
     ///Transform a t x s mean matrix
     pub fn transform(&self, mean : &Array2<f32>) -> Array2<f32> {
-        let mut result : Array2<f32> = einsum("ca,bd,ab->cd", &[&self.out_scatter, &self.in_scatter, mean]).unwrap()
-                                   .into_dimensionality::<Ix2>().unwrap();
+        let mean_in_scatter : Array2<f32> = mean.dot(&self.in_scatter);
+        let mut result = self.out_scatter.dot(&mean_in_scatter);
         result *= self.scale;
         result
     }
 
     ///Transform a t x s x m matrix to another t x s x m one
     pub fn transform3(&self, tensor : &Array3<f32>) -> Array3<f32> {
-        let mut result : Array3<f32> = einsum("ca,bd,abs->cds", &[&self.out_scatter, &self.in_scatter, tensor]).unwrap()
+        let mut result : Array3<f32> = einsum("ca,abs,bd->cds", &[&self.out_scatter, tensor, &self.in_scatter]).unwrap()
                                    .into_dimensionality::<Ix3>().unwrap();
         result *= self.scale;
         result
@@ -132,14 +93,13 @@ impl FuncScatterTensor {
 
     ///Induced inner product on t x s mean matrices
     pub fn inner_product(&self, mean_one : &Array2<f32>, mean_two : &Array2<f32>) -> f32 {
-        let result = einsum("ab,ac,bd,cd->", &[mean_one, &self.out_scatter, &self.in_scatter, mean_two])
-                           .unwrap().into_dimensionality::<Ix0>().unwrap().into_scalar();
-        result * self.scale
+        let transformed = self.transform(mean_two);
+        let result = frob_inner(mean_one, &transformed);
+        result
     }
 
     pub fn transform_in_out(&self, in_array : &Array2<f32>) -> Array2<f32> {
-        let in_inner = einsum("ab,ab->", &[&self.in_scatter, in_array]).unwrap()
-                       .into_dimensionality::<Ix0>().unwrap().into_scalar();
+        let in_inner = frob_inner(&self.in_scatter, in_array);
         let mut out = self.out_scatter.clone();
         out *= in_inner * self.scale;
         out

@@ -3,9 +3,9 @@ extern crate ndarray_linalg;
 
 use std::ops;
 use ndarray::*;
-use ndarray_einsum_beta::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
+use crate::linalg_utils::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
 use crate::func_scatter_tensor::*;
@@ -160,8 +160,7 @@ impl NormalInverseGamma {
 
 impl NormalInverseGamma {
     pub fn eval(&self, in_vec : &Array1<f32>) -> Array1<f32> {
-        einsum("ab,b->a", &[&self.mean, in_vec])
-              .unwrap().into_dimensionality::<Ix1>().unwrap()
+        self.mean.dot(in_vec)
     }
 }
 
@@ -190,8 +189,7 @@ impl NormalInverseGamma {
     fn update(&mut self, data_point : &DataPoint, downdate : bool) {
         let out_precision = &data_point.out_inv_schmear.precision;
 
-        let in_precision : Array2<f32> = einsum("a,b->ab", &[&data_point.in_vec, &data_point.in_vec]).unwrap()
-                                         .into_dimensionality::<Ix2>().unwrap();
+        let in_precision = outer(&data_point.in_vec, &data_point.in_vec);
 
         let precision_contrib = FuncScatterTensor::from_in_and_out_scatter(in_precision, out_precision.clone());
 
@@ -206,21 +204,18 @@ impl NormalInverseGamma {
 
         let data_out_mean : &Array1::<f32> = &data_point.out_inv_schmear.mean;
 
-        let mut x_out_precision_y = einsum("s,tr,r->ts", 
-                               &[&data_point.in_vec, out_precision, data_out_mean])
-                                .unwrap().into_dimensionality::<Ix2>().unwrap();
+        let out_precision_y : Array1<f32> = out_precision.dot(data_out_mean);
 
-        let mut y_T_out_precision_y = einsum("x,xy,y->", 
-                               &[data_out_mean, out_precision, data_out_mean])
-                                .unwrap().into_dimensionality::<Ix0>().unwrap().into_scalar();
+        let mut x_out_precision_y = outer(&out_precision_y, &data_point.in_vec);
+
+        let mut y_T_out_precision_y = out_precision_y.dot(data_out_mean);
+
         if (downdate == true) {
             x_out_precision_y *= -1.0f32;
             y_T_out_precision_y *= -1.0f32;
         }
         
-        let u_precision_u_zero = einsum("ab,ab->", &[&self.mean, &self.precision_u])
-                                .unwrap().into_dimensionality::<Ix0>().unwrap().into_scalar();
-
+        let u_precision_u_zero = frob_inner(&self.mean, &self.precision_u);
 
         self.b += 0.5 * y_T_out_precision_y;
         self.b += 0.5 * u_precision_u_zero;
@@ -228,8 +223,7 @@ impl NormalInverseGamma {
         self.precision_u += &x_out_precision_y;
         self.mean = self.sigma.transform(&self.precision_u);
 
-        let u_precision_u_n = einsum("ab,ab->", &[&self.mean, &self.precision_u])
-                                .unwrap().into_dimensionality::<Ix0>().unwrap().into_scalar();
+        let u_precision_u_n = frob_inner(&self.mean, &self.precision_u);
         self.b -= 0.5 * &u_precision_u_n;
 
         self.a += (self.t as f32) * (if downdate == true {-0.5} else {0.5});

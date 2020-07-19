@@ -28,8 +28,7 @@ pub struct SampledFunction {
 impl SampledFunction {
     pub fn apply(&self, input : &Array1<f32>) -> Array1<f32> {
         let features : Array1<f32> = to_features(&self.feature_collections, input);
-        let result : Array1<f32> = einsum("ab,b->a", &[&self.mat, &features])
-                                         .unwrap().into_dimensionality::<Ix1>().unwrap();
+        let result : Array1<f32> = self.mat.dot(&features);
         result
     }
 
@@ -72,7 +71,7 @@ impl ArgminOp for SampledFunctionTarget {
     fn gradient(&self, p : &Self::Param) -> Result<Self::Param, Error> {
         let features = to_features(&self.func.feature_collections, p);
         let jacobian = to_jacobian(&self.func.feature_collections, p);
-        let const_term : Array1<f32> = einsum("a,ab->a", &[&self.y_t_s_m, &jacobian]).unwrap()
+        let const_term : Array1<f32> = einsum("a,ab->b", &[&self.y_t_s_m, &jacobian]).unwrap()
                                        .into_dimensionality::<Ix1>().unwrap();
         let mut result : Array1<f32> = einsum("a,ab,bc->c", &[&features, &self.m_t_s_m, &jacobian]).unwrap()
                                        .into_dimensionality::<Ix1>().unwrap();

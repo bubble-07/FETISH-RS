@@ -46,7 +46,6 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
-use ndarray_einsum_beta::*;
 use std::rc::*;
 
 use crate::feature_collection::*;

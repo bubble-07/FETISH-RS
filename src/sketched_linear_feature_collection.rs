@@ -3,7 +3,6 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
-use ndarray_einsum_beta::*;
 
 use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
@@ -42,8 +41,7 @@ impl FeatureCollection for SketchedLinearFeatureCollection {
     }
 
     fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32> {
-        let projected : Array1<f32> = einsum("ab,b->a", &[&self.projection_mat, in_vec]).unwrap()
-                                      .into_dimensionality::<Ix1>().unwrap();
+        let projected = self.projection_mat.dot(in_vec);
         let single_ones = Array::ones((1,));
         stack(Axis(0), &[projected.view(), single_ones.view()]).unwrap()
     }

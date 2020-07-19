@@ -2,9 +2,9 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_einsum_beta::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
+use crate::linalg_utils::*;
 
 pub fn get_closest_unit_norm_psd_matrix(in_mat : &Array2<f32>) -> Array2<f32> {
     let mut result = get_closest_psd_matrix(in_mat);
@@ -25,8 +25,8 @@ pub fn get_closest_psd_matrix(in_mat : &Array2<f32>) -> Array2<f32> {
             eigenvals[[i,]] = 0.0f32;
         }
     }
-    //Re-constitute the matrix
-    let result = einsum("ba,b,bc->ac", &[&symmetrized, &eigenvals, &symmetrized]).unwrap()
-                       .into_dimensionality::<Ix2>().unwrap();
+    //Re-constitute the matrix as S^T E S
+    let result_right = scale_rows(&symmetrized, &eigenvals);
+    let result = symmetrized.t().dot(&result_right);
     result
 }

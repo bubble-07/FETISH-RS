@@ -14,6 +14,7 @@ use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
+use crate::linalg_utils::*;
 use crate::bayes_utils::*;
 use crate::term_application::*;
 use crate::func_scatter_tensor::*;
@@ -68,26 +69,22 @@ impl Model {
 
         //z
         let k = self.get_features(&u_x);
-        let k_t_k = einsum("a,a->", &[&k, &k]).unwrap()
-                    .into_dimensionality::<Ix0>().unwrap().into_scalar();
+        let k_t_k = k.dot(&k);
         let alpha = 1.0f32 / k_t_k;
 
-        let u_f_k : Array1<f32> = einsum("ab,b->a", &[&u_f, &k]).unwrap()
-                                  .into_dimensionality::<Ix1>().unwrap();
+        let u_f_k = u_f.dot(&k);
         //t
         let r = target - &u_f_k;
         //z x s
         let J = to_jacobian(&self.feature_collections, &u_x);
 
         //t x z
-        let mut a : Array2<f32> = einsum("a,b->ab", &[&r, &k]).unwrap()
-                              .into_dimensionality::<Ix2>().unwrap();
+        let mut a : Array2<f32> = outer(&r, &k);
 
         a *= alpha;
 
         //t x s
-        let u_f_J : Array2<f32> = einsum("ab,bc->ac", &[&u_f, &J]).unwrap()
-                              .into_dimensionality::<Ix2>().unwrap();
+        let u_f_J : Array2<f32> = u_f.dot(&J);
 
         //t x s x z
         let J_r : Array3<f32> = einsum("zs,t->tsz", &[&J, &r]).unwrap()
@@ -129,19 +126,16 @@ impl Model {
         let new_x : Array1<f32> = u_x + delta_x;
         let new_k : Array1<f32> = self.get_features(&new_x);
 
-        let new_k_sq_norm : f32 = einsum("a,a->", &[&new_k, &new_k]).unwrap()
-                                  .into_dimensionality::<Ix0>().unwrap().into_scalar();
+        let new_k_sq_norm = new_k.dot(&new_k);
 
-        let u_f_new_k : Array1<f32> = einsum("ab,b->a", &[&u_f, &new_k]).unwrap()
-                                      .into_dimensionality::<Ix1>().unwrap();
+        let u_f_new_k = u_f.dot(&new_k);
 
         let norm_new_k : Array1<f32> = (1.0f32 / new_k_sq_norm) * new_k;
 
         
         let t : Array1<f32> = target - &u_f_new_k;
 
-        let delta_f : Array2<f32> = einsum("t,s->ts", &[&t, &norm_new_k]).unwrap()
-                                      .into_dimensionality::<Ix2>().unwrap();
+        let delta_f : Array2<f32> = outer(&t, &norm_new_k);
 
         let new_f = u_f + delta_f;
 
@@ -161,16 +155,14 @@ impl Model {
     //Find a better function in the case where the argument is a vector
     pub fn find_better_func(&self, arg : &Array1<f32>, target : &Array1<f32>) -> InverseSchmear {
         let k = self.get_features(arg);
-        let k_t_k = einsum("a,a->", &[&k, &k]).unwrap()
-                          .into_dimensionality::<Ix0>().unwrap().into_scalar();
+        let k_t_k = k.dot(&k);
         let k_normed = k * (1.0f32 / k_t_k);
 
         let func_inv_schmear = self.data.get_inverse_schmear();
         let new_out = self.eval(arg);
         let r = target - &new_out;
 
-        let delta_f : Array2<f32> = einsum("t,s->ts", &[&r, &k_normed]).unwrap()
-                                    .into_dimensionality::<Ix2>().unwrap();
+        let delta_f : Array2<f32> = outer(&r, &k_normed);
         let new_f = func_inv_schmear.mean + &delta_f;
 
         let result = FuncInverseSchmear {
