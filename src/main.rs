@@ -6,6 +6,7 @@
 
 mod bayes_utils;
 mod array_utils;
+mod linear_sketch;
 mod linalg_utils;
 mod feature_collection;
 mod linear_feature_collection;

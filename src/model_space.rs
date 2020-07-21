@@ -15,7 +15,9 @@ use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
 use crate::func_scatter_tensor::*;
 use crate::linalg_utils::*;
+use crate::linear_sketch::*;
 use crate::model::*;
+use crate::params::*;
 use crate::bayes_utils::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
@@ -34,12 +36,20 @@ pub struct ModelSpace {
     feature_dimensions : usize,
     out_dimensions : usize,
     feature_collections : Rc<[EnumFeatureCollection; 3]>,
-    models : HashMap<ModelKey, Model>
+    models : HashMap<ModelKey, Model>,
+    func_sketcher : LinearSketch
 }
 
 impl ModelSpace {
-    pub fn get_dimensions(&self) -> usize {
+    pub fn get_full_dimensions(&self) -> usize {
         self.feature_dimensions * self.out_dimensions
+    }
+    pub fn get_sketched_dimensions(&self) -> usize {
+        self.func_sketcher.get_output_dimension()
+    }
+
+    pub fn compress_inverse_schmear(&self, inv_schmear : &InverseSchmear) -> InverseSchmear {
+        self.func_sketcher.compress_inverse_schmear(inv_schmear)
     }
 
     pub fn new(in_dimensions : usize, out_dimensions : usize) -> ModelSpace {
@@ -52,12 +62,17 @@ impl ModelSpace {
         }
         println!("And feature dims {}", total_feat_dims);
 
+        let embedding_dim = total_feat_dims * out_dimensions;
+        let sketched_embedding_dim = get_reduced_output_dimension(embedding_dim);
+        let output_sketch = LinearSketch::new(embedding_dim, sketched_embedding_dim);
+
         let model_space = ModelSpace {
             in_dimensions : in_dimensions,
             feature_dimensions : total_feat_dims,
             out_dimensions : out_dimensions,
             feature_collections : rc_feature_collections,
-            models : HashMap::new()
+            models : HashMap::new(),
+            func_sketcher : output_sketch
         };
         model_space
     }
@@ -122,9 +137,11 @@ impl ModelSpace {
     }
 
     pub fn schmear_to_prior(&self, in_schmear : &Schmear) -> NormalInverseGamma {
-        let (mean, covar) = schmear_to_tensors(self.feature_dimensions, self.out_dimensions, in_schmear);
+        let expanded_schmear = self.func_sketcher.expand_schmear(in_schmear);
+        let (mean, covar) = schmear_to_tensors(self.feature_dimensions, self.out_dimensions, &expanded_schmear);
         let sigma = FuncScatterTensor::from_four_tensor(&covar);
         let precision = sigma.inverse();
+
         let s : usize = self.feature_dimensions;
         let t : usize = self.out_dimensions;
         let a : f32 = ((t * (s - 1)) as f32) * -0.5f32;

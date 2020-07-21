@@ -22,6 +22,15 @@ impl InverseSchmear {
         let result : f32 = diff.dot(&precision_diff);
         result
     }
+    
+    pub fn transform_compress(&self, mat : &Array2<f32>) -> InverseSchmear {
+        let mean = mat.dot(&self.mean);
+        let precision = mat.dot(&self.precision).dot(&mat.t());
+        InverseSchmear {
+            mean,
+            precision
+        }
+    }
 
     pub fn ident_precision_from_noisy(vec : &Array1<R32>) -> InverseSchmear {
         let n = vec.len();

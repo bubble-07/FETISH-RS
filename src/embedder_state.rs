@@ -40,7 +40,8 @@ impl EmbedderState {
         println!("Readying embedder state");
         let mut model_spaces = HashMap::<TypeId, ModelSpace>::new();
         
-        let mut dimensions = HashMap::<TypeId, usize>::new();
+        let mut in_dimensions = HashMap::<TypeId, usize>::new();
+        let mut out_dimensions = HashMap::<TypeId, usize>::new();
         let mut topo_sort = TopologicalSort::<TypeId>::new();
         for i in 0..total_num_types() {
             let type_id : TypeId = i as TypeId;
@@ -50,7 +51,8 @@ impl EmbedderState {
                     topo_sort.add_dependency(ret_type_id, type_id);
                 },
                 Type::VecType(dim) => {
-                    dimensions.insert(type_id, dim);
+                    in_dimensions.insert(type_id, dim);
+                    out_dimensions.insert(type_id, dim);
                 }
             };
         }
@@ -59,14 +61,16 @@ impl EmbedderState {
             let mut type_ids : Vec<TypeId> = topo_sort.pop_all();
             for func_type_id in type_ids.drain(..) {
                 if let Type::FuncType(arg_type_id, ret_type_id) = get_type(func_type_id) {
-                    let arg_dimension = *dimensions.get(&arg_type_id).unwrap();
-                    let ret_dimension = *dimensions.get(&ret_type_id).unwrap();
+                    let arg_dimension = *in_dimensions.get(&arg_type_id).unwrap();
+                    let ret_dimension = *out_dimensions.get(&ret_type_id).unwrap();
 
                     println!("Creating model space with dims {} -> {}", arg_dimension, ret_dimension);
                     let model_space = ModelSpace::new(arg_dimension, ret_dimension);
-                    let model_dims = model_space.get_dimensions();
+                    let model_sketched_dims = model_space.get_sketched_dimensions();
+                    let model_full_dims = model_space.get_full_dimensions();
                     model_spaces.insert(func_type_id, model_space);
-                    dimensions.insert(func_type_id, model_dims);
+                    in_dimensions.insert(func_type_id, model_full_dims);
+                    out_dimensions.insert(func_type_id, model_sketched_dims);
                 }
             }
         }
@@ -308,7 +312,13 @@ impl EmbedderState {
         let ret_ref = term_app_res.get_ret_ref();
 
         let arg_mean : Array1::<f32> = self.get_mean_from_ref(&arg_ref);
-        let out_inv_schmear : InverseSchmear = self.get_inverse_schmear_from_ref(&ret_ref);
+        let mut out_inv_schmear : InverseSchmear = self.get_inverse_schmear_from_ref(&ret_ref);
+
+        let out_type = term_app_res.get_ret_type();
+        if is_vector_type(out_type) {
+            let out_space = self.model_spaces.get(&out_type).unwrap();
+            out_inv_schmear = out_space.compress_inverse_schmear(&out_inv_schmear);
+        }
 
         let data_point = DataPoint {
             in_vec : arg_mean,
