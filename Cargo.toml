@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 ndarray={version = "0.13.1", features = ["blas"] }
-ndarray-linalg={version = "0.12.0", features = ["openblas-src"]}
+ndarray-linalg={version = "0.12.1", features = ["openblas-src"]}
 ndarray_einsum_beta="0.5.0"
 rustfft="3.0.1"
 rand="0.7.3"
@@ -18,7 +18,7 @@ enum_dispatch="0.3.0"
 argmin={version = "0.3.1", features = ["ndarrayl"] }
 arraymap="0.1.1"
 plotters="0.2"
-lapack-src = {version = "0.4.0", default-features = false, features = ["openblas"]}
+lapack-src = {version = "0.6", default-features = false, features = ["openblas"]}
 noisy_float="0.1.12"
 lazy_static="1.4.0"
 multimap="0.8.1"

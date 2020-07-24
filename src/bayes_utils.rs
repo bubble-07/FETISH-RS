@@ -139,7 +139,7 @@ impl NormalInverseGamma {
         let precision_u = precision.transform(&mean);
         println!("Inverting precision with dims {}, {}", t, s);
         let sigma = precision.inverse();
-        
+
         NormalInverseGamma {
             mean,
             precision_u,
@@ -195,7 +195,14 @@ impl NormalInverseGamma {
         let u_precision_u_n = frob_inner(&self.mean, &self.precision_u);
         self.b -= 0.5 * &u_precision_u_n;
 
+        if (self.b < 0.0f32) {
+            panic!();
+        }
+
         self.a += (self.t as f32) * (if downdate == true {-0.5} else {0.5});
+        if (self.a < 0.0f32) {
+            panic!();
+        }
     }
 }
 
@@ -235,7 +242,23 @@ impl NormalInverseGamma {
         
         self.b += s * (other.b + 0.5 * (u_diff_l_u_diff_one + u_diff_l_u_diff_two));
 
-        self.a += s * (other.a + 0.5 * ((self.t * self.s) as f32));
+        if (self.b < 0.0f32) {
+            panic!();
+        }
+
+
+        let a_base = -0.5 * ((self.t * self.s) as f32);
+        println!("a values {}, {}, {}", self.a, other.a, a_base);
+        println!("update combine t {}, s {}", self.t, self.s);
+
+        let my_a_centered = self.a - a_base;
+        let other_a_centered = other.a - a_base;
+        let combined_a_centered = my_a_centered + s * other_a_centered;
+        self.a = combined_a_centered + a_base;
+
+        if (self.a < 0.0f32) {
+            panic!();
+        }
 
         self.precision = precision_out;
 

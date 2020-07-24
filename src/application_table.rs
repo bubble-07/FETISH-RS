@@ -43,16 +43,25 @@ impl ApplicationTable {
         self.table.get(term_app).unwrap().clone()
     }
 
-    pub fn get_app_results_with_arg(&self, arg : &TermReference) -> &Vec<TermApplicationResult> {
-        self.arg_to_application_map.get_vec(arg).unwrap()
+    pub fn get_app_results_with_arg(&self, arg : &TermReference) -> Vec<TermApplicationResult> {
+        match (self.arg_to_application_map.get_vec(arg)) {
+            Option::Some(vec) => vec.clone(),
+            Option::None => Vec::new()
+        }
     }
 
-    pub fn get_app_results_with_func(&self, func : &TermPointer) -> &Vec<TermApplicationResult> {
-        self.func_to_application_map.get_vec(func).unwrap()
+    pub fn get_app_results_with_func(&self, func : &TermPointer) -> Vec<TermApplicationResult> {
+        match (self.func_to_application_map.get_vec(func)) {
+            Option::Some(vec) => vec.clone(),
+            Option::None => Vec::new()
+        }
     }
 
-    pub fn get_app_results_with_result(&self, result : &TermReference) -> &Vec<TermApplicationResult> {
-        self.result_to_application_map.get_vec(result).unwrap()
+    pub fn get_app_results_with_result(&self, result : &TermReference) -> Vec<TermApplicationResult> {
+        match (self.result_to_application_map.get_vec(result)) {
+            Option::Some(vec) => vec.clone(),
+            Option::None => Vec::new()
+        }
     }
 
     pub fn link(&mut self, term_app : TermApplication, result_ref : TermReference) {

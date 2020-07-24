@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use lazy_static::*;
 use topological_sort::*;
 use crate::params::*;
+use std::fmt;
 
 lazy_static! {
     static ref GLOBAL_TYPE_INFO : GlobalTypeInfo = {
@@ -54,16 +55,20 @@ lazy_static! {
         }
 
         //Fill in the ret_types table
+       for ret_type_id in 0..types.info_vec.len() {
+            if (!types.ret_map.contains_key(&ret_type_id)) {
+                types.ret_map.insert(ret_type_id, Vec::new());
+            }
+        } 
+
         for i in 0..types.info_vec.len() {
             let type_id = i as TypeId;
             if let Type::FuncType(arg_type_id, ret_type_id) = types.info_vec[type_id].clone() {
-                if (!types.ret_map.contains_key(&ret_type_id)) {
-                    types.ret_map.insert(ret_type_id, Vec::new());
-                }
                 let vec : &mut Vec::<(TypeId, TypeId)> = types.ret_map.get_mut(&ret_type_id).unwrap();
                 vec.push((type_id, arg_type_id));
             }
         }
+        
         println!("Type initialization complete");
 
         types
@@ -158,4 +163,13 @@ pub type TypeId = usize;
 pub enum Type {
     VecType(usize),
     FuncType(TypeId, TypeId)
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f : &mut fmt::Formatter<'_>) -> fmt::Result {
+        match (self) {
+            Type::VecType(n) => write!(f, "{}", n),
+            Type::FuncType(arg, ret) => write!(f, "({} -> {})", get_type(*arg), get_type(*ret))
+        }
+    }
 }

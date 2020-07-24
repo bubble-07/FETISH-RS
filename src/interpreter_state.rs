@@ -34,7 +34,7 @@ impl InterpreterState {
     pub fn get_app_results_with_arg(&self, arg : &TermReference) -> Vec<TermApplicationResult> {
         let mut result : Vec<TermApplicationResult> = Vec::new();
         for table in self.application_tables.values() {
-            let mut temp = table.get_app_results_with_arg(arg).clone();
+            let mut temp = table.get_app_results_with_arg(arg);
             result.append(&mut temp);
         }
         result
@@ -43,7 +43,7 @@ impl InterpreterState {
     pub fn get_app_results_with_func(&self, func : &TermPointer) -> Vec<TermApplicationResult> {
         let mut result : Vec<TermApplicationResult> = Vec::new();
         for table in self.application_tables.values() {
-            let mut temp = table.get_app_results_with_func(func).clone();
+            let mut temp = table.get_app_results_with_func(func);
             result.append(&mut temp);
         }
         result
@@ -52,7 +52,7 @@ impl InterpreterState {
     pub fn get_app_results_with_result(&self, result_term : &TermReference) -> Vec<TermApplicationResult> {
         let mut result : Vec<TermApplicationResult> = Vec::new();
         for table in self.application_tables.values() {
-            let mut temp = table.get_app_results_with_result(result_term).clone();
+            let mut temp = table.get_app_results_with_result(result_term);
             result.append(&mut temp);
         }
         result

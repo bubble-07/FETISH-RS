@@ -98,9 +98,12 @@ impl OptimizerStateWithTarget {
 
         println!("Readying interpreter state");
         let optimizer_state = OptimizerState::new();
+        let target_space = optimizer_state.embedder_state.model_spaces.get(&target_type_id).unwrap();
+        let reduced_target_inv_schmear = target_space.compress_inverse_schmear(&target_inv_schmear);
+
         OptimizerStateWithTarget {
             optimizer_state,
-            target_inv_schmear,
+            target_inv_schmear : reduced_target_inv_schmear,
             target_type_id
         }
     }
@@ -135,6 +138,12 @@ impl OptimizerState {
         let mut best_application_and_types : Option<(TermApplication, TypeId, TypeId)> = Option::None;
         
         for (func_type_id, arg_type_id) in application_type_ids.drain(..) {
+            println!("Type ids {}, {}, {}", get_type(func_type_id), get_type(arg_type_id), 
+                                            get_type(target_type_id));
+            let func_space = self.embedder_state.model_spaces.get(&func_type_id).unwrap();
+            println!("optimize evaluating {}, {}, {}, {}", func_space.in_dimensions,
+                    func_space.feature_dimensions, func_space.out_dimensions, 
+                    target_inv_schmear.mean.shape()[0]);
             let (application, dist) = self.embedder_state.thompson_sample_app(func_type_id, arg_type_id, 
                                                                               target_inv_schmear);
             if (dist < best_dist) {

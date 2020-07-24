@@ -31,7 +31,7 @@ use crate::enum_feature_collection::*;
 use topological_sort::TopologicalSort;
 
 pub struct EmbedderState {
-    model_spaces : HashMap::<TypeId, ModelSpace>
+    pub model_spaces : HashMap::<TypeId, ModelSpace>
 }
 
 impl EmbedderState {
@@ -91,13 +91,15 @@ impl EmbedderState {
         (term_pointer, dist)
     }
 
-    pub fn thompson_sample_app(&self, func_id : TypeId, arg_id : TypeId, inv_schmear : &InverseSchmear)
+    pub fn thompson_sample_app(&self, func_id : TypeId, arg_id : TypeId, target : &InverseSchmear)
                               -> (TermApplication, f32) {
         let func_space : &ModelSpace = self.model_spaces.get(&func_id).unwrap();
+        println!("sampling app {}, {}, {}, {}", func_space.in_dimensions, func_space.feature_dimensions,
+                                            func_space.out_dimensions, target.mean.shape()[0]);
         let mut rng = rand::thread_rng();
         //Now we have two cases, depending on whether/not the argument type is a vector type
         if is_vector_type(arg_id) {
-            let (func_ind, vec, dist) = func_space.thompson_sample_vec(&mut rng, inv_schmear);
+            let (func_ind, vec, dist) = func_space.thompson_sample_vec(&mut rng, target);
             let func_pointer = TermPointer {
                 type_id : func_id,
                 index : func_ind
@@ -110,7 +112,7 @@ impl EmbedderState {
             (term_application, dist) 
         } else {
             let arg_space : &ModelSpace = self.model_spaces.get(&arg_id).unwrap();
-            let (func_ind, arg_ind, dist) = func_space.thompson_sample_app(&mut rng, arg_space, inv_schmear); 
+            let (func_ind, arg_ind, dist) = func_space.thompson_sample_app(&mut rng, arg_space, target); 
             let func_pointer = TermPointer {
                 type_id : func_id,
                 index : func_ind
@@ -130,17 +132,23 @@ impl EmbedderState {
     pub fn find_better_app(&self, term_application : &TermApplication, target : &Array1<f32>) ->
                           (InverseSchmear, Option::<InverseSchmear>) {
         let func_ptr = &term_application.func_ptr;
+        let func_space = self.get_model_space(func_ptr);
         let func_model = self.get_embedding(func_ptr);
         let arg_ref = &term_application.arg_ref;
         match arg_ref {
             TermReference::FuncRef(arg_ptr) => {
+                let arg_space = self.get_model_space(arg_ptr);
                 let arg_model = self.get_embedding(arg_ptr);
                 let (func_schmear, arg_schmear) = func_model.find_better_app(arg_model, target);
-                (func_schmear, Option::Some(arg_schmear))
+                let reduced_func_schmear = func_space.compress_inverse_schmear(&func_schmear);
+                let reduced_arg_schmear = arg_space.compress_inverse_schmear(&arg_schmear);
+
+                (reduced_func_schmear, Option::Some(reduced_arg_schmear))
             },
             TermReference::VecRef(vec) => {
                 let func_schmear = func_model.find_better_func(&from_noisy(vec), target);
-                (func_schmear, Option::None)
+                let reduced_func_schmear = func_space.compress_inverse_schmear(&func_schmear);
+                (reduced_func_schmear, Option::None)
             }
         }
     }
@@ -160,8 +168,12 @@ impl EmbedderState {
     }
 
     pub fn get_embedding(&self, term_ptr : &TermPointer) -> &Model {
-        let space : &ModelSpace = self.model_spaces.get(&term_ptr.type_id).unwrap();
+        let space = self.get_model_space(term_ptr);
         space.get_model(term_ptr.index)
+    }
+
+    pub fn get_model_space(&self, term_ptr : &TermPointer) -> &ModelSpace {
+        self.model_spaces.get(&term_ptr.type_id).unwrap()
     }
 
     pub fn get_mut_embedding(&mut self, term_ptr : TermPointer) -> &mut Model {
@@ -315,7 +327,7 @@ impl EmbedderState {
         let mut out_inv_schmear : InverseSchmear = self.get_inverse_schmear_from_ref(&ret_ref);
 
         let out_type = term_app_res.get_ret_type();
-        if is_vector_type(out_type) {
+        if (!is_vector_type(out_type)) {
             let out_space = self.model_spaces.get(&out_type).unwrap();
             out_inv_schmear = out_space.compress_inverse_schmear(&out_inv_schmear);
         }

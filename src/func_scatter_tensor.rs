@@ -62,16 +62,14 @@ impl FuncScatterTensor {
             scale
         }
     }
-    pub fn to_tensor4(&self) -> Array4<f32> {
-        let mut result = einsum("ac,bd->abcd", &[&self.out_scatter, &self.in_scatter]).unwrap()
-                               .into_dimensionality::<Ix4>().unwrap();
-        result *= self.scale;
-        result
-    }
+    //pub fn to_tensor4(&self) -> Array4<f32> {
+    //    let mut result = einsum("ac,bd->abcd", &[&self.out_scatter, &self.in_scatter]).unwrap()
+    //                           .into_dimensionality::<Ix4>().unwrap();
+    //    result *= self.scale;
+    //    result
+    //}
     pub fn flatten(&self) -> Array2<f32> {
-        let t = self.out_scatter.shape()[0];
-        let s = self.in_scatter.shape()[0];
-        let result = self.to_tensor4().into_shape((t * s, t * s)).unwrap();
+        let result = kron(&self.out_scatter, &self.in_scatter);
         result
     }
 

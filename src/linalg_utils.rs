@@ -23,4 +23,15 @@ pub fn frob_inner(a : &Array2<f32>, b : &Array2<f32>) -> f32 {
 pub fn scale_rows(a : &Array2<f32>, b : &Array1<f32>) -> Array2<f32> {
     einsum("ts,t->ts", &[a, b]).unwrap().into_dimensionality::<Ix2>().unwrap()
 }
+//Pulled from: https://github.com/rust-ndarray/ndarray/issues/652
+pub fn kron(a: &Array2<f32>, b: &Array2<f32>) -> Array2<f32> {
+    let dima = a.shape()[0];
+    let dimb = b.shape()[0];
+    let dimout = dima * dimb;
+    let mut out = Array2::zeros((dimout, dimout));
+    for (mut chunk, elem) in out.exact_chunks_mut((dimb, dimb)).into_iter().zip(a.iter()) {
+        chunk.assign(&(*elem * b));
+    }
+    out
+}
 

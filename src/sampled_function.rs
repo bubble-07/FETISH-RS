@@ -88,6 +88,8 @@ impl SampledFunctionTarget {
         let m = &func.mat;
         let y = &target.mean;
 
+        println!("shapez: {}, {}, {}, {}", y.shape()[0], s.shape()[1], m.shape()[0], m.shape()[1]);
+
         let y_t_s_m : Array1<f32> = einsum("a,ab,bc->c", &[y, s, m]).unwrap()
                                     .into_dimensionality::<Ix1>().unwrap();
         let m_t_s_m : Array2<f32> = einsum("ba,bc,cd->ad", &[m, s, m]).unwrap()

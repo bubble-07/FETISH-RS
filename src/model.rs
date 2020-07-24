@@ -24,6 +24,7 @@ use crate::schmear::*;
 use crate::inverse_schmear::*;
 use crate::func_schmear::*;
 use crate::func_inverse_schmear::*;
+use crate::params::*;
 
 use crate::sampled_function::*;
 use arraymap::ArrayMap;
@@ -321,7 +322,8 @@ impl Model {
 
         println!("Initializing model initial distribution");
 
-        let data = NormalInverseGamma::new(mean, precision, 0.5, 0.0, out_dimensions, in_dimensions);
+        let data = NormalInverseGamma::new(mean, precision, INITIAL_INV_GAMMA_A, INITIAL_INV_GAMMA_B,
+                                           out_dimensions, total_feat_dims);
     
         Model {
             in_dimensions,

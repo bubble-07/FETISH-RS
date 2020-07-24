@@ -32,9 +32,9 @@ use std::collections::HashMap;
 type ModelKey = usize;
 
 pub struct ModelSpace {
-    in_dimensions : usize,
-    feature_dimensions : usize,
-    out_dimensions : usize,
+    pub in_dimensions : usize,
+    pub feature_dimensions : usize,
+    pub out_dimensions : usize,
     feature_collections : Rc<[EnumFeatureCollection; 3]>,
     models : HashMap<ModelKey, Model>,
     func_sketcher : LinearSketch
@@ -78,7 +78,7 @@ impl ModelSpace {
     }
 
     //Samples a function applied to a bare vec
-    pub fn thompson_sample_vec(&self, rng : &mut ThreadRng, inv_schmear : &InverseSchmear) -> 
+    pub fn thompson_sample_vec(&self, rng : &mut ThreadRng, target : &InverseSchmear) -> 
                               (ModelKey, Array1<f32>, f32) {
         let mut result_key : ModelKey = 0 as ModelKey;
         let mut result_vec : Array1<f32> = Array::zeros((self.in_dimensions,));
@@ -86,7 +86,7 @@ impl ModelSpace {
         for (key, model) in self.models.iter() {
             //Sample an array from the model
             let sample : SampledFunction = model.sample(rng);
-            let (arg_val, dist) = sample.get_closest_arg_to_target(inv_schmear.clone());
+            let (arg_val, dist) = sample.get_closest_arg_to_target(target.clone());
 
             if (dist < result_dist) {
                 result_key = *key;
@@ -104,7 +104,8 @@ impl ModelSpace {
         for (key, model) in self.models.iter() {
             //Sample a vector from the model
             let sample : Array1<f32> = model.sample_as_vec(rng);
-            let model_dist = inv_schmear.mahalanobis_dist(&sample);
+            let compressed_sample = self.func_sketcher.sketch(&sample);
+            let model_dist = inv_schmear.mahalanobis_dist(&compressed_sample);
             if (model_dist <= result_dist) {
                 result_key = *key;
                 result_dist = model_dist;
@@ -138,18 +139,19 @@ impl ModelSpace {
 
     pub fn schmear_to_prior(&self, in_schmear : &Schmear) -> NormalInverseGamma {
         let expanded_schmear = self.func_sketcher.expand_schmear(in_schmear);
-        let (mean, covar) = schmear_to_tensors(self.feature_dimensions, self.out_dimensions, &expanded_schmear);
+        let (mean, covar) = schmear_to_tensors(self.out_dimensions, self.feature_dimensions, &expanded_schmear);
         let sigma = FuncScatterTensor::from_four_tensor(&covar);
         let precision = sigma.inverse();
 
         let s : usize = self.feature_dimensions;
         let t : usize = self.out_dimensions;
-        let a : f32 = ((t * (s - 1)) as f32) * -0.5f32;
+        println!("Schmear to prior t {}, s {}", t, s);
+        let a : f32 = -0.5f32 * ((t * s) as f32) + 0.5f32;
         let b : f32 = 0.0f32;
         NormalInverseGamma::new(mean, precision, a, b, t, s)
     }
 
-    fn get_jacobian(&self, in_vec: &Array1<f32>) -> Array2<f32> {
+    fn get_feature_jacobian(&self, in_vec: &Array1<f32>) -> Array2<f32> {
         to_jacobian(&self.feature_collections, in_vec)
     }
 
@@ -167,7 +169,8 @@ impl ModelSpace {
         let x_covar = &x.covariance;
 
         let feat_vec = self.get_features(&x_mean);
-        let jacobian = self.get_jacobian(&x_mean);
+        let feature_jacobian = self.get_feature_jacobian(&x_mean);
+        let jacobian = f_mean.dot(&feature_jacobian);
 
         //There are two terms here for covariance -- J_f(x) sigma_x J_f(x)^T
         let data_contrib = jacobian.dot(x_covar).dot(&jacobian.t());
@@ -177,7 +180,7 @@ impl ModelSpace {
         let model_contrib = f_covar.transform_in_out(&feat_outer);
        
         let out_covar = data_contrib + model_contrib;
-        let out_mean = f_mean.dot(x_mean);
+        let out_mean = f_mean.dot(&feat_vec);
 
         Schmear {
             mean : out_mean,
