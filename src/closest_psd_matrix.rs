@@ -26,7 +26,7 @@ pub fn get_closest_psd_matrix(in_mat : &Array2<f32>) -> Array2<f32> {
         }
     }
     //Re-constitute the matrix as S^T E S
-    let result_right = scale_rows(&symmetrized, &eigenvals);
-    let result = symmetrized.t().dot(&result_right);
+    let result_right = scale_rows(&symmetrized.t().to_owned(), &eigenvals);
+    let result = symmetrized.dot(&result_right);
     result
 }

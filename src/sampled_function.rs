@@ -41,11 +41,16 @@ impl SampledFunction {
 
         let function_target = SampledFunctionTarget::new(self, target);
 
-        let result = Executor::new(function_target, solver, init_param)
+        let maybe_result = Executor::new(function_target, solver, init_param.clone())
                      .max_iters(NUM_OPT_ITERS)
-                     .run().unwrap();
-        (result.state.param, result.state.cost)
-        
+                     .run();
+        match (maybe_result) {
+            Result::Ok(result) => (result.state.param, result.state.cost),
+            Result::Err(err) => {
+                println!("Optimizer failed: {}", err);    
+                (init_param, f32::INFINITY)
+            }
+        }
     }
 }
 

@@ -23,9 +23,9 @@ impl InverseSchmear {
         result
     }
     
-    pub fn transform_compress(&self, mat : &Array2<f32>) -> InverseSchmear {
+    pub fn transform_compress(&self, mat : &Array2<f32>, mat_pinv : &Array2<f32>) -> InverseSchmear {
         let mean = mat.dot(&self.mean);
-        let precision = mat.dot(&self.precision).dot(&mat.t());
+        let precision = mat_pinv.t().dot(&self.precision).dot(mat_pinv);
         InverseSchmear {
             mean,
             precision
