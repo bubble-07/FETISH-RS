@@ -94,8 +94,6 @@ impl EmbedderState {
     pub fn thompson_sample_app(&self, func_id : TypeId, arg_id : TypeId, target : &InverseSchmear)
                               -> (TermApplication, f32) {
         let func_space : &ModelSpace = self.model_spaces.get(&func_id).unwrap();
-        println!("sampling app {}, {}, {}, {}", func_space.in_dimensions, func_space.feature_dimensions,
-                                            func_space.out_dimensions, target.mean.shape()[0]);
         let mut rng = rand::thread_rng();
         //Now we have two cases, depending on whether/not the argument type is a vector type
         if is_vector_type(arg_id) {

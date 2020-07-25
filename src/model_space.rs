@@ -145,7 +145,6 @@ impl ModelSpace {
 
         let s : usize = self.feature_dimensions;
         let t : usize = self.out_dimensions;
-        println!("Schmear to prior t {}, s {}", t, s);
         let a : f32 = -0.5f32 * ((t * s) as f32) + 0.5f32;
         let b : f32 = 0.0f32;
         NormalInverseGamma::new(mean, precision, a, b, t, s)

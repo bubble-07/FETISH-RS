@@ -38,7 +38,6 @@ fn generate_cauchy_random<R : Rng + ?Sized>(rng : &mut R, dims : usize) -> Array
 }
 
 fn generate_inverse_gamma_random<R : Rng + ?Sized>(rng : &mut R, a : f32, b : f32) -> f32 {
-    println!("Sampling gamma {}, {}", a, b);
     let gamma = Gamma::<f32>::new(a, b).unwrap();
     let inv_result = gamma.sample(rng);
     (1.0 / inv_result)

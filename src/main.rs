@@ -61,7 +61,7 @@ use rand::prelude::*;
 use crate::optimizer_state::*;
 
 fn f(x : f32) -> f32 {
-    x * x
+    2.0 * x
 }
 
 fn main() {

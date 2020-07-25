@@ -135,9 +135,7 @@ impl NormalInverseGamma {
 
 impl NormalInverseGamma {
     pub fn new(mean : Array2<f32>, precision : FuncScatterTensor, a : f32, b : f32, t : usize, s : usize) -> NormalInverseGamma {
-        println!("Transforming mean with dims {}, {}", t, s);
         let precision_u = precision.transform(&mean);
-        println!("Inverting precision with dims {}, {}", t, s);
         let sigma = precision.inverse();
 
         NormalInverseGamma {
@@ -248,8 +246,6 @@ impl NormalInverseGamma {
 
 
         let a_base = -0.5 * ((self.t * self.s) as f32);
-        println!("a values {}, {}, {}", self.a, other.a, a_base);
-        println!("update combine t {}, s {}", self.t, self.s);
 
         let my_a_centered = self.a - a_base;
         let other_a_centered = other.a - a_base;

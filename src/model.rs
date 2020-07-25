@@ -262,8 +262,6 @@ impl Model {
     pub fn new(feature_collections : Rc<[EnumFeatureCollection; 3]>,
               in_dimensions : usize, out_dimensions : usize) -> Model {
 
-        println!("Initializing model with dims {} -> {}", in_dimensions, out_dimensions);
-
         let prior_updates : HashMap::<PriorUpdateKey, NormalInverseGamma> = HashMap::new();
         let data_updates : HashMap::<DataUpdateKey, DataPoint> = HashMap::new();
 
@@ -271,8 +269,6 @@ impl Model {
         for collection in feature_collections.iter() {
             total_feat_dims += collection.get_dimension();
         }
-
-        println!("Initializing model mean");
 
         let mut mean : Array2<f32> = Array::zeros((out_dimensions, total_feat_dims));
         let mut ind_one : usize = 0;
@@ -287,8 +283,6 @@ impl Model {
 
             ind_one = end_ind_one;
         }
-
-        println!("Initializing model precision");
 
         let mut in_precision : Array2<f32> = Array::zeros((total_feat_dims, total_feat_dims));
         let mut ind_one = 0;
@@ -319,8 +313,6 @@ impl Model {
         }
         let out_precision : Array2<f32> = Array::eye(out_dimensions);
         let precision = FuncScatterTensor::from_in_and_out_scatter(in_precision, out_precision);
-
-        println!("Initializing model initial distribution");
 
         let data = NormalInverseGamma::new(mean, precision, INITIAL_INV_GAMMA_A, INITIAL_INV_GAMMA_B,
                                            out_dimensions, total_feat_dims);
