@@ -73,16 +73,18 @@ impl OptimizerStateWithTarget {
         let out_type_id : TypeId = get_type_id(&Type::VecType(out_dimensions));
         let target_type_id : TypeId = get_type_id(&Type::FuncType(in_type_id, out_type_id));
 
-        println!("Readying feature collections");
-        let feature_collections = get_feature_collections(in_dimensions);
-        let rc_feature_collections = Rc::new(feature_collections);
+        println!("Readying interpreter state");
+        let optimizer_state = OptimizerState::new();
+        
+        let target_space = optimizer_state.embedder_state.model_spaces.get(&target_type_id).unwrap();
+        let rc_feature_collections = target_space.feature_collections.clone();
+
+        println!("Readying target");
         
         let mut target_model : Model = Model::new(rc_feature_collections, in_dimensions, out_dimensions);
 
         let out_precision = Array::eye(out_dimensions);
 
-        println!("Readying target");
-        
         for (in_vec, out_vec) in data_points.iter() {
             let data_point = DataPoint {
                 in_vec : in_vec.clone(),
@@ -96,8 +98,6 @@ impl OptimizerStateWithTarget {
 
         let target_inv_schmear : InverseSchmear = target_model.get_inverse_schmear().flatten();
 
-        println!("Readying interpreter state");
-        let optimizer_state = OptimizerState::new();
         let target_space = optimizer_state.embedder_state.model_spaces.get(&target_type_id).unwrap();
         let reduced_target_inv_schmear = target_space.compress_inverse_schmear(&target_inv_schmear);
 

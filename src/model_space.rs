@@ -35,7 +35,7 @@ pub struct ModelSpace {
     pub in_dimensions : usize,
     pub feature_dimensions : usize,
     pub out_dimensions : usize,
-    feature_collections : Rc<[EnumFeatureCollection; 3]>,
+    pub feature_collections : Rc<[EnumFeatureCollection; 3]>,
     models : HashMap<ModelKey, Model>,
     func_sketcher : LinearSketch
 }
