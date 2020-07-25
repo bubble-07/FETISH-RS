@@ -11,6 +11,8 @@ use crate::closest_psd_matrix::*;
 use crate::randomized_svd::*;
 use crate::schmear::*;
 use crate::inverse_schmear::*;
+use crate::pseudoinverse::*;
+use crate::params::*;
 
 #[derive(Clone)]
 pub struct FuncScatterTensor {
@@ -119,8 +121,8 @@ impl FuncScatterTensor {
     }
 
     pub fn inverse(&self) -> FuncScatterTensor {
-        let inv_in_scatter = self.in_scatter.invh().unwrap();
-        let inv_out_scatter = self.out_scatter.invh().unwrap();
+        let inv_in_scatter = pseudoinverse_h(&self.in_scatter);
+        let inv_out_scatter = pseudoinverse_h(&self.out_scatter);
         let inv_scale = 1.0f32 / self.scale;
         
         let mut result = FuncScatterTensor {
@@ -134,8 +136,13 @@ impl FuncScatterTensor {
     fn renormalize(&mut self) {
         let in_scatter_norm = self.in_scatter.opnorm_fro().unwrap();
         let out_scatter_norm = self.out_scatter.opnorm_fro().unwrap();
+        let combined_norm = in_scatter_norm * out_scatter_norm;
+        if (combined_norm < ZEROING_THRESH) {
+            //To smol to matter
+            return;
+        }
 
-        self.scale *= in_scatter_norm * out_scatter_norm;
+        self.scale *= combined_norm;
         self.in_scatter /= in_scatter_norm;
         self.out_scatter /= out_scatter_norm;
     }
@@ -145,6 +152,10 @@ impl FuncScatterTensor {
     fn update(&mut self, other : &FuncScatterTensor, downdate : bool) {
         let tot_scale_sq = self.scale * self.scale + other.scale * other.scale;
         let tot_scale = tot_scale_sq.sqrt();
+        if (tot_scale < ZEROING_THRESH) {
+            return; //Too smol to matter
+        }
+
         //First, scale your elements
         self.in_scatter *= self.scale;
         self.out_scatter *= self.scale;
@@ -157,6 +168,7 @@ impl FuncScatterTensor {
             self.in_scatter += &(other.scale * &other.in_scatter);
             self.out_scatter += &(other.scale * &other.out_scatter);
         }
+
         //Divide through by the total scale
         self.scale = 1.0f32 / tot_scale;
         //Renormalize to put things back into standard form

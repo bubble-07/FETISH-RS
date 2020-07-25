@@ -17,6 +17,8 @@ pub const OUT_TAPER_START : usize = 5;
 pub const SVD_PRECISION : f32 = 0.00001f32;
 pub const SVD_MAX_ITER : usize = 1000;
 
+pub const ZEROING_THRESH : f32 = 0.0001f32;
+
 pub const INITIAL_INV_GAMMA_A : f32 = 0.5f32;
 pub const INITIAL_INV_GAMMA_B : f32 = 1.0f32;
 
