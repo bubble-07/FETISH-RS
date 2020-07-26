@@ -15,6 +15,8 @@ use crate::model::*;
 use crate::inverse_schmear::*;
 use crate::enum_feature_collection::*;
 
+extern crate pretty_env_logger;
+
 const NUM_OPT_ITERS : u64 = 100;
 const LBFGS_HISTORY : usize = 10;
 
@@ -47,7 +49,7 @@ impl SampledFunction {
         match (maybe_result) {
             Result::Ok(result) => (result.state.param, result.state.cost),
             Result::Err(err) => {
-                println!("Optimizer failed: {}", err);    
+                error!("Optimizer failed: {}", err);    
                 (init_param, f32::INFINITY)
             }
         }

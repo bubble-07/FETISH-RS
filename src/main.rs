@@ -45,6 +45,8 @@ mod randomized_svd;
 extern crate lazy_static;
 extern crate ndarray;
 extern crate ndarray_linalg;
+extern crate pretty_env_logger;
+#[macro_use] extern crate log;
 
 use ndarray::*;
 use ndarray_linalg::*;
@@ -65,6 +67,8 @@ fn f(x : f32) -> f32 {
 }
 
 fn main() {
+    pretty_env_logger::init();
+
     let num_iters = 100;
     let num_samples = 100;
     let in_dimensions = 1;
@@ -89,16 +93,16 @@ fn main() {
         data_points.push(tuple);
     }
 
-    println!("Creating optimizer");
+    info!("Creating optimizer");
     let mut optimizer_state = OptimizerStateWithTarget::new(data_points);
-    println!("Initializing optimizer");
+    info!("Initializing optimizer");
     optimizer_state.init_step();
-    println!("Running optimizer");
+    info!("Running optimizer");
     for i in 0..num_iters {
-        println!("Iter: {}", i);
+        info!("Iter: {}", i);
         let term_ptr : TermPointer = optimizer_state.step();
         let term_str : String = term_ptr.display(&optimizer_state.optimizer_state.interpreter_state);
-        println!("{}", term_str);
+        info!("{}", term_str);
     }
 }
 

@@ -30,6 +30,8 @@ use crate::feature_collection::*;
 use crate::enum_feature_collection::*;
 use topological_sort::TopologicalSort;
 
+extern crate pretty_env_logger;
+
 pub struct EmbedderState {
     pub model_spaces : HashMap::<TypeId, ModelSpace>
 }
@@ -37,7 +39,7 @@ pub struct EmbedderState {
 impl EmbedderState {
 
     pub fn new() -> EmbedderState {
-        println!("Readying embedder state");
+        info!("Readying embedder state");
         let mut model_spaces = HashMap::<TypeId, ModelSpace>::new();
         
         let mut in_dimensions = HashMap::<TypeId, usize>::new();
@@ -64,7 +66,7 @@ impl EmbedderState {
                     let arg_dimension = *in_dimensions.get(&arg_type_id).unwrap();
                     let ret_dimension = *out_dimensions.get(&ret_type_id).unwrap();
 
-                    println!("Creating model space with dims {} -> {}", arg_dimension, ret_dimension);
+                    info!("Creating model space with dims {} -> {}", arg_dimension, ret_dimension);
                     let model_space = ModelSpace::new(arg_dimension, ret_dimension);
                     let model_sketched_dims = model_space.get_sketched_dimensions();
                     let model_full_dims = model_space.get_full_dimensions();
@@ -152,7 +154,7 @@ impl EmbedderState {
     }
 
     pub fn init_embeddings(&mut self, interpreter_state : &mut InterpreterState) {
-        println!("Initializing embeddings for {} new terms", interpreter_state.new_terms.len());
+        trace!("Initializing embeddings for {} new terms", interpreter_state.new_terms.len());
         for term_ptr in interpreter_state.new_terms.drain(..) {
             if (!self.has_embedding(&term_ptr)) {
                 self.init_embedding(term_ptr);

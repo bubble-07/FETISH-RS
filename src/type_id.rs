@@ -4,6 +4,8 @@ use topological_sort::*;
 use crate::params::*;
 use std::fmt;
 
+extern crate pretty_env_logger;
+
 lazy_static! {
     static ref GLOBAL_TYPE_INFO : GlobalTypeInfo = {
         let mut types : GlobalTypeInfo = GlobalTypeInfo::new();
@@ -23,7 +25,7 @@ lazy_static! {
         //TODO: ensure that the types here are exactly closed w.r.t. all types
         //in func_impl
         
-        println!("Adding composition types");
+        info!("Adding composition types");
         
         //Add all composition types of vector functions
         for n in [1, DIM].iter() {
@@ -43,7 +45,7 @@ lazy_static! {
             }
         }
 
-        println!("Adding constant types");
+        info!("Adding constant types");
         //Add in all constant functions
         for n in [1, DIM].iter() {
             let n_t = types.add(Type::VecType(*n));
@@ -69,7 +71,7 @@ lazy_static! {
             }
         }
         
-        println!("Type initialization complete");
+        info!("Type initialization complete");
 
         types
     };

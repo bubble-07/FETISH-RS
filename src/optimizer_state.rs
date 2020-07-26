@@ -5,6 +5,7 @@ use ndarray::*;
 use ndarray_linalg::*;
 
 use std::collections::HashSet;
+use crate::displayable_with_state::*;
 use std::rc::*;
 use crate::type_id::*;
 use crate::application_table::*;
@@ -29,6 +30,8 @@ use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
 use crate::term_application_result::*;
+
+extern crate pretty_env_logger;
 
 pub struct OptimizerStateWithTarget {
     pub optimizer_state : OptimizerState,
@@ -65,7 +68,7 @@ impl OptimizerStateWithTarget {
         if (data_points.is_empty()) {
             panic!(); 
         }
-        println!("Readying types");
+        info!("Readying types");
         let in_dimensions : usize = data_points[0].0.shape()[0];
         let out_dimensions : usize = data_points[0].1.shape()[0];
 
@@ -73,13 +76,13 @@ impl OptimizerStateWithTarget {
         let out_type_id : TypeId = get_type_id(&Type::VecType(out_dimensions));
         let target_type_id : TypeId = get_type_id(&Type::FuncType(in_type_id, out_type_id));
 
-        println!("Readying interpreter state");
+        info!("Readying interpreter state");
         let optimizer_state = OptimizerState::new();
         
         let target_space = optimizer_state.embedder_state.model_spaces.get(&target_type_id).unwrap();
         let rc_feature_collections = target_space.feature_collections.clone();
 
-        println!("Readying target");
+        info!("Readying target");
         
         let mut target_model : Model = Model::new(rc_feature_collections, in_dimensions, out_dimensions);
 
@@ -130,7 +133,9 @@ impl OptimizerState {
     fn optimize_evaluate_step(&mut self, target_type_id : TypeId, target_inv_schmear : &InverseSchmear)
                                      -> TermPointer {
         //Sample for the best term in the space of the target 
+        trace!("Thompson sampling for term of type {}", get_type(target_type_id));
         let (term_pointer, term_dist) = self.embedder_state.thompson_sample_term(target_type_id, target_inv_schmear);
+        trace!("Obtained {} with loss {}", term_pointer.display(&self.interpreter_state), term_dist);
 
         //Now, iterate through all term applications yielding the type of the target
         let mut application_type_ids : Vec::<(TypeId, TypeId)> = get_application_type_ids(target_type_id);
@@ -138,9 +143,12 @@ impl OptimizerState {
         let mut best_application_and_types : Option<(TermApplication, TypeId, TypeId)> = Option::None;
         
         for (func_type_id, arg_type_id) in application_type_ids.drain(..) {
+            trace!("Thompson sampling for application of {}", get_type(func_type_id));
             let func_space = self.embedder_state.model_spaces.get(&func_type_id).unwrap();
             let (application, dist) = self.embedder_state.thompson_sample_app(func_type_id, arg_type_id, 
                                                                               target_inv_schmear);
+
+            trace!("Obtained {} with loss {}", application.display(&self.interpreter_state), dist);
             if (dist < best_dist) {
                 best_application_and_types = Option::Some((application, func_type_id, arg_type_id));
                 best_dist = dist;
@@ -155,11 +163,15 @@ impl OptimizerState {
                     let (func_target, maybe_arg_target) = 
                         self.embedder_state.find_better_app(&application, target_mean);
 
+                    info!("Recursing on function [");
                     let better_func = self.optimize_evaluate_step(func_type_id, &func_target);
+                    info!("]");
 
                     let better_arg : TermReference = match (maybe_arg_target) {
                         Some(arg_target) => {
+                            info!("Recursing on arg [");
                             let better_arg = self.optimize_evaluate_step(arg_type_id, &arg_target);
+                            info!("]");
                             TermReference::FuncRef(better_arg)
                         },
                         None => {

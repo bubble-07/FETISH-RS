@@ -27,6 +27,8 @@ use crate::func_inverse_schmear::*;
 use arraymap::ArrayMap;
 use rand::prelude::*;
 
+extern crate pretty_env_logger;
+
 use std::collections::HashMap;
 
 type ModelKey = usize;
@@ -60,7 +62,7 @@ impl ModelSpace {
         for collection in rc_feature_collections.iter() {
             total_feat_dims += collection.get_dimension();
         }
-        println!("And feature dims {}", total_feat_dims);
+        info!("And feature dims {}", total_feat_dims);
 
         let embedding_dim = total_feat_dims * out_dimensions;
         let sketched_embedding_dim = get_reduced_output_dimension(embedding_dim);

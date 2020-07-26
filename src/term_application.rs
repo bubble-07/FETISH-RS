@@ -4,6 +4,8 @@ use crate::type_id::*;
 use std::cmp::*;
 use std::fmt::*;
 use std::hash::*;
+use crate::interpreter_state::*;
+use crate::displayable_with_state::*;
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct TermApplication {
@@ -34,5 +36,11 @@ impl TermApplication {
         } else {
             panic!();
         }
+    }
+}
+
+impl DisplayableWithState for TermApplication {
+    fn display(&self, state : &InterpreterState) -> String {
+        format!("{} {}", self.func_ptr.display(state), self.arg_ref.display(state))
     }
 }
