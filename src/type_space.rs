@@ -5,6 +5,7 @@ use crate::type_id::*;
 use crate::term::*;
 use crate::term_pointer::*;
 use crate::func_impl::*;
+use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 
 pub struct TypeSpace {
@@ -19,6 +20,20 @@ impl TypeSpace {
             my_type : id,
             terms : Vec::<PartiallyAppliedTerm>::new(),
             term_to_index_map : HashMap::new()
+        }
+    }
+
+    pub fn draw_random_ptr(&self) -> Option<TermPointer> {
+        if (self.terms.len() == 0) {
+            Option::None
+        } else {
+            let mut rng = rand::thread_rng();
+            let index : usize = rng.gen_range(0, self.terms.len());
+            let result = TermPointer {
+                type_id : self.my_type.clone(),
+                index : index
+            };
+            Option::Some(result)
         }
     }
     

@@ -1,8 +1,13 @@
+extern crate ndarray;
+extern crate ndarray_linalg;
+
+use ndarray::*;
 use std::collections::HashMap;
 use crate::type_id::*;
 use crate::application_table::*;
 use crate::type_space::*;
 use crate::term::*;
+use crate::params::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::term_application::*;
@@ -103,6 +108,57 @@ impl InterpreterState {
         }
     }
 
+    fn ensure_every_type_has_a_term(&mut self) {
+        let mut type_to_term = HashMap::<TypeId, TermReference>::new();
+        type_to_term.insert(*SCALAR_T, TermReference::VecRef(Array::zeros((1,))));
+        type_to_term.insert(*VECTOR_T, TermReference::VecRef(Array::zeros((DIM,))));
+        //Initial population
+        for i in 0..total_num_types() {
+            let type_id = i as TypeId;
+            let kind = get_type(type_id);
+            match (kind) {
+                Type::VecType(n) => {
+                    type_to_term.insert(type_id, TermReference::VecRef(Array::zeros((n,))));
+                },
+                Type::FuncType(_, _) => {
+                    let type_space = self.type_spaces.get(&type_id).unwrap();
+                    let maybe_func_ptr = type_space.draw_random_ptr();
+                    if let Option::Some(func_ptr) = maybe_func_ptr {
+                        type_to_term.insert(type_id, TermReference::FuncRef(func_ptr));
+                    }
+                }
+            }
+        }
+        loop {
+            let mut found_something = false;
+            for i in 0..total_num_types() {
+                let func_type_id = i as TypeId;
+
+                if let Option::Some(func_term) = type_to_term.get(&func_type_id) {
+                    if let Type::FuncType(arg_type_id, ret_type_id) = get_type(func_type_id) {
+                        if let Option::Some(arg_ref) = type_to_term.get(&arg_type_id) {
+                            if (!type_to_term.contains_key(&ret_type_id)) {
+                                if let TermReference::FuncRef(func_ptr) = func_term {
+                                    let application = TermApplication {
+                                        func_ptr : func_ptr.clone(),
+                                        arg_ref : arg_ref.clone()
+                                    };
+                                    let result_ref = self.evaluate(&application);
+                                    type_to_term.insert(ret_type_id, result_ref);
+
+                                    found_something = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (!found_something) {
+                break;
+            }
+        }
+    }
+
     pub fn add_init(&mut self, func : EnumFuncImpl) -> TermPointer {
         let func_type_id : TypeId = func.func_type();
         let type_space : &mut TypeSpace = self.type_spaces.get_mut(&func_type_id).unwrap();
@@ -176,6 +232,9 @@ impl InterpreterState {
                 }
             }
         }
+
+        result.ensure_every_type_has_a_term();
+
         result
     }
 }
