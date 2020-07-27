@@ -33,19 +33,8 @@ impl LinearSketch {
     pub fn sketch(&self, vec : &Array1<f32>) -> Array1<f32> {
         self.projection_mat.dot(vec)
     }
-    pub fn expand_schmear(&self, in_schmear : &Schmear) -> Schmear {
-        let mean = self.expand_mean(&in_schmear.mean);
-        let covariance = self.expand_covariance(&in_schmear.covariance);
-        Schmear {
-            mean,
-            covariance
-        }
-    }
-    pub fn expand_mean(&self, mean : &Array1<f32>) -> Array1<f32> {
+    pub fn expand(&self, mean : &Array1<f32>) -> Array1<f32> {
         self.projection_mat_pinv.dot(mean)
-    }
-    pub fn expand_covariance(&self, covariance : &Array2<f32>) -> Array2<f32> {
-        self.projection_mat_pinv.dot(covariance).dot(&self.projection_mat_pinv.t().to_owned())
     }
     pub fn get_output_dimension(&self) -> usize {
         self.projection_mat.shape()[0]

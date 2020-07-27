@@ -50,19 +50,6 @@ pub fn mean_to_array(mean : &Array2<f32>) -> Array1<f32> {
     mean_copy.into_shape((n,)).unwrap()
 }
 
-pub fn schmear_to_tensors(t : usize, s : usize, schmear : &Schmear) -> (Array2<f32>, Array4<f32>) {
-    let n = t * s; 
-    
-    let mut mean_copy = Array::zeros((n,));
-    let mut sigma_copy = Array::zeros((n, n));
-    
-    mean_copy.assign(&schmear.mean);
-    sigma_copy.assign(&schmear.covariance);
-
-    let inflate_mean = mean_copy.into_shape((t, s)).unwrap();
-    let inflate_sigma = sigma_copy.into_shape((t, s, t, s)).unwrap();
-    (inflate_mean, inflate_sigma)
-}
 
 impl NormalInverseGamma {
 

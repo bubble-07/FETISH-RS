@@ -2,9 +2,11 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use std::ops;
+use std::cmp;
 use ndarray::*;
 use ndarray_einsum_beta::*;
 use crate::linalg_utils::*;
+use crate::linear_sketch::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
 use crate::closest_psd_matrix::*;
@@ -31,45 +33,57 @@ impl FuncScatterTensor {
         result.renormalize();
         result
     }
-    pub fn from_four_tensor(in_tensor : &Array4<f32>) -> FuncScatterTensor {
-        //Takes the t x s x t x s four-dimensional tensor
-        //representation and finds the best tensor-product
-        //representation
-        let t = in_tensor.shape()[0];
-        let s = in_tensor.shape()[1];
-        
-        //first re-arrange to be t x t x s x s
-        let mut re_arranged = in_tensor.clone();
-        re_arranged.swap_axes(1, 2);
+    pub fn from_compressed_covariance(t : usize, s : usize, linear_sketch : &LinearSketch, 
+                                                            covariance : &Array2<f32>) -> FuncScatterTensor {
+        let mut in_scatter : Array2<f32> = Array::zeros((s, s));
+        let mut out_scatter : Array2<f32> = Array::zeros((t, t));
 
-        //Now re-shape to be (t * t) x (s * s)
-        let reshaped = re_arranged.into_shape((t * t, s * s)).unwrap()
-                       .into_dimensionality::<Ix2>().unwrap();
-        
-        let mut rng = rand::thread_rng();
-        let (u, scale, v) = randomized_rank_one_approx(&reshaped, &mut rng);
+        let mut accum_norm_sq = 0.0f32;
 
-        //Great, now we just need to reshape and find the nearest PSD matrices
-        let reshaped_u = u.into_shape((t, t)).unwrap()
-                          .into_dimensionality::<Ix2>().unwrap();
-        let reshaped_v = v.into_shape((s, s)).unwrap()
-                          .into_dimensionality::<Ix2>().unwrap();
+        //Start off by decomposing the covariance into its eigendecomposition
+        let maybe_eigh = covariance.eigh(UPLO::Lower);
+        if let Result::Err(e) = &maybe_eigh {
+            error!("Bad matrix for eigh {}", covariance);
+        }
+        let (eigenvals, eigenvecs) = maybe_eigh.unwrap();
+        for i in 0..eigenvecs.shape()[1] {
+            let eigenval = eigenvals[i];
+            let eigenvec = eigenvecs.column(i);
+            //Now, for each eigenvector, expand it to the full size (t x s)
+            let expanded_eigenvec = linear_sketch.expand(&eigenvec.to_owned());
+            let reshaped = expanded_eigenvec.into_shape((t, s)).unwrap();
 
-        let out_scatter = get_closest_unit_norm_psd_matrix(&reshaped_u);
-        let in_scatter = get_closest_unit_norm_psd_matrix(&reshaped_v);
+            //For each matrix of this form, obtain its SVD
+            let maybe_svd = reshaped.svd(true, true); 
+            if let Result::Err(e) = &maybe_svd {
+                error!("Bad matrix for svd {}", reshaped);
+            }
+            let (maybe_u, sigma, maybe_v_t) = maybe_svd.unwrap();
+            let u = maybe_u.unwrap();
+            let v_t = maybe_v_t.unwrap();
+            let n = cmp::min(cmp::min(s, t), sigma.shape()[0]);
+            for j in 0..n {
+                let out_vec = u.column(j).to_owned();
+                let in_vec = v_t.row(j).to_owned();
+                let singular_val = sigma[[j,]];
 
-        FuncScatterTensor {
+                let coef = singular_val * eigenval;
+                accum_norm_sq += coef * coef;
+
+                in_scatter += &(coef * outer(&in_vec, &in_vec));
+                out_scatter += &(coef * &outer(&out_vec, &out_vec));
+            }
+        }
+        let scale = 1.0f32 / accum_norm_sq.sqrt();
+        let mut result = FuncScatterTensor {
             in_scatter,
             out_scatter,
             scale
-        }
+        };
+        result.renormalize();
+        result
     }
-    //pub fn to_tensor4(&self) -> Array4<f32> {
-    //    let mut result = einsum("ac,bd->abcd", &[&self.out_scatter, &self.in_scatter]).unwrap()
-    //                           .into_dimensionality::<Ix4>().unwrap();
-    //    result *= self.scale;
-    //    result
-    //}
+
     pub fn flatten(&self) -> Array2<f32> {
         let result = kron(&self.out_scatter, &self.in_scatter);
         result

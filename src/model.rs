@@ -235,8 +235,15 @@ impl Model {
         self.data_updates.contains_key(update_key)
     }
     pub fn update_data(&mut self, update_key : DataUpdateKey, data_point : DataPoint) {
-        self.data += &data_point;
-        self.data_updates.insert(update_key, data_point);
+        //Need to upgrade the input schmear to a featurized input schmear
+        let feat_vec = self.get_features(&data_point.in_vec);
+        let feat_data_point = DataPoint {
+            in_vec : feat_vec,
+            out_inv_schmear : data_point.out_inv_schmear
+        };
+
+        self.data += &feat_data_point;
+        self.data_updates.insert(update_key, feat_data_point);
     }
     pub fn downdate_data(&mut self, update_key : &DataUpdateKey) {
         let added_point : DataPoint = self.data_updates.remove(update_key).unwrap();

@@ -49,7 +49,8 @@ impl CountSketch {
     pub fn sketch(&self, v: &Array1<f32>) -> Array1<f32> {
         let mut result = Array::zeros((self.out_dims,));
         for i in 0..self.in_dims {
-            result[[i,]] += self.signs[i] * v[[i,]]; 
+            let index = self.indices[i];
+            result[[index,]] += self.signs[i] * v[[i,]]; 
         }
         result
     }

@@ -140,13 +140,16 @@ impl ModelSpace {
     }
 
     pub fn schmear_to_prior(&self, in_schmear : &Schmear) -> NormalInverseGamma {
-        let expanded_schmear = self.func_sketcher.expand_schmear(in_schmear);
-        let (mean, covar) = schmear_to_tensors(self.out_dimensions, self.feature_dimensions, &expanded_schmear);
-        let sigma = FuncScatterTensor::from_four_tensor(&covar);
-        let precision = sigma.inverse();
-
         let s : usize = self.feature_dimensions;
         let t : usize = self.out_dimensions;
+
+        let mean_flat = self.func_sketcher.expand(&in_schmear.mean);
+        let mean = mean_flat.into_shape((t, s)).unwrap();
+
+        let sigma = FuncScatterTensor::from_compressed_covariance(t, s, 
+                                                                  &self.func_sketcher, &in_schmear.covariance);
+        let precision = sigma.inverse();
+
         let a : f32 = -0.5f32 * ((t * s) as f32) + 0.5f32;
         let b : f32 = 0.0f32;
         NormalInverseGamma::new(mean, precision, a, b, t, s)
@@ -164,7 +167,7 @@ impl ModelSpace {
         self.compute_out_schmear(&f.mean, &f.covariance, x)
     }
 
-    fn compute_out_schmear(&self, f_mean : &Array2<f32>, f_covar : &FuncScatterTensor,
+    pub fn compute_out_schmear(&self, f_mean : &Array2<f32>, f_covar : &FuncScatterTensor,
                            x : &Schmear) -> Schmear {
         let x_mean = &x.mean;
         let x_covar = &x.covariance;
