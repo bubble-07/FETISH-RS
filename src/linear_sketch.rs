@@ -29,6 +29,9 @@ impl LinearSketch {
     pub fn compress_inverse_schmear(&self, inv_schmear : &InverseSchmear) -> InverseSchmear {
         inv_schmear.transform_compress(&self.projection_mat, &self.projection_mat_pinv)
     }
+    pub fn compress_schmear(&self, schmear : &Schmear) -> Schmear {
+        schmear.transform_compress(&self.projection_mat)
+    }
 
     pub fn sketch(&self, vec : &Array1<f32>) -> Array1<f32> {
         self.projection_mat.dot(vec)

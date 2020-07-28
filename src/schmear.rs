@@ -27,4 +27,12 @@ impl Schmear {
             covariance : covariance
         }
     }
+    pub fn transform_compress(&self, mat : &Array2<f32>) -> Schmear {
+        let mean = mat.dot(&self.mean);
+        let covariance = mat.dot(&self.covariance).dot(&mat.t());
+        Schmear {
+            mean,
+            covariance
+        }
+    }
 }

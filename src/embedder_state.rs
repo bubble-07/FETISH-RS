@@ -42,8 +42,8 @@ impl EmbedderState {
         info!("Readying embedder state");
         let mut model_spaces = HashMap::<TypeId, ModelSpace>::new();
         
-        let mut in_dimensions = HashMap::<TypeId, usize>::new();
-        let mut out_dimensions = HashMap::<TypeId, usize>::new();
+        let mut full_dimensions = HashMap::<TypeId, usize>::new();
+        let mut reduced_dimensions = HashMap::<TypeId, usize>::new();
         let mut topo_sort = TopologicalSort::<TypeId>::new();
         for i in 0..total_num_types() {
             let type_id : TypeId = i as TypeId;
@@ -53,8 +53,8 @@ impl EmbedderState {
                     topo_sort.add_dependency(ret_type_id, type_id);
                 },
                 Type::VecType(dim) => {
-                    in_dimensions.insert(type_id, dim);
-                    out_dimensions.insert(type_id, dim);
+                    full_dimensions.insert(type_id, dim);
+                    reduced_dimensions.insert(type_id, dim);
                 }
             };
         }
@@ -63,16 +63,16 @@ impl EmbedderState {
             let mut type_ids : Vec<TypeId> = topo_sort.pop_all();
             for func_type_id in type_ids.drain(..) {
                 if let Type::FuncType(arg_type_id, ret_type_id) = get_type(func_type_id) {
-                    let arg_dimension = *in_dimensions.get(&arg_type_id).unwrap();
-                    let ret_dimension = *out_dimensions.get(&ret_type_id).unwrap();
+                    let arg_dimension = *reduced_dimensions.get(&arg_type_id).unwrap();
+                    let ret_dimension = *reduced_dimensions.get(&ret_type_id).unwrap();
 
                     info!("Creating model space with dims {} -> {}", arg_dimension, ret_dimension);
                     let model_space = ModelSpace::new(arg_dimension, ret_dimension);
                     let model_sketched_dims = model_space.get_sketched_dimensions();
                     let model_full_dims = model_space.get_full_dimensions();
                     model_spaces.insert(func_type_id, model_space);
-                    in_dimensions.insert(func_type_id, model_full_dims);
-                    out_dimensions.insert(func_type_id, model_sketched_dims);
+                    full_dimensions.insert(func_type_id, model_full_dims);
+                    reduced_dimensions.insert(func_type_id, model_sketched_dims);
                 }
             }
         }
@@ -296,11 +296,17 @@ impl EmbedderState {
     //exists for the given application of terms, this will first remove that update
     fn propagate_prior(&mut self, term_app_res : TermApplicationResult) {
         let func_schmear : FuncSchmear = self.get_schmear_from_ptr(&term_app_res.get_func_ptr());
-        let arg_schmear : Schmear = self.get_schmear_from_ref(&term_app_res.get_arg_ref());
+        let full_arg_schmear : Schmear = self.get_schmear_from_ref(&term_app_res.get_arg_ref());
        
         //Get the model space for the func type
         let func_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_func_type()).unwrap();
         let ret_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_ret_type()).unwrap();
+
+        let maybe_arg_space = self.model_spaces.get(&term_app_res.get_arg_type());
+        let arg_schmear : Schmear = match (maybe_arg_space) {
+            Option::Some(arg_space) => arg_space.compress_schmear(&full_arg_schmear),
+            Option::None => full_arg_schmear
+        };
 
         let out_schmear : Schmear = func_space.apply_schmears(&func_schmear, &arg_schmear);
         let out_prior : NormalInverseGamma = ret_space.schmear_to_prior(&out_schmear);
@@ -323,8 +329,14 @@ impl EmbedderState {
         let arg_ref = term_app_res.get_arg_ref();
         let ret_ref = term_app_res.get_ret_ref();
 
-        let arg_mean : Array1::<f32> = self.get_mean_from_ref(&arg_ref);
+        let mut arg_mean : Array1::<f32> = self.get_mean_from_ref(&arg_ref);
         let mut out_inv_schmear : InverseSchmear = self.get_inverse_schmear_from_ref(&ret_ref);
+
+        let in_type = term_app_res.get_arg_type();
+        if (!is_vector_type(in_type)) {
+            let in_space = self.model_spaces.get(&in_type).unwrap();
+            arg_mean = in_space.sketch(&arg_mean);  
+        }
 
         let out_type = term_app_res.get_ret_type();
         if (!is_vector_type(out_type)) {

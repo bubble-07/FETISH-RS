@@ -50,8 +50,15 @@ impl ModelSpace {
         self.func_sketcher.get_output_dimension()
     }
 
+    pub fn sketch(&self, mean : &Array1<f32>) -> Array1<f32> {
+        self.func_sketcher.sketch(mean)
+    }
+
     pub fn compress_inverse_schmear(&self, inv_schmear : &InverseSchmear) -> InverseSchmear {
         self.func_sketcher.compress_inverse_schmear(inv_schmear)
+    }
+    pub fn compress_schmear(&self, schmear : &Schmear) -> Schmear {
+        self.func_sketcher.compress_schmear(schmear)
     }
 
     pub fn new(in_dimensions : usize, out_dimensions : usize) -> ModelSpace {
@@ -126,7 +133,9 @@ impl ModelSpace {
             //Sample a function from the function distribution
             let func_sample : SampledFunction = func_model.sample(rng);
             for (arg_key, arg_model) in other.models.iter() {
-                let arg_sample : Array1<f32> = arg_model.sample_as_vec(rng);
+                let raw_arg_sample : Array1<f32> = arg_model.sample_as_vec(rng);
+                let arg_sample : Array1<f32> = other.func_sketcher.sketch(&raw_arg_sample);
+
                 let result : Array1<f32> = func_sample.apply(&arg_sample);
                 let model_dist = inv_schmear.mahalanobis_dist(&result);
                 if (model_dist < result_dist) {
