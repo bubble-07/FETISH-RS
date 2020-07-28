@@ -69,7 +69,7 @@ fn f(x : f32) -> f32 {
 fn main() {
     pretty_env_logger::init();
 
-    let num_iters = 100;
+    let num_iters = 40;
     let num_samples = 100;
     let in_dimensions = 1;
     let out_dimensions = 1;

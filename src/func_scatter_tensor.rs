@@ -99,6 +99,8 @@ impl FuncScatterTensor {
 
     ///Transform a t x s x m matrix to another t x s x m one
     pub fn transform3(&self, tensor : &Array3<f32>) -> Array3<f32> {
+        println!("Transform3 tensor dims: {}, {}, {}", tensor.shape()[0], tensor.shape()[1], tensor.shape()[2]);
+        println!("scatter dims: {}, {}", self.out_scatter.shape()[0], self.in_scatter.shape()[0]);
         let mut result : Array3<f32> = einsum("ca,abs,bd->cds", &[&self.out_scatter, tensor, &self.in_scatter]).unwrap()
                                    .into_dimensionality::<Ix3>().unwrap();
         result *= self.scale;
