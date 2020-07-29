@@ -2,6 +2,7 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
+use crate::test_utils::*;
 use crate::params::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
@@ -33,4 +34,33 @@ pub fn pseudoinverse(in_mat : &Array2<f32>) -> Array2<f32> {
     let result_right = sigma_inv.dot(&u.t().to_owned());
     let result = v_t.t().dot(&result_right);
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pseudoinverse_is_inverse_on_square() {
+        let matrix = random_matrix(10, 10);
+        let matrix_inv = matrix.inv().unwrap();
+        let matrix_pinv = pseudoinverse(&matrix);
+        assert_equal_matrices(&matrix_pinv, &matrix_inv);
+    }
+
+    #[test]
+    fn pseudoinverse_of_pseudoinverse_is_identity() {
+        let matrix = random_matrix(8, 10);
+        let matrix_pinv = pseudoinverse(&matrix);
+        let matrix_pinv_pinv = pseudoinverse(&matrix_pinv);
+        assert_equal_matrices(&matrix_pinv_pinv, &matrix);
+    }
+
+    #[test]
+    fn pseudoinverse_has_dims_of_transpose() {
+        let matrix = random_matrix(4, 11);
+        let matrix_pinv = pseudoinverse(&matrix);
+        assert_eq!(matrix_pinv.shape()[0], matrix.shape()[1]);
+        assert_eq!(matrix_pinv.shape()[1], matrix.shape()[0]);
+    }
 }

@@ -5,6 +5,7 @@
 #![allow(unused_variables)]
 
 mod bayes_utils;
+mod test_utils;
 mod array_utils;
 mod pseudoinverse;
 mod linear_sketch;
