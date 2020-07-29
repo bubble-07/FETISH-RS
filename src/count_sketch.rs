@@ -3,6 +3,7 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
+use crate::test_utils::*;
 
 use crate::feature_collection::*;
 
@@ -25,8 +26,8 @@ impl CountSketch {
         let mut rng = rand::thread_rng();
         let bernoulli_distr = Bernoulli::new(0.5).unwrap();
         for i in 0..in_dims {
-            let r_one : i8 = rng.gen();
-            let sign = ((r_one % 2) * 2 - 1) as f32;
+            let r_one : u8 = rng.gen();
+            let sign = (((r_one % 2) as i8) * 2 - 1) as f32;
             signs.push(sign);
 
             let r_two : usize = rng.gen(); 
@@ -53,5 +54,19 @@ impl CountSketch {
             result[[index,]] += self.signs[i] * v[[i,]]; 
         }
         result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn signs_have_abs_value_one() {
+        let count_sketch = CountSketch::new(10, 5);
+        for i in 0..count_sketch.in_dims {
+            let elem = count_sketch.signs[i];
+            assert_eps_equals(elem.abs(), 1.0f32);
+        }
     }
 }

@@ -15,6 +15,13 @@ pub fn assert_equal_matrices(one : &Array2<f32>, two : &Array2<f32>) {
         panic!();
     }
 }
+pub fn assert_eps_equals(one : f32, two : f32) {
+    let diff = one - two;
+    if (diff.abs() > ZEROING_THRESH) {
+        println!("Actual: {} Expected: {}", one, two);
+        panic!();
+    }
+}
 pub fn random_matrix(t : usize, s : usize) -> Array2<f32> {
     Array::random((t, s), StandardNormal)
 }
