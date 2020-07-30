@@ -8,6 +8,8 @@ use crate::feature_collection::*;
 use crate::linalg_utils::*;
 use rand::prelude::*;
 use crate::params::*;
+use crate::test_utils::*;
+use crate::cauchy_fourier_features::*;
 
 pub struct FourierFeatureCollection {
     in_dimensions : usize,
@@ -73,5 +75,29 @@ impl FeatureCollection for FourierFeatureCollection {
 
     fn get_regularization_strength(&self) -> f32 {
         self.reg_strength
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empirical_jacobian_is_jacobian() {
+        let mut successes : usize = 0;
+        for i in 0..10 {
+            let fourier_feature_collection = FourierFeatureCollection::new(10, gen_cauchy_random);
+            let in_vec = random_vector(10);
+            let jacobian = fourier_feature_collection.get_jacobian(&in_vec);
+            let empirical_jacobian = empirical_jacobian(|x| fourier_feature_collection.get_features(x),
+                                                            &in_vec);
+            let test = are_equal_matrices_to_within(&jacobian, &empirical_jacobian, 1.0f32);
+            if (test) {
+                successes += 1;
+            }
+        }
+        if (successes < 5) {
+            panic!();
+        }
     }
 }

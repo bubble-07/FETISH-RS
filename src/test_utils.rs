@@ -20,7 +20,7 @@ pub fn assert_equal_inv_schmears(one : &InverseSchmear, two : &InverseSchmear) {
     assert_equal_vectors(&one.mean, &two.mean);
 }
 
-pub fn assert_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, within : f32) {
+pub fn are_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, within : f32) -> bool {
     let diff = one - two;
     let frob_norm = diff.opnorm_fro().unwrap();
     if (frob_norm > within) {
@@ -28,6 +28,14 @@ pub fn assert_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, w
         println!("Expected: {}", two);
         println!("Diff: {}", diff);
         println!("Frob norm: {}", frob_norm);
+        false
+    } else {
+        true
+    }
+}
+
+pub fn assert_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, within : f32) {
+    if (!are_equal_matrices_to_within(one, two, within)) {
         panic!();
     }
 }

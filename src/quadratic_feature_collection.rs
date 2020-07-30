@@ -159,7 +159,7 @@ mod tests {
         let jacobian = quadratic_feature_collection.get_jacobian(&in_vec);
         let empirical_jacobian = empirical_jacobian(|x| quadratic_feature_collection.get_features(x),
                                                         &in_vec);
-        assert_equal_matrices_to_within(&jacobian, &empirical_jacobian, 0.01f32);
+        assert_equal_matrices_to_within(&jacobian, &empirical_jacobian, 0.1f32);
     }
 
     #[test]
