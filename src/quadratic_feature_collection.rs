@@ -13,6 +13,7 @@ use rustfft::FFT;
 use rustfft::num_complex::Complex;
 use rustfft::num_traits::Zero;
 use crate::params::*;
+use crate::test_utils::*;
 
 pub struct QuadraticFeatureCollection {
     in_dimensions : usize,
@@ -53,6 +54,26 @@ fn to_complex(real : f32) -> Complex<f32> {
 
 fn from_complex(complex : Complex<f32>) -> f32 {
     complex.re
+}
+
+impl QuadraticFeatureCollection {
+    ///Unoptimized implementation of "get_features", for testing purposes
+    fn unoptimized_get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
+        let s = self.in_dimensions;
+        let t = self.get_dimension();
+        
+        let mut result : Array1<f32> = Array::zeros((t,));
+        for i in 0..s {
+            for j in 0..s {
+                let x = in_vec[[i,]];
+                let y = in_vec[[j,]];
+                let sign = self.sketch_one.signs[i] * self.sketch_two.signs[j];
+                let index = (self.sketch_one.indices[i] + self.sketch_two.indices[j]) % t;
+                result[[index,]] += sign * x * y;
+            }
+        }
+        result
+    }
 }
 
 impl FeatureCollection for QuadraticFeatureCollection {
@@ -125,4 +146,28 @@ impl FeatureCollection for QuadraticFeatureCollection {
         self.reg_strength
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empirical_jacobian_is_jacobian() {
+        let quadratic_feature_collection = QuadraticFeatureCollection::new(10);
+        let in_vec = random_vector(10);
+        let jacobian = quadratic_feature_collection.get_jacobian(&in_vec);
+        let empirical_jacobian = empirical_jacobian(|x| quadratic_feature_collection.get_features(x),
+                                                        &in_vec);
+        assert_equal_matrices_to_within(&jacobian, &empirical_jacobian, 0.01f32);
+    }
+
+    #[test]
+    fn unoptimized_get_features_is_get_features() {
+        let quadratic_feature_collection = QuadraticFeatureCollection::new(10);
+        let in_vec = random_vector(10);
+        let unoptimized = quadratic_feature_collection.unoptimized_get_features(&in_vec);
+        let optimized = quadratic_feature_collection.get_features(&in_vec);
+        assert_equal_vectors(&optimized, &unoptimized);
+    }
 }

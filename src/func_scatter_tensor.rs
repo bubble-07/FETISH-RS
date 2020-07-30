@@ -10,7 +10,6 @@ use crate::linear_sketch::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
 use crate::closest_psd_matrix::*;
-use crate::randomized_svd::*;
 use crate::schmear::*;
 use crate::inverse_schmear::*;
 use crate::pseudoinverse::*;

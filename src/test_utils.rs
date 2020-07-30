@@ -20,12 +20,20 @@ pub fn assert_equal_inv_schmears(one : &InverseSchmear, two : &InverseSchmear) {
     assert_equal_vectors(&one.mean, &two.mean);
 }
 
-pub fn assert_equal_matrices(one : &Array2<f32>, two : &Array2<f32>) {
+pub fn assert_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, within : f32) {
     let diff = one - two;
     let frob_norm = diff.opnorm_fro().unwrap();
-    if (frob_norm > ZEROING_THRESH) {
+    if (frob_norm > within) {
+        println!("Actual: {}", one);
+        println!("Expected: {}", two);
+        println!("Diff: {}", diff);
+        println!("Frob norm: {}", frob_norm);
         panic!();
     }
+}
+
+pub fn assert_equal_matrices(one : &Array2<f32>, two : &Array2<f32>) {
+    assert_equal_matrices_to_within(one, two, ZEROING_THRESH);
 }
 pub fn assert_equal_vectors(one : &Array1<f32>, two : &Array1<f32>) {
     let diff = one - two;
@@ -77,3 +85,27 @@ pub fn random_inv_schmear(t : usize) -> InverseSchmear {
         precision
     }
 }
+pub fn empirical_jacobian<F>(f : F, x : &Array1<f32>) -> Array2<f32> 
+    where F : Fn(&Array1<f32>) -> Array1<f32> {
+    let epsilon = 0.001f32;
+    let y = f(x);
+    let s = x.shape()[0];
+    let t = y.shape()[0];
+
+    let mut result = Array::zeros((t, s));
+    for i in 0..s {
+        let mut delta_x : Array1<f32> = Array::zeros((s,));
+        delta_x[[i,]] = epsilon;
+
+        let new_x = x + &delta_x;
+        let new_y = f(&new_x); 
+        let delta_y = &new_y - &y;
+
+        let grad = delta_y / epsilon;
+        for j in 0..t {
+            result[[j, i]] = grad[[j,]];
+        }
+    }
+    result
+}
+
