@@ -69,4 +69,21 @@ mod tests {
             assert_eps_equals(elem.abs(), 1.0f32);
         }
     }
+    #[test]
+    fn signs_differ() {
+        let count_sketch = CountSketch::new(50, 5);
+        let mut pos_count : usize = 0;
+        let mut neg_count : usize = 0;
+        for i in 0..count_sketch.in_dims {
+            if (count_sketch.signs[i] > 0.0) {
+                pos_count += 1;
+            } else {
+                neg_count += 1;
+            }
+            if (pos_count > 0 && neg_count > 0) {
+                return;
+            }
+        }
+        panic!();
+    }
 }

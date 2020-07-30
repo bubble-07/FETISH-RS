@@ -46,8 +46,7 @@ mod tests {
 
     #[test]
     fn closest_psd_of_psd_is_identity() {
-        let matrix_sqrt = random_matrix(10, 10);
-        let matrix = matrix_sqrt.t().dot(&matrix_sqrt);
+        let matrix = random_psd_matrix(10);
         let closest_psd_matrix = get_closest_psd_matrix(&matrix);
         assert_equal_matrices(&closest_psd_matrix, &matrix); 
     }

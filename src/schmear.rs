@@ -11,6 +11,7 @@ use noisy_float::prelude::*;
 
 use crate::inverse_schmear::*;
 use crate::cauchy_fourier_features::*;
+use crate::pseudoinverse::*;
 
 pub struct Schmear {
     pub mean : Array1<f32>,
@@ -25,6 +26,14 @@ impl Schmear {
         Schmear {
             mean : mean,
             covariance : covariance
+        }
+    }
+    pub fn inverse(&self) -> InverseSchmear {
+        let mean = self.mean.clone();
+        let precision = pseudoinverse(&self.covariance);
+        InverseSchmear {
+            mean,
+            precision
         }
     }
     pub fn transform_compress(&self, mat : &Array2<f32>) -> Schmear {

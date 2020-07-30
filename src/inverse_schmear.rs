@@ -8,6 +8,7 @@ use ndarray_linalg::solveh::*;
 use noisy_float::prelude::*;
 use crate::array_utils::*;
 use crate::func_scatter_tensor::*;
+use crate::pseudoinverse::*;
 
 #[derive(Clone)]
 pub struct InverseSchmear {
@@ -23,9 +24,12 @@ impl InverseSchmear {
         result
     }
     
-    pub fn transform_compress(&self, mat : &Array2<f32>, mat_pinv : &Array2<f32>) -> InverseSchmear {
+    pub fn transform_compress(&self, mat : &Array2<f32>) -> InverseSchmear {
         let mean = mat.dot(&self.mean);
-        let precision = mat_pinv.t().dot(&self.precision).dot(mat_pinv);
+        let full_covariance = pseudoinverse(&self.precision);
+        let reduced_covariance = mat.dot(&full_covariance).dot(&mat.t());
+        let precision = pseudoinverse(&reduced_covariance);
+
         InverseSchmear {
             mean,
             precision
