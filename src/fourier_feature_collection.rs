@@ -91,7 +91,7 @@ mod tests {
             let jacobian = fourier_feature_collection.get_jacobian(&in_vec);
             let empirical_jacobian = empirical_jacobian(|x| fourier_feature_collection.get_features(x),
                                                             &in_vec);
-            let test = are_equal_matrices_to_within(&jacobian, &empirical_jacobian, 1.0f32);
+            let test = are_equal_matrices_to_within(&jacobian, &empirical_jacobian, 1.0f32, false);
             if (test) {
                 successes += 1;
             }

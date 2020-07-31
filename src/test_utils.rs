@@ -9,6 +9,7 @@ use ndarray_linalg::*;
 use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
 use crate::linalg_utils::*;
+use crate::func_scatter_tensor::*;
 
 pub fn assert_equal_schmears(one : &Schmear, two : &Schmear) {
     assert_equal_matrices(&one.covariance, &two.covariance);
@@ -20,14 +21,16 @@ pub fn assert_equal_inv_schmears(one : &InverseSchmear, two : &InverseSchmear) {
     assert_equal_vectors(&one.mean, &two.mean);
 }
 
-pub fn are_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, within : f32) -> bool {
+pub fn are_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, within : f32, print : bool) -> bool {
     let diff = one - two;
     let frob_norm = diff.opnorm_fro().unwrap();
     if (frob_norm > within) {
-        println!("Actual: {}", one);
-        println!("Expected: {}", two);
-        println!("Diff: {}", diff);
-        println!("Frob norm: {}", frob_norm);
+        if (print) {
+            println!("Actual: {}", one);
+            println!("Expected: {}", two);
+            println!("Diff: {}", diff);
+            println!("Frob norm: {}", frob_norm);
+        }
         false
     } else {
         true
@@ -35,7 +38,7 @@ pub fn are_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, with
 }
 
 pub fn assert_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, within : f32) {
-    if (!are_equal_matrices_to_within(one, two, within)) {
+    if (!are_equal_matrices_to_within(one, two, within, true)) {
         panic!();
     }
 }
@@ -55,6 +58,12 @@ pub fn assert_eps_equals(one : f32, two : f32) {
     let diff = one - two;
     if (diff.abs() > ZEROING_THRESH) {
         println!("Actual: {} Expected: {}", one, two);
+        panic!();
+    }
+}
+pub fn assert_greater(one : f32, two : f32) {
+    if (two >= one) {
+        println!("{} is greater than {}", two, one);
         panic!();
     }
 }
@@ -93,6 +102,13 @@ pub fn random_inv_schmear(t : usize) -> InverseSchmear {
         precision
     }
 }
+
+pub fn random_func_scatter_tensor(t : usize, s : usize) -> FuncScatterTensor {
+    let in_mat = random_psd_matrix(s);
+    let out_mat = random_psd_matrix(t);
+    FuncScatterTensor::from_in_and_out_scatter(in_mat, out_mat)
+}
+
 pub fn empirical_jacobian<F>(f : F, x : &Array1<f32>) -> Array2<f32> 
     where F : Fn(&Array1<f32>) -> Array1<f32> {
     let epsilon = 0.001f32;

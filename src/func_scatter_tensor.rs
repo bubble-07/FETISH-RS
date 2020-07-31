@@ -10,6 +10,7 @@ use crate::linear_sketch::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
 use crate::closest_psd_matrix::*;
+use crate::test_utils::*;
 use crate::schmear::*;
 use crate::inverse_schmear::*;
 use crate::pseudoinverse::*;
@@ -165,23 +166,27 @@ impl FuncScatterTensor {
     //Uses the approximate rank-1 approx to the sum of rank-1 matrices
     //that you found
     fn update(&mut self, other : &FuncScatterTensor, downdate : bool) {
-        let tot_scale_sq = self.scale * self.scale + other.scale * other.scale;
+        let other_scale = if (downdate) { -other.scale } else { other.scale };
+        
+        let in_dot = frob_inner(&self.in_scatter, &other.in_scatter);
+        let out_dot = frob_inner(&self.out_scatter, &other.out_scatter);
+
+        let tot_scale_sq = self.scale * self.scale + 
+                           2.0f32 * self.scale * other_scale * in_dot * out_dot +
+                           other_scale * other_scale;
+
         let tot_scale = tot_scale_sq.sqrt();
-        if (tot_scale < ZEROING_THRESH) {
-            return; //Too smol to matter
-        }
 
         //First, scale your elements
         self.in_scatter *= self.scale;
         self.out_scatter *= self.scale;
+
         //Add scaled versions of the other elems
-        if (downdate) {
-            //TODO: is there a better approx to the downdate than doing this?
-            self.in_scatter -= &(other.scale * &other.in_scatter);
-            self.out_scatter -= &(other.scale * &other.out_scatter);
-        } else {
-            self.in_scatter += &(other.scale * &other.in_scatter);
-            self.out_scatter += &(other.scale * &other.out_scatter);
+        self.in_scatter += &(other_scale * &other.in_scatter);
+        self.out_scatter += &(other_scale * &other.out_scatter);
+
+        if (tot_scale < ZEROING_THRESH) {
+            panic!(); //Awwww, freak out!
         }
 
         //Divide through by the total scale
@@ -207,4 +212,38 @@ impl ops::SubAssign<&FuncScatterTensor> for FuncScatterTensor {
     fn sub_assign(&mut self, other : &FuncScatterTensor) {
         self.update(other, true);
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn adding_same_tensor_increasing_in_same_subspace() {
+        let tensor = random_func_scatter_tensor(10, 9);
+        let mut doubled_tensor = tensor.clone();
+        doubled_tensor += &tensor;
+        assert_greater(doubled_tensor.scale, tensor.scale);
+        assert_equal_matrices(&doubled_tensor.in_scatter, &tensor.in_scatter);
+        assert_equal_matrices(&doubled_tensor.out_scatter, &tensor.out_scatter);
+    }
+    #[test]
+    fn subtracting_half_tensor_decreasing_in_same_subspace() {
+        let tensor = random_func_scatter_tensor(10, 9);
+        let mut halved_tensor = tensor.clone();
+        halved_tensor *= 0.5f32;
+        let mut subtracted_tensor = tensor.clone();
+        subtracted_tensor -= &halved_tensor;
+
+        assert_greater(tensor.scale, halved_tensor.scale);
+        assert_equal_matrices(&halved_tensor.in_scatter, &tensor.in_scatter); 
+        assert_equal_matrices(&halved_tensor.out_scatter, &tensor.out_scatter);
+
+        assert_greater(tensor.scale, subtracted_tensor.scale);
+        assert_equal_matrices(&subtracted_tensor.in_scatter, &tensor.in_scatter);
+        assert_equal_matrices(&subtracted_tensor.out_scatter, &tensor.out_scatter);
+
+        assert_eps_equals(halved_tensor.scale, subtracted_tensor.scale);
+    }
+
 }
