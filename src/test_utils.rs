@@ -10,6 +10,10 @@ use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
 use crate::linalg_utils::*;
 use crate::func_scatter_tensor::*;
+use plotlib::page::Page;
+use plotlib::repr::{Histogram, HistogramBins};
+use plotlib::style::BoxStyle;
+use plotlib::view::ContinuousView;
 
 pub fn assert_equal_schmears(one : &Schmear, two : &Schmear) {
     assert_equal_matrices(&one.covariance, &two.covariance);
@@ -19,6 +23,13 @@ pub fn assert_equal_schmears(one : &Schmear, two : &Schmear) {
 pub fn assert_equal_inv_schmears(one : &InverseSchmear, two : &InverseSchmear) {
     assert_equal_matrices(&one.precision, &two.precision);
     assert_equal_vectors(&one.mean, &two.mean);
+}
+
+pub fn relative_frob_norm_error(actual : &Array2<f32>, expected : &Array2<f32>) -> f32 {
+    let denominator = expected.opnorm_fro().unwrap();
+    let diff = actual - expected;
+    let diff_norm = diff.opnorm_fro().unwrap();
+    diff_norm / denominator
 }
 
 pub fn are_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, within : f32, print : bool) -> bool {
@@ -131,5 +142,12 @@ pub fn empirical_jacobian<F>(f : F, x : &Array1<f32>) -> Array2<f32>
         }
     }
     result
+}
+
+pub fn plot_histogram(filename : &str, values : Vec<f64>, num_buckets : usize) {
+    let h = Histogram::from_slice(&values, HistogramBins::Count(num_buckets))
+            .style(&BoxStyle::new().fill("burlywood"));
+    let v = ContinuousView::new().add(h);
+    Page::single(&v).save("charts/".to_owned() + &filename + ".svg").expect("saving svg");
 }
 

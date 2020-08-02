@@ -58,7 +58,6 @@ use crate::term_pointer::*;
 use crate::bayes_utils::*;
 use crate::inverse_schmear::*;
 use crate::model::*;
-use plotters::prelude::*;
 use rand::prelude::*;
 use crate::optimizer_state::*;
 

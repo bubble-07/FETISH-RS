@@ -85,7 +85,7 @@ impl FuncScatterTensor {
     }
 
     pub fn flatten(&self) -> Array2<f32> {
-        let result = kron(&self.out_scatter, &self.in_scatter);
+        let result = self.scale * kron(&self.out_scatter, &self.in_scatter);
         result
     }
 
@@ -172,8 +172,8 @@ impl FuncScatterTensor {
         let out_dot = frob_inner(&self.out_scatter, &other.out_scatter);
 
         let tot_scale_sq = self.scale * self.scale + 
-                           2.0f32 * self.scale * other_scale * in_dot * out_dot +
-                           other_scale * other_scale;
+                           other_scale * other_scale + 
+                           2.0f32 * self.scale * other_scale * in_dot * out_dot;
 
         let tot_scale = tot_scale_sq.sqrt();
 
@@ -217,6 +217,32 @@ impl ops::SubAssign<&FuncScatterTensor> for FuncScatterTensor {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn plot_relative_error_against_true_value() {
+        let samples = 100;
+        let buckets = 10;
+        let t = 10;
+        let s = 10;
+        let mut relative_errors = Vec::<f64>::new();
+        for _ in 0..samples {
+            let one = random_func_scatter_tensor(t, s);
+            let two = random_func_scatter_tensor(t, s);
+            let mut actual_sum = one.clone();
+            actual_sum += &two;
+
+            let actual_sum_flat = actual_sum.flatten();
+
+            let one_flat = one.flatten();
+            let two_flat = two.flatten();
+            let mut expected_sum_flat = one_flat.clone();
+            expected_sum_flat += &two_flat;
+
+            let relative_error = relative_frob_norm_error(&actual_sum_flat, &expected_sum_flat);
+            relative_errors.push(relative_error as f64);
+        }
+        plot_histogram("scatterTensorRelativeErrorAgainstTrueValue", relative_errors, buckets);
+    }
 
     #[test]
     fn adding_same_tensor_increasing_in_same_subspace() {
