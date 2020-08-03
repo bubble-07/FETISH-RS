@@ -38,13 +38,13 @@ impl FuncScatterTensor {
         let mut in_scatter : Array2<f32> = Array::zeros((s, s));
         let mut out_scatter : Array2<f32> = Array::zeros((t, t));
 
-        let mut accum_norm_sq = 0.0f32;
 
         //Start off by decomposing the covariance into its eigendecomposition
         let maybe_eigh = covariance.eigh(UPLO::Lower);
         if let Result::Err(e) = &maybe_eigh {
             error!("Bad matrix for eigh {}", covariance);
         }
+        //Time complexity of the loop: nts^2 [so long as n is O(ln(ts)) and s >> t [wlog]
         let (eigenvals, eigenvecs) = maybe_eigh.unwrap();
         for i in 0..eigenvecs.shape()[1] {
             let eigenval = eigenvals[i];
@@ -68,13 +68,30 @@ impl FuncScatterTensor {
                 let singular_val = sigma[[j,]];
 
                 let coef = singular_val * eigenval;
-                accum_norm_sq += coef * coef;
 
                 in_scatter += &(coef * outer(&in_vec, &in_vec));
                 out_scatter += &(coef * &outer(&out_vec, &out_vec));
             }
         }
-        let scale = 1.0f32 / accum_norm_sq.sqrt();
+        //Now, we need to compute the appropriate scale by computing
+        //<v, w> / <v, v>, where w is the actual tensor, and v is our estimate
+        let expansion = linear_sketch.get_expansion_matrix();
+        let n = expansion.shape()[1];
+        //t x (s x n)
+        let reshaped_expansion = expansion.into_shape((t, s, n)).unwrap();
+        //t x (s x n)
+        let transformed_expansion = einsum("ab,bcd->acd", &[&out_scatter, &reshaped_expansion]).unwrap();
+        //n x n x s x s
+        let reduced_expansion = einsum("tca,tdb->abcd", &[&reshaped_expansion, &transformed_expansion]).unwrap();
+        //n x n
+        let double_reduced = einsum("abcd,cd->ab", &[&reduced_expansion, &in_scatter]).unwrap()
+                             .into_dimensionality::<Ix2>().unwrap();
+
+        let dot = frob_inner(&double_reduced, covariance);
+        let sq_norm = frob_inner(&double_reduced, &double_reduced);
+
+        let scale = dot / sq_norm;
+
         let mut result = FuncScatterTensor {
             in_scatter,
             out_scatter,
@@ -217,6 +234,20 @@ impl ops::SubAssign<&FuncScatterTensor> for FuncScatterTensor {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_rank_one_from_compressed_covariance() {
+        let t = 10;
+        let s = 10;
+        let func_scatter_tensor = random_func_scatter_tensor(t, s);
+        let covariance = func_scatter_tensor.flatten();
+        let linear_sketch = LinearSketch::trivial_sketch(t * s);
+        let from_compressed = FuncScatterTensor::from_compressed_covariance(t, s, &linear_sketch, &covariance);
+
+        assert_eps_equals(from_compressed.scale, func_scatter_tensor.scale);
+        assert_equal_matrices(&from_compressed.in_scatter, &func_scatter_tensor.in_scatter);
+        assert_equal_matrices(&from_compressed.out_scatter, &func_scatter_tensor.out_scatter);
+    }
 
     #[test]
     fn plot_relative_error_against_true_value() {

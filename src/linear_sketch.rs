@@ -27,6 +27,14 @@ impl LinearSketch {
             projection_mat_pinv
         }
     }
+    pub fn trivial_sketch(dimensions : usize) -> LinearSketch {
+        let ident = Array::eye(dimensions);
+        LinearSketch {
+            projection_mat : ident.clone(),
+            projection_mat_pinv : ident
+        }
+    }
+
     pub fn compress_inverse_schmear(&self, inv_schmear : &InverseSchmear) -> InverseSchmear {
         inv_schmear.transform_compress(&self.projection_mat)
     }
@@ -39,6 +47,9 @@ impl LinearSketch {
     }
     pub fn expand(&self, mean : &Array1<f32>) -> Array1<f32> {
         self.projection_mat_pinv.dot(mean)
+    }
+    pub fn get_expansion_matrix(&self) -> Array2<f32> {
+        self.projection_mat_pinv.clone()
     }
     pub fn get_output_dimension(&self) -> usize {
         self.projection_mat.shape()[0]
