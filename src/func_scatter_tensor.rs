@@ -77,31 +77,40 @@ impl FuncScatterTensor {
         //<v, w> / <v, v>, where w is the actual tensor, and v is our estimate
         let expansion = linear_sketch.get_expansion_matrix();
         let n = expansion.shape()[1];
-        //t x (s * n)
-        let reshaped_expansion = expansion.into_shape((t, s * n)).unwrap();
-        //t x (s * n)
-        let transformed_expansion = out_scatter.dot(&reshaped_expansion);
-        //(s * n) x t
+        //t x (s x n)
+        let expanded_expansion = expansion.into_shape((t, s, n)).unwrap();
+
+        //s x (t x n)
+        let permuted_expansion = expanded_expansion.permuted_axes([1, 0, 2]);
+
+        let permuted_expansion_std = permuted_expansion.as_standard_layout();
+
+        //s x (t * n)
+        let reshaped_expansion = permuted_expansion_std.into_shape((s, t * n)).unwrap();
+
+        //s x (t * n)
+        let transformed_expansion = in_scatter.dot(&reshaped_expansion);
+        //(t * n) x s
         let reshaped_expansion_t = reshaped_expansion.t();
 
-        //(s * n) x (s * n)
+        //(t * n) x (t * n)
         let reduced_expansion = reshaped_expansion_t.dot(&transformed_expansion);
 
-        //s x n x s x n
-        let reduced_expansion_4d = reduced_expansion.into_shape((s, n, s, n)).unwrap();
+        //t x n x t x n
+        let reduced_expansion_4d = reduced_expansion.into_shape((t, n, t, n)).unwrap();
 
-        //n x n x s x s
+        //n x n x t x t
         let rearranged_reduced_4d = reduced_expansion_4d.permuted_axes([1, 3, 0, 2]);
         let rearranged_reduced_4d_std = rearranged_reduced_4d.as_standard_layout();
 
-        //(n * n) x (s * s)
-        let rearranged_reduced = rearranged_reduced_4d_std.into_shape((n * n, s * s)).unwrap();
+        //(n * n) x (t * t)
+        let rearranged_reduced = rearranged_reduced_4d_std.into_shape((n * n, t * t)).unwrap();
 
-        let in_scatter_flat = in_scatter.clone().into_shape((s * s,)).unwrap();
+        let out_scatter_flat = out_scatter.clone().into_shape((t * t,)).unwrap();
         let covariance_flat = covariance.clone().into_shape((n * n,)).unwrap();
 
         //(n * n)
-        let double_reduced = rearranged_reduced.dot(&in_scatter_flat);
+        let double_reduced = rearranged_reduced.dot(&out_scatter_flat);
 
         let dot = double_reduced.dot(&covariance_flat);
         let sq_norm = double_reduced.dot(&double_reduced);
