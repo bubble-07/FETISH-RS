@@ -302,6 +302,9 @@ impl EmbedderState {
         let func_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_func_type()).unwrap();
         let ret_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_ret_type()).unwrap();
 
+        trace!("Propagating prior for space of size {}->{}", func_space.feature_dimensions, 
+                                                             func_space.out_dimensions);
+
         let maybe_arg_space = self.model_spaces.get(&term_app_res.get_arg_type());
         let arg_schmear : Schmear = match (maybe_arg_space) {
             Option::Some(arg_space) => arg_space.compress_schmear(&full_arg_schmear),
@@ -331,6 +334,9 @@ impl EmbedderState {
 
         let mut arg_mean : Array1::<f32> = self.get_mean_from_ref(&arg_ref);
         let mut out_inv_schmear : InverseSchmear = self.get_inverse_schmear_from_ref(&ret_ref);
+
+        trace!("Propagating data for space of size {}->{}", arg_mean.shape()[0],
+                                                            out_inv_schmear.mean.shape()[0]);
 
         let in_type = term_app_res.get_arg_type();
         if (!is_vector_type(in_type)) {

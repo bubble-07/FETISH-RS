@@ -77,18 +77,34 @@ impl FuncScatterTensor {
         //<v, w> / <v, v>, where w is the actual tensor, and v is our estimate
         let expansion = linear_sketch.get_expansion_matrix();
         let n = expansion.shape()[1];
-        //t x (s x n)
-        let reshaped_expansion = expansion.into_shape((t, s, n)).unwrap();
-        //t x (s x n)
-        let transformed_expansion = einsum("ab,bcd->acd", &[&out_scatter, &reshaped_expansion]).unwrap();
-        //n x n x s x s
-        let reduced_expansion = einsum("tca,tdb->abcd", &[&reshaped_expansion, &transformed_expansion]).unwrap();
-        //n x n
-        let double_reduced = einsum("abcd,cd->ab", &[&reduced_expansion, &in_scatter]).unwrap()
-                             .into_dimensionality::<Ix2>().unwrap();
+        //t x (s * n)
+        let reshaped_expansion = expansion.into_shape((t, s * n)).unwrap();
+        //t x (s * n)
+        let transformed_expansion = out_scatter.dot(&reshaped_expansion);
+        //(s * n) x t
+        let reshaped_expansion_t = reshaped_expansion.t();
 
-        let dot = frob_inner(&double_reduced, covariance);
-        let sq_norm = frob_inner(&double_reduced, &double_reduced);
+        //(s * n) x (s * n)
+        let reduced_expansion = reshaped_expansion_t.dot(&transformed_expansion);
+
+        //s x n x s x n
+        let reduced_expansion_4d = reduced_expansion.into_shape((s, n, s, n)).unwrap();
+
+        //n x n x s x s
+        let rearranged_reduced_4d = reduced_expansion_4d.permuted_axes([1, 3, 0, 2]);
+        let rearranged_reduced_4d_std = rearranged_reduced_4d.as_standard_layout();
+
+        //(n * n) x (s * s)
+        let rearranged_reduced = rearranged_reduced_4d_std.into_shape((n * n, s * s)).unwrap();
+
+        let in_scatter_flat = in_scatter.clone().into_shape((s * s,)).unwrap();
+        let covariance_flat = covariance.clone().into_shape((n * n,)).unwrap();
+
+        //(n * n)
+        let double_reduced = rearranged_reduced.dot(&in_scatter_flat);
+
+        let dot = double_reduced.dot(&covariance_flat);
+        let sq_norm = double_reduced.dot(&double_reduced);
 
         let scale = dot / sq_norm;
 

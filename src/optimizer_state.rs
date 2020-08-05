@@ -126,7 +126,9 @@ impl OptimizerState {
             updated_apps.insert(term_app_result); 
         }
 
+        trace!("Propagating data updates for {} applications", updated_apps.len());
         self.embedder_state.propagate_data_recursive(&self.interpreter_state, updated_apps, &mut data_updated_terms);
+        trace!("Propagating prior updates for {} applications", data_updated_terms.len());
         self.embedder_state.propagate_prior_recursive(&self.interpreter_state, data_updated_terms, &mut prior_updated_terms);
     }
 
