@@ -4,6 +4,7 @@ extern crate ndarray_linalg;
 use ndarray::*;
 use ndarray_linalg::*;
 use ndarray_einsum_beta::*;
+use std::rc::*;
 
 use enum_dispatch::*;
 use crate::feature_collection::*;
@@ -30,4 +31,17 @@ pub fn get_feature_collections(in_dimensions : usize) -> [EnumFeatureCollection;
                                EnumFeatureCollection::from(quadratic_collection),
                                EnumFeatureCollection::from(fourier_collection)];
     feature_collections
+}
+
+pub fn get_rc_feature_collections(in_dimensions : usize) -> Rc<[EnumFeatureCollection; 3]> {
+    let feature_collections = get_feature_collections(in_dimensions);
+    Rc::new(feature_collections)
+}
+
+pub fn get_total_feat_dims(rc_feature_collections : &Rc<[EnumFeatureCollection; 3]>) -> usize {
+    let mut total_feat_dims : usize = 0;
+    for collection in rc_feature_collections.iter() {
+        total_feat_dims += collection.get_dimension();
+    }
+    total_feat_dims
 }

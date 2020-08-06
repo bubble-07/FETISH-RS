@@ -62,13 +62,9 @@ impl ModelSpace {
     }
 
     pub fn new(in_dimensions : usize, out_dimensions : usize) -> ModelSpace {
-        let feature_collections = get_feature_collections(in_dimensions);
-        let rc_feature_collections = Rc::new(feature_collections);
+        let rc_feature_collections = get_rc_feature_collections(in_dimensions);
+        let total_feat_dims = get_total_feat_dims(&rc_feature_collections);
 
-        let mut total_feat_dims : usize = 0;
-        for collection in rc_feature_collections.iter() {
-            total_feat_dims += collection.get_dimension();
-        }
         info!("And feature dims {}", total_feat_dims);
 
         let embedding_dim = total_feat_dims * out_dimensions;

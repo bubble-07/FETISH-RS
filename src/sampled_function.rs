@@ -4,7 +4,6 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
-use ndarray_einsum_beta::*;
 
 use argmin::prelude::*;
 use argmin::solver::linesearch::MoreThuenteLineSearch;
@@ -13,6 +12,7 @@ use argmin::solver::quasinewton::LBFGS;
 use std::rc::*;
 use crate::model::*;
 use crate::params::*;
+use crate::test_utils::*;
 use crate::inverse_schmear::*;
 use crate::enum_feature_collection::*;
 
@@ -77,10 +77,9 @@ impl ArgminOp for SampledFunctionTarget {
     fn gradient(&self, p : &Self::Param) -> Result<Self::Param, Error> {
         let features = to_features(&self.func.feature_collections, p);
         let jacobian = to_jacobian(&self.func.feature_collections, p);
-        let const_term : Array1<f32> = einsum("a,ab->b", &[&self.y_t_s_m, &jacobian]).unwrap()
-                                       .into_dimensionality::<Ix1>().unwrap();
-        let mut result : Array1<f32> = einsum("a,ab,bc->c", &[&features, &self.m_t_s_m, &jacobian]).unwrap()
-                                       .into_dimensionality::<Ix1>().unwrap();
+        let const_term = self.y_t_s_m.dot(&jacobian);
+        let mut result = features.dot(&self.m_t_s_m).dot(&jacobian);
+
         result -= &const_term;
         result *= 2.0f32;
         Ok(result)
@@ -94,10 +93,10 @@ impl SampledFunctionTarget {
         let m = &func.mat;
         let y = &target.mean;
 
-        let y_t_s_m : Array1<f32> = einsum("a,ab,bc->c", &[y, s, m]).unwrap()
-                                    .into_dimensionality::<Ix1>().unwrap();
-        let m_t_s_m : Array2<f32> = einsum("ba,bc,cd->ad", &[m, s, m]).unwrap()
-                                    .into_dimensionality::<Ix2>().unwrap();
+        let s_m : Array2<f32> = s.dot(m);
+        let y_t_s_m = y.dot(&s_m);
+        let m_t_s_m = m.t().dot(&s_m);
+
         SampledFunctionTarget {
             func : func,
             target : target,
@@ -107,3 +106,31 @@ impl SampledFunctionTarget {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empirical_gradient_is_gradient() {
+        let in_dimension = 6;
+        let out_dimension = 7;
+        let mut successes : usize = 0;
+        for i in 0..10 {
+            let sampled_function = random_sampled_function(in_dimension, out_dimension);
+            let target = random_inv_schmear(out_dimension);
+            let sampled_function_target = SampledFunctionTarget::new(sampled_function, target);
+            let in_vec = random_vector(in_dimension);
+
+            let gradient = sampled_function_target.gradient(&in_vec).unwrap();
+            let empirical_gradient = empirical_gradient(|x| sampled_function_target.apply(x).unwrap(), &in_vec);
+
+            let test = are_equal_vectors_to_within(&gradient, &empirical_gradient, 10.0f32, false);
+            if (test) {
+                successes += 1;
+            }
+        }
+        if (successes < 5) {
+            panic!();
+        }
+    }
+}

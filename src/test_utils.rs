@@ -10,10 +10,24 @@ use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
 use crate::linalg_utils::*;
 use crate::func_scatter_tensor::*;
+use crate::sampled_function::*;
+use crate::enum_feature_collection::*;
+use crate::inverse_schmear::*;
 use plotlib::page::Page;
 use plotlib::repr::{Histogram, HistogramBins};
 use plotlib::style::BoxStyle;
 use plotlib::view::ContinuousView;
+
+pub fn random_sampled_function(in_dimensions : usize, out_dimensions : usize) -> SampledFunction {
+    let feature_collections = get_rc_feature_collections(in_dimensions);
+    let total_feat_dims = get_total_feat_dims(&feature_collections); 
+    let mat = random_matrix(out_dimensions, total_feat_dims);
+    SampledFunction {
+        in_dimensions,
+        mat,
+        feature_collections
+    }
+}
 
 pub fn assert_equal_schmears(one : &Schmear, two : &Schmear) {
     assert_equal_matrices(&one.covariance, &two.covariance);
@@ -57,14 +71,34 @@ pub fn assert_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, w
 pub fn assert_equal_matrices(one : &Array2<f32>, two : &Array2<f32>) {
     assert_equal_matrices_to_within(one, two, ZEROING_THRESH);
 }
-pub fn assert_equal_vectors(one : &Array1<f32>, two : &Array1<f32>) {
+
+pub fn are_equal_vectors_to_within(one : &Array1<f32>, two : &Array1<f32>, within : f32, print : bool) -> bool {
     let diff = one - two;
     let sq_norm = diff.dot(&diff);
     let norm = sq_norm.sqrt();
-    if (norm > ZEROING_THRESH) {
+    if (norm > within) {
+        if (print) {
+            println!("Actual: {}", one);
+            println!("Expected: {}", two);
+            println!("Diff: {}", diff);
+            println!("Norm: {}", norm);
+        }
+        false
+    } else {
+        true
+    }
+}
+
+pub fn assert_equal_vectors_to_within(one : &Array1<f32>, two : &Array1<f32>, within : f32) {
+    if(!are_equal_vectors_to_within(one, two, within, true)) {
         panic!();
     }
 }
+
+pub fn assert_equal_vectors(one : &Array1<f32>, two : &Array1<f32>) {
+    assert_equal_vectors_to_within(one, two, ZEROING_THRESH);
+}
+
 pub fn assert_eps_equals(one : f32, two : f32) {
     let diff = one - two;
     if (diff.abs() > ZEROING_THRESH) {
@@ -118,6 +152,30 @@ pub fn random_func_scatter_tensor(t : usize, s : usize) -> FuncScatterTensor {
     let in_mat = random_psd_matrix(s);
     let out_mat = random_psd_matrix(t);
     FuncScatterTensor::from_in_and_out_scatter(in_mat, out_mat)
+}
+
+pub fn empirical_gradient<F>(f : F, x : &Array1<f32>) -> Array1<f32>
+    where F : Fn(&Array1<f32>) -> f32 {
+
+    let epsilon = 0.001f32;
+    let y = f(x);
+
+    let s = x.shape()[0];
+
+    let mut result = Array::zeros((s,));
+    for i in 0..s {
+        let mut delta_x : Array1<f32> = Array::zeros((s,));
+        delta_x[[i,]] = epsilon;
+
+        let new_x = x + &delta_x;
+        let new_y = f(&new_x);
+        let delta_y = new_y - y;
+
+        let grad = delta_y / epsilon;
+
+        result[[i,]] = grad;
+    }
+    result
 }
 
 pub fn empirical_jacobian<F>(f : F, x : &Array1<f32>) -> Array2<f32> 
