@@ -6,10 +6,14 @@ use ndarray_linalg::*;
 
 use std::collections::HashSet;
 use crate::displayable_with_state::*;
+use rand::prelude::*;
 use std::rc::*;
+use crate::linalg_utils::*;
+use crate::array_utils::*;
 use crate::type_id::*;
 use crate::application_table::*;
 use crate::type_space::*;
+use crate::params::*;
 use crate::term::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
@@ -36,7 +40,8 @@ extern crate pretty_env_logger;
 pub struct OptimizerStateWithTarget {
     pub optimizer_state : OptimizerState,
     target_inv_schmear : InverseSchmear,
-    target_type_id : TypeId
+    target_type_id : TypeId,
+    data_points : Vec::<(Array1<f32>, Array1<f32>)>
 }
 
 pub struct OptimizerState {
@@ -47,8 +52,13 @@ pub struct OptimizerState {
 impl OptimizerStateWithTarget {
     pub fn step(&mut self) -> TermPointer {
         let result : TermPointer = self.optimize_evaluate_step();
+        self.evaluate_training_data_step(result.clone());
         self.bayesian_update_step();
         result
+    }
+
+    pub fn evaluate_training_data_step(&mut self, term_ptr : TermPointer) {
+        self.optimizer_state.evaluate_training_data_step(term_ptr, &self.data_points);
     }
 
     pub fn optimize_evaluate_step(&mut self) -> TermPointer {
@@ -107,7 +117,8 @@ impl OptimizerStateWithTarget {
         OptimizerStateWithTarget {
             optimizer_state,
             target_inv_schmear : reduced_target_inv_schmear,
-            target_type_id
+            target_type_id,
+            data_points
         }
     }
 }
@@ -115,6 +126,29 @@ impl OptimizerStateWithTarget {
 impl OptimizerState {
     pub fn init_step(&mut self) {
         self.embedder_state.init_embeddings(&mut self.interpreter_state);
+    }
+    pub fn evaluate_training_data_step(&mut self, term_ptr : TermPointer, 
+                                                  data_points : &Vec<(Array1<f32>, Array1<f32>)>) {
+        let mut sq_loss = 0.0f32;
+
+        //Pick a random collection of training points
+        for _ in 0..TRAINING_POINTS_PER_ITER {
+            let r : usize = rand::thread_rng().gen();
+            let i : usize = r % data_points.len();
+            let (in_vec, out_vec) = &data_points[i];
+            let in_term = TermReference::from(in_vec);
+            let term_app = TermApplication {
+                func_ptr : term_ptr.clone(),
+                arg_ref : in_term
+            };
+            let result_ref = self.interpreter_state.evaluate(&term_app);
+            if let TermReference::VecRef(actual_out_vec_noisy) = result_ref {
+                let actual_out_vec = from_noisy(&actual_out_vec_noisy);
+                let loss = sq_vec_dist(out_vec, &actual_out_vec);
+                sq_loss += loss;
+            }
+        }
+        info!("Emprirical loss of {} on training set subsample of size {}", sq_loss, TRAINING_POINTS_PER_ITER);
     }
     pub fn bayesian_update_step(&mut self) {
         self.embedder_state.init_embeddings(&mut self.interpreter_state);

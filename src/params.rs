@@ -13,14 +13,16 @@ pub const DIM : usize = 2;
 pub const IN_TAPER_START : usize = 5;
 pub const OUT_TAPER_START : usize = 5;
 
-//Numerical algorithm constants
-pub const SVD_PRECISION : f32 = 0.00001f32;
-pub const SVD_MAX_ITER : usize = 1000;
-
-pub const ZEROING_THRESH : f32 = 0.0001f32;
+pub const TRAINING_POINTS_PER_ITER : usize = 5;
 
 pub const INITIAL_INV_GAMMA_A : f32 = 0.5f32;
 pub const INITIAL_INV_GAMMA_B : f32 = 1.0f32;
+
+//Numerical algorithm constants
+pub const ZEROING_THRESH : f32 = 0.0001f32;
+
+pub const NUM_OPT_ITERS : u64 = 20;
+pub const LBFGS_HISTORY : usize = 6;
 
 pub fn log_tapered_linear(k : usize, x : usize) -> usize {
     if (x < k) {

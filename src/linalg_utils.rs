@@ -7,6 +7,11 @@ use ndarray_linalg::*;
 use ndarray_linalg::eigh::*;
 use ndarray_linalg::lapack::*;
 
+pub fn sq_vec_dist(one : &Array1<f32>, two : &Array1<f32>) -> f32 {
+    let diff = one - two;
+    diff.dot(&diff)
+}
+
 pub fn sqrtm(in_array: &Array2<f32>) -> Array2<f32> {
     in_array.ssqrt(UPLO::Lower).unwrap()
 }

@@ -12,13 +12,12 @@ use argmin::solver::quasinewton::LBFGS;
 
 use std::rc::*;
 use crate::model::*;
+use crate::params::*;
 use crate::inverse_schmear::*;
 use crate::enum_feature_collection::*;
 
 extern crate pretty_env_logger;
 
-const NUM_OPT_ITERS : u64 = 100;
-const LBFGS_HISTORY : usize = 10;
 
 #[derive(Clone)]
 pub struct SampledFunction {

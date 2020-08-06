@@ -89,6 +89,7 @@ impl ModelSpace {
     //Samples a function applied to a bare vec
     pub fn thompson_sample_vec(&self, rng : &mut ThreadRng, target : &InverseSchmear) -> 
                               (ModelKey, Array1<f32>, f32) {
+        trace!("Performing vector optimization for {} functions", self.models.len());
         let mut result_key : ModelKey = 0 as ModelKey;
         let mut result_vec : Array1<f32> = Array::zeros((self.in_dimensions,));
         let mut result_dist = f32::INFINITY;

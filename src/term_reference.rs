@@ -5,6 +5,7 @@ use ndarray::*;
 use ndarray_linalg::*;
 use ndarray_einsum_beta::*;
 
+use crate::array_utils::*;
 use crate::type_id::*;
 use crate::term_pointer::*;
 use crate::displayable_with_state::*;
@@ -15,6 +16,12 @@ use noisy_float::prelude::*;
 pub enum TermReference {
     FuncRef(TermPointer),
     VecRef(Array1<R32>)
+}
+
+impl From<&Array1<f32>> for TermReference {
+    fn from(vec : &Array1<f32>) -> Self {
+        TermReference::VecRef(to_noisy(vec))
+    }
 }
 
 impl DisplayableWithState for TermReference {
