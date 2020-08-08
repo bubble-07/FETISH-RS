@@ -17,6 +17,8 @@ use plotlib::page::Page;
 use plotlib::repr::{Histogram, HistogramBins};
 use plotlib::style::BoxStyle;
 use plotlib::view::ContinuousView;
+use crate::model::*;
+use crate::bayes_utils::*;
 
 pub fn random_sampled_function(in_dimensions : usize, out_dimensions : usize) -> SampledFunction {
     let feature_collections = get_rc_feature_collections(in_dimensions);
@@ -27,6 +29,32 @@ pub fn random_sampled_function(in_dimensions : usize, out_dimensions : usize) ->
         mat,
         feature_collections
     }
+}
+
+pub fn random_normal_inverse_gamma(feature_dimensions : usize, out_dimensions : usize) -> NormalInverseGamma {
+    let mean = random_matrix(out_dimensions, feature_dimensions);
+    let precision = random_func_scatter_tensor(out_dimensions, feature_dimensions);
+    let a = 1.0f32;
+    let b = 1.0f32;
+    let t = out_dimensions;
+    let s = feature_dimensions;
+    NormalInverseGamma::new(mean, precision, a, b, t, s)
+}
+//Yields a pair of models (func, arg), of type (in_dimensions -> middle_dimensions) ->
+//out_dimensions
+pub fn random_model_app(in_dimensions : usize, middle_dimensions : usize, out_dimensions : usize) -> (Model, Model) {
+    let arg_model = random_model(in_dimensions, middle_dimensions);
+    let arg_dims = arg_model.get_total_dims();
+    let func_model = random_model(arg_dims, out_dimensions);
+    (func_model, arg_model)
+}
+
+pub fn random_model(in_dimensions : usize, out_dimensions : usize) -> Model {
+    let feature_collections = get_rc_feature_collections(in_dimensions);
+    let total_feat_dims = get_total_feat_dims(&feature_collections); 
+    let mut result = Model::new(feature_collections, in_dimensions, out_dimensions);
+    result.data = random_normal_inverse_gamma(total_feat_dims, out_dimensions);
+    result 
 }
 
 pub fn assert_equal_schmears(one : &Schmear, two : &Schmear) {

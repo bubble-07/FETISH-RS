@@ -139,12 +139,22 @@ impl FuncScatterTensor {
         result
     }
 
-    ///Transform a t x s x m matrix to another t x s x m one
+    ///Transform a t x m x s matrix to another t x m x s one
     pub fn transform3(&self, tensor : &Array3<f32>) -> Array3<f32> {
-        println!("Transform3 tensor dims: {}, {}, {}", tensor.shape()[0], tensor.shape()[1], tensor.shape()[2]);
-        println!("scatter dims: {}, {}", self.out_scatter.shape()[0], self.in_scatter.shape()[0]);
-        let mut result : Array3<f32> = einsum("ca,abs,bd->cds", &[&self.out_scatter, tensor, &self.in_scatter]).unwrap()
-                                   .into_dimensionality::<Ix3>().unwrap();
+        let t = tensor.shape()[0];
+        let m = tensor.shape()[1];
+        let s = tensor.shape()[2];
+
+        //t x (m * s)
+        let reshaped_one = tensor.clone().into_shape((t, m * s)).unwrap();
+        //t x (m * s)
+        let transformed_one = self.out_scatter.dot(&reshaped_one);
+        //(t * m) x s
+        let reshaped_two = transformed_one.into_shape((t * m, s)).unwrap();
+        //(t * m) x s
+        let transformed_two = reshaped_two.dot(&self.in_scatter);
+
+        let mut result = transformed_two.into_shape((t, m, s)).unwrap();
         result *= self.scale;
         result
     }

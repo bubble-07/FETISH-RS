@@ -25,6 +25,7 @@ use crate::inverse_schmear::*;
 use crate::func_schmear::*;
 use crate::func_inverse_schmear::*;
 use crate::params::*;
+use crate::test_utils::*;
 
 use crate::sampled_function::*;
 use arraymap::ArrayMap;
@@ -39,7 +40,7 @@ pub struct Model {
     in_dimensions : usize,
     out_dimensions : usize,
     feature_collections : Rc<[EnumFeatureCollection; 3]>,
-    data : NormalInverseGamma,
+    pub data : NormalInverseGamma,
     prior_updates : HashMap::<PriorUpdateKey, NormalInverseGamma>,
     data_updates : HashMap::<DataUpdateKey, DataPoint>
 }
@@ -55,6 +56,10 @@ pub fn to_jacobian(feature_collections : &[EnumFeatureCollection; 3], in_vec : &
 }
 
 impl Model {
+
+    pub fn get_total_dims(&self) -> usize {
+        self.data.get_total_dims()
+    }
 
     //Find a better function and a better argument in the case where both
     //have schmears
@@ -335,4 +340,27 @@ impl Model {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
 
+    #[test]
+    fn find_better_app_always_exact() {
+        let in_dimensions = 4;
+        let middle_dimensions = 5;
+        let out_dimensions = 6;
+        let (func_model, arg_model) = random_model_app(in_dimensions, middle_dimensions, out_dimensions);
+
+        let target = random_vector(out_dimensions);
+        let (better_func_schmear, better_arg_schmear) = func_model.find_better_app(&arg_model, &target);
+
+        let better_func_mean = better_func_schmear.mean;
+        let better_arg_mean = better_arg_schmear.mean;
+        
+        let feats = func_model.get_features(&better_arg_mean);
+        let better_func_mat = better_func_mean.into_shape((out_dimensions, feats.shape()[0])).unwrap();
+        let better_result = better_func_mat.dot(&feats);
+
+        assert_equal_vectors_to_within(&better_result, &target, 0.001f32);
+    }
+}

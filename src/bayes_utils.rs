@@ -53,6 +53,10 @@ pub fn mean_to_array(mean : &Array2<f32>) -> Array1<f32> {
 
 impl NormalInverseGamma {
 
+    pub fn get_total_dims(&self) -> usize {
+        self.s * self.t
+    }
+
     pub fn sample_as_vec(&self, rng : &mut ThreadRng) -> Array1::<f32> {
         let t = self.mean.shape()[0];
         let s = self.mean.shape()[1];
