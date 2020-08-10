@@ -4,7 +4,6 @@ extern crate ndarray_linalg;
 use std::ops;
 use std::cmp;
 use ndarray::*;
-use ndarray_einsum_beta::*;
 use crate::linalg_utils::*;
 use crate::linear_sketch::*;
 use ndarray_linalg::*;
@@ -135,26 +134,6 @@ impl FuncScatterTensor {
     pub fn transform(&self, mean : &Array2<f32>) -> Array2<f32> {
         let mean_in_scatter : Array2<f32> = mean.dot(&self.in_scatter);
         let mut result = self.out_scatter.dot(&mean_in_scatter);
-        result *= self.scale;
-        result
-    }
-
-    ///Transform a t x m x s matrix to another t x m x s one
-    pub fn transform3(&self, tensor : &Array3<f32>) -> Array3<f32> {
-        let t = tensor.shape()[0];
-        let m = tensor.shape()[1];
-        let s = tensor.shape()[2];
-
-        //t x (m * s)
-        let reshaped_one = tensor.clone().into_shape((t, m * s)).unwrap();
-        //t x (m * s)
-        let transformed_one = self.out_scatter.dot(&reshaped_one);
-        //(t * m) x s
-        let reshaped_two = transformed_one.into_shape((t * m, s)).unwrap();
-        //(t * m) x s
-        let transformed_two = reshaped_two.dot(&self.in_scatter);
-
-        let mut result = transformed_two.into_shape((t, m, s)).unwrap();
         result *= self.scale;
         result
     }
