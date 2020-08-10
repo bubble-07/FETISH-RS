@@ -76,7 +76,7 @@ impl Model {
         //z
         let k = self.get_features(&u_x);
         let k_t_k = k.dot(&k);
-        let alpha = 1.0f32 / k_t_k;
+
 
         let u_f_k = u_f.dot(&k);
         //t
@@ -84,45 +84,25 @@ impl Model {
         //z x s
         let J = to_jacobian(&self.feature_collections, &u_x);
 
-        //t x z
-        let mut a : Array2<f32> = outer(&r, &k);
+        let u_f_J = u_f.dot(&J);
 
-        a *= alpha;
+        let p_t = p_f.out_scatter;
+        let p_s = p_f.scale * p_f.in_scatter;
 
-        //t x s
-        let u_f_J : Array2<f32> = u_f.dot(&J);
 
-        //t x s x z
-        let J_r : Array3<f32> = einsum("zs,t->tsz", &[&J, &r]).unwrap()
-                              .into_dimensionality::<Ix3>().unwrap();
+        let J_u_p_t = u_f_J.t().dot(&p_t);
 
-        //t x s x z
-        let k_u_f_J : Array3<f32> = einsum("z,ts->tsz", &[&k, &u_f_J]).unwrap()
-                              .into_dimensionality::<Ix3>().unwrap();
+        let J_u_p_t_r = J_u_p_t.dot(&r);
+        let J_u_p_t_u_J = J_u_p_t.dot(&u_f_J);
 
-        
-        //t x s x z
-        let B : Array3<f32> = alpha * (J_r - k_u_f_J);
+        let k_p_s_k : f32 = k.dot(&p_s).dot(&k);
+        let p_x_scale = (k_t_k * k_t_k) / (k_p_s_k);
+        let scaled_p_x = p_x_scale * p_x.clone();
 
-        //t x s x z
-        let B_t_p_f = p_f.transform3(&B);
-        
-        //s x s
-        let B_t_p_f_B : Array2<f32> = einsum("taz,tbz->ab", &[&B_t_p_f, &B]).unwrap()
-                              .into_dimensionality::<Ix2>().unwrap();
-
-        //B_t_p_f_B + p_x : s x s
-        let inner : Array2<f32> = B_t_p_f_B + &p_x;
+        let inner = scaled_p_x + J_u_p_t_u_J;
         let inner_inv = inner.invh().unwrap();
 
-
-        //inner_inv : s x s,
-        //B_t_p_f : t x s x z
-        //a : t x z
-        let inner_inv_B_t_p_f_a : Array1<f32> = einsum("os,tsz,tz->o", &[&inner_inv, &B_t_p_f, &a]).unwrap()
-                               .into_dimensionality::<Ix1>().unwrap();
-
-        let delta_x : Array1<f32> = -inner_inv_B_t_p_f_a;
+        let delta_x : Array1<f32> = inner_inv.dot(&J_u_p_t_r);
          
         //Now that we have estimated what the change in x should
         //be [under the linear approximation by the jacobian]
@@ -343,6 +323,95 @@ impl Model {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn clone_model(model : &Model) -> Model {
+        let mut result = Model::new(model.feature_collections.clone(), model.in_dimensions, model.out_dimensions);
+        result.data = model.data.clone();
+        result
+    }
+    
+    fn clone_and_perturb_model(model : &Model, epsilon : f32) -> Model {
+        let mut result = Model::new(model.feature_collections.clone(), model.in_dimensions, model.out_dimensions);
+        result.data = model.data.clone();
+        
+        let mean = &model.data.mean;
+        let t = mean.shape()[0];
+        let s = mean.shape()[1];
+
+        let perturbation = epsilon * random_matrix(t, s);
+
+        result.data.mean += &perturbation;
+
+        result.data.recompute_derived();
+
+        result
+    }
+
+    #[test]
+    fn find_better_app_always_better_arg_in_attraction_basin() {
+        let epsilon = 0.01f32;
+
+        let in_dimensions = 2;
+        let middle_dimensions = 2;
+        let out_dimensions = 2;
+        let (func_model, arg_model) = random_model_app(in_dimensions, middle_dimensions, out_dimensions);
+
+        let func_schmear = func_model.get_inverse_schmear().flatten();
+        let arg_schmear = arg_model.get_inverse_schmear().flatten();
+
+        let actual_func_mean = func_model.get_mean_as_vec();
+        let actual_arg_mean = arg_model.get_mean_as_vec();
+
+        let target = func_model.eval(&actual_arg_mean);
+
+        let perturbed_arg_model = clone_and_perturb_model(&arg_model, epsilon);
+
+        let perturbed_arg_mean = perturbed_arg_model.get_mean_as_vec();
+
+        let perturbed_dist = arg_schmear.mahalanobis_dist(&perturbed_arg_mean);
+
+
+        let (better_func_schmear, better_arg_schmear) = 
+            func_model.find_better_app(&perturbed_arg_model, &target);
+
+        let better_func_mean = better_func_schmear.mean;
+        let better_arg_mean = better_arg_schmear.mean;
+
+        let better_dist = arg_schmear.mahalanobis_dist(&better_arg_mean);
+
+
+        //Assert that the bettered one must be closer
+        if (better_dist > perturbed_dist) {
+            println!("Perturbed distance {} was not bettered, became {}", perturbed_dist, better_dist);
+            println!("Perturbed arg relative to basept: {}", perturbed_arg_mean - &actual_arg_mean);
+            println!("Bettered arg relative to basept: {}", better_arg_mean - &actual_arg_mean);
+            println!("   ");
+            println!("Bettered func relative to basept: {}", better_func_mean - &actual_func_mean);
+            panic!();
+        }
+    }
+
+    #[test]
+    fn find_better_app_no_change_unless_needed() {
+        let in_dimensions = 3;
+        let middle_dimensions = 4;
+        let out_dimensions = 5;
+        let (func_model, arg_model) = random_model_app(in_dimensions, middle_dimensions, out_dimensions);
+
+        let actual_func_mean = func_model.get_mean_as_vec();
+        let actual_arg_mean = arg_model.get_mean_as_vec();
+
+        let target = func_model.eval(&actual_arg_mean);
+
+        let (better_func_schmear, better_arg_schmear) = func_model.find_better_app(&arg_model, &target);
+
+        let better_func_mean = better_func_schmear.mean;
+        let better_arg_mean = better_arg_schmear.mean;
+
+
+        assert_equal_vectors(&better_func_mean, &actual_func_mean);
+        assert_equal_vectors(&better_arg_mean, &actual_arg_mean);
+    }
 
     #[test]
     fn find_better_app_always_exact() {

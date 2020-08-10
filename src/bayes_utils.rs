@@ -28,8 +28,9 @@ pub struct DataPoint {
 
 ///Normal-inverse-gamma distribution representation
 ///for bayesian inference
+#[derive(Clone)]
 pub struct NormalInverseGamma {
-    mean: Array2<f32>,
+    pub mean: Array2<f32>,
     precision_u: Array2<f32>,
     precision : FuncScatterTensor,
     sigma : FuncScatterTensor,
@@ -125,6 +126,10 @@ impl NormalInverseGamma {
 }
 
 impl NormalInverseGamma {
+    pub fn recompute_derived(&mut self) {
+        self.precision_u = self.precision.transform(&self.mean);
+        self.sigma = self.precision.inverse();
+    }
     pub fn new(mean : Array2<f32>, precision : FuncScatterTensor, a : f32, b : f32, t : usize, s : usize) -> NormalInverseGamma {
         let precision_u = precision.transform(&mean);
         let sigma = precision.inverse();
