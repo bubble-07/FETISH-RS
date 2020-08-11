@@ -1,7 +1,7 @@
 pub const CAUCHY_SCALING : f32 = 1.0;
 
 pub const FOURIER_REG_STRENGTH : f32 = 1.0;
-pub const FOURIER_COVERAGE_MULTIPLIER : usize = 5;
+pub const FOURIER_COVERAGE_MULTIPLIER : usize = 3;
 
 pub const LIN_REG_STRENGTH : f32 = 0.1;
 
@@ -10,8 +10,8 @@ pub const QUAD_PADDING_MULTIPLIER : usize = 1;
 
 pub const DIM : usize = 2;
 
-pub const IN_TAPER_START : usize = 5;
-pub const OUT_TAPER_START : usize = 5;
+pub const IN_TAPER_START : usize = 4;
+pub const OUT_TAPER_START : usize = 4;
 
 pub const TRAINING_POINTS_PER_ITER : usize = 5;
 

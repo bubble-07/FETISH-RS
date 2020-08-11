@@ -61,13 +61,10 @@ impl Model {
         self.data.get_total_dims()
     }
 
-    //Find a better function and a better argument in the case where both
-    //have schmears
-    pub fn find_better_app(&self, arg : &Model, target : &Array1<f32>) -> (InverseSchmear, InverseSchmear) {
+    fn find_better_internal(&self, arg : InverseSchmear, target : &Array1<f32>) -> (InverseSchmear, InverseSchmear) {
         let func_inv_schmear = self.data.get_inverse_schmear();
-        let arg_inv_schmear = arg.data.get_inverse_schmear().flatten();
-        let u_x : Array1<f32> = arg_inv_schmear.mean;
-        let p_x : Array2<f32> = arg_inv_schmear.precision;
+        let u_x : Array1<f32> = arg.mean;
+        let p_x : Array2<f32> = arg.precision;
         let u_f : Array2<f32> = self.data.get_mean();
 
         //t x z x t x z
@@ -136,6 +133,23 @@ impl Model {
         };
 
         (result_f, result_x) 
+
+    }
+
+    //Find a better function and a better argument in the case where the
+    //argument is a vector
+    pub fn find_better_vec_app(&self, arg : &Array1<f32>, target : &Array1<f32>) -> (InverseSchmear, Array1<f32>) {
+        let arg_inv_schmear = InverseSchmear::zero_precision_from_vec(arg);
+
+        let (better_func_schmear, better_arg_schmear) = self.find_better_internal(arg_inv_schmear, target);
+        let better_vec = better_arg_schmear.mean;
+        (better_func_schmear, better_vec)
+    }
+
+    //Find a better function and a better argument in the case where both
+    //have schmears
+    pub fn find_better_app(&self, arg : &Model, target : &Array1<f32>) -> (InverseSchmear, InverseSchmear) {
+        self.find_better_internal(arg.get_inverse_schmear().flatten(), target)
     }
 
     //Find a better function in the case where the argument is a vector

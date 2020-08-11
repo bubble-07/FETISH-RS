@@ -26,6 +26,7 @@ use crate::schmear::*;
 use crate::inverse_schmear::*;
 use crate::embedder_state::*;
 use crate::interpreter_state::*;
+use either::*;
 
 use crate::feature_collection::*;
 use crate::linear_feature_collection::*;
@@ -204,16 +205,17 @@ impl OptimizerState {
                     info!("]");
 
                     let better_arg : TermReference = match (maybe_arg_target) {
-                        Some(arg_target) => {
+                        Left(arg_target) => {
                             info!("Recursing on arg [");
                             let better_arg = self.optimize_evaluate_step(arg_type_id, &arg_target);
                             info!("]");
                             TermReference::FuncRef(better_arg)
                         },
-                        None => {
-                            //In this case, we just optimized the function choice
-                            //since the argument choice was already the best possible
-                            application.arg_ref 
+                        Right(arg_vec) => {
+                            //In this case, we optimized the function choice and the argument
+                            //choice, but the argument was a vector, so we need to store it
+                            self.embedder_state.store_vec(arg_type_id, arg_vec.clone());
+                            TermReference::VecRef(arg_vec)
                         }
                     };
                     let better_application = TermApplication {

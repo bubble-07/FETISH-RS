@@ -7,6 +7,7 @@ use ndarray_linalg::*;
 use std::ops;
 use std::rc::*;
 
+use crate::vector_space::*;
 use crate::feature_collection::*;
 use crate::linear_feature_collection::*;
 use crate::quadratic_feature_collection::*;
@@ -83,21 +84,19 @@ impl ModelSpace {
     }
 
     //Samples a function applied to a bare vec
-    pub fn thompson_sample_vec(&self, rng : &mut ThreadRng, target : &InverseSchmear) -> 
+    pub fn thompson_sample_vec(&self, rng : &mut ThreadRng, other : &VectorSpace, target : &InverseSchmear) ->
                               (ModelKey, Array1<f32>, f32) {
-        trace!("Performing vector optimization for {} functions", self.models.len());
         let mut result_key : ModelKey = 0 as ModelKey;
         let mut result_vec : Array1<f32> = Array::zeros((self.in_dimensions,));
         let mut result_dist = f32::INFINITY;
         for (key, model) in self.models.iter() {
             //Sample an array from the model
             let sample : SampledFunction = model.sample(rng);
-            let (arg_val, dist) = sample.get_closest_arg_to_target(target.clone());
-
-            if (dist < result_dist) {
+            let (temp, temp_dist) = other.get_best_vector_arg(&sample, target);
+            if (temp_dist < result_dist) {
+                result_vec = temp;
+                result_dist = temp_dist;
                 result_key = *key;
-                result_vec = arg_val;
-                result_dist = dist;
             }
         }
         (result_key, result_vec, result_dist)

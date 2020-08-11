@@ -36,6 +36,15 @@ impl InverseSchmear {
         }
     }
 
+    pub fn zero_precision_from_vec(vec : &Array1<f32>) -> InverseSchmear {
+        let n = vec.len();
+        let precision = Array::zeros((n, n));
+        InverseSchmear {
+            mean : vec.clone(),
+            precision
+        }
+     }
+
     pub fn ident_precision_from_noisy(vec : &Array1<R32>) -> InverseSchmear {
         let n = vec.len();
         let precision = Array::eye(n);

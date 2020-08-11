@@ -8,6 +8,7 @@ use noisy_float::prelude::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use std::rc::*;
+use either::*;
 use crate::interpreter_state::*;
 use crate::displayable_with_state::*;
 use crate::type_id::*;
@@ -28,19 +29,26 @@ use crate::inverse_schmear::*;
 use crate::func_inverse_schmear::*;
 use crate::feature_collection::*;
 use crate::enum_feature_collection::*;
+use crate::vector_space::*;
 use topological_sort::TopologicalSort;
 
 extern crate pretty_env_logger;
 
 pub struct EmbedderState {
-    pub model_spaces : HashMap::<TypeId, ModelSpace>
+    pub model_spaces : HashMap::<TypeId, ModelSpace>,
+    pub vector_spaces : HashMap::<TypeId, VectorSpace>
 }
 
 impl EmbedderState {
 
+    pub fn store_vec(&mut self, vec_type : TypeId, vec : Array1<R32>) {
+        self.vector_spaces.get_mut(&vec_type).unwrap().store_vec(vec);
+    }
+
     pub fn new() -> EmbedderState {
         info!("Readying embedder state");
         let mut model_spaces = HashMap::<TypeId, ModelSpace>::new();
+        let mut vector_spaces = HashMap::<TypeId, VectorSpace>::new();
         
         let mut full_dimensions = HashMap::<TypeId, usize>::new();
         let mut reduced_dimensions = HashMap::<TypeId, usize>::new();
@@ -55,6 +63,8 @@ impl EmbedderState {
                 Type::VecType(dim) => {
                     full_dimensions.insert(type_id, dim);
                     reduced_dimensions.insert(type_id, dim);
+
+                    vector_spaces.insert(type_id, VectorSpace::new(dim));
                 }
             };
         }
@@ -78,7 +88,8 @@ impl EmbedderState {
         }
 
         EmbedderState {
-            model_spaces
+            model_spaces,
+            vector_spaces
         }
     }
 
@@ -99,7 +110,8 @@ impl EmbedderState {
         let mut rng = rand::thread_rng();
         //Now we have two cases, depending on whether/not the argument type is a vector type
         if is_vector_type(arg_id) {
-            let (func_ind, vec, dist) = func_space.thompson_sample_vec(&mut rng, target);
+            let vec_space = self.vector_spaces.get(&arg_id).unwrap();
+            let (func_ind, vec, dist) = func_space.thompson_sample_vec(&mut rng, vec_space, target);
             let func_pointer = TermPointer {
                 type_id : func_id,
                 index : func_ind
@@ -130,7 +142,7 @@ impl EmbedderState {
     }
 
     pub fn find_better_app(&self, term_application : &TermApplication, target : &Array1<f32>) ->
-                          (InverseSchmear, Option::<InverseSchmear>) {
+                          (InverseSchmear, Either<InverseSchmear, Array1<R32>>) {
         let func_ptr = &term_application.func_ptr;
         let func_space = self.get_model_space(func_ptr);
         let func_model = self.get_embedding(func_ptr);
@@ -143,12 +155,12 @@ impl EmbedderState {
                 let reduced_func_schmear = func_space.compress_inverse_schmear(&func_schmear);
                 let reduced_arg_schmear = arg_space.compress_inverse_schmear(&arg_schmear);
 
-                (reduced_func_schmear, Option::Some(reduced_arg_schmear))
+                (reduced_func_schmear, Either::Left(reduced_arg_schmear))
             },
             TermReference::VecRef(vec) => {
-                let func_schmear = func_model.find_better_func(&from_noisy(vec), target);
+                let (func_schmear, arg_vec) = func_model.find_better_vec_app(&from_noisy(vec), target);
                 let reduced_func_schmear = func_space.compress_inverse_schmear(&func_schmear);
-                (reduced_func_schmear, Option::None)
+                (reduced_func_schmear, Either::Right(to_noisy(&arg_vec)))
             }
         }
     }

@@ -10,6 +10,7 @@ mod array_utils;
 mod pseudoinverse;
 mod linear_sketch;
 mod linalg_utils;
+mod vector_space;
 mod feature_collection;
 mod linear_feature_collection;
 mod sketched_linear_feature_collection;
