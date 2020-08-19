@@ -14,10 +14,11 @@ use rustfft::num_complex::Complex;
 use rustfft::num_traits::Zero;
 use crate::params::*;
 use crate::test_utils::*;
+use crate::alpha_formulas::*;
 
 pub struct QuadraticFeatureCollection {
     in_dimensions : usize,
-    reg_strength : f32,
+    alpha : f32,
     sketch_one : CountSketch,
     sketch_two : CountSketch,
     fft : Arc<dyn FFT<f32>>,
@@ -27,7 +28,9 @@ pub struct QuadraticFeatureCollection {
 impl QuadraticFeatureCollection {
     pub fn new(in_dimensions : usize) -> QuadraticFeatureCollection {
         let out_dimensions = num_quadratic_features(in_dimensions);
-        let reg_strength = QUAD_REG_STRENGTH;
+
+        let alpha = quadratic_sketched_alpha(in_dimensions);
+
         let sketch_one = CountSketch::new(in_dimensions, out_dimensions);
         let sketch_two = CountSketch::new(in_dimensions, out_dimensions);
         
@@ -39,7 +42,7 @@ impl QuadraticFeatureCollection {
 
         QuadraticFeatureCollection {
             in_dimensions,
-            reg_strength,
+            alpha,
             sketch_one,
             sketch_two,
             fft,
@@ -72,7 +75,7 @@ impl QuadraticFeatureCollection {
                 result[[index,]] += sign * x * y;
             }
         }
-        result
+        self.alpha * result
     }
 }
 
@@ -98,7 +101,7 @@ impl FeatureCollection for QuadraticFeatureCollection {
                 result[[index, j]] += sign * x;
             }
         }
-        result
+        self.alpha * result
     }
 
     fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32> {
@@ -131,7 +134,8 @@ impl FeatureCollection for QuadraticFeatureCollection {
             first_fft[i] *= scale_fac;
         }
         
-        Array::from(first_fft).mapv(from_complex)
+        let result = Array::from(first_fft).mapv(from_complex);
+        self.alpha * result
     }
 
     fn get_in_dimensions(&self) -> usize {
@@ -141,11 +145,6 @@ impl FeatureCollection for QuadraticFeatureCollection {
     fn get_dimension(&self) -> usize {
         self.sketch_one.get_out_dimensions()
     }
-
-    fn get_regularization_strength(&self) -> f32 {
-        self.reg_strength
-    }
-
 }
 
 #[cfg(test)]

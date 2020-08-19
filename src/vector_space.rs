@@ -29,12 +29,15 @@ impl VectorSpace {
     }
 
     pub fn store_vec(&mut self, vec : Array1<R32>) {
+        if (vec.shape()[0] != self.dimension) {
+            panic!();
+        }
         self.vectors.insert(vec);
     }
 
     pub fn get_best_vector_arg(&self, sampled_function : &SampledFunction, target : &InverseSchmear) -> 
                           (Array1<f32>, f32) {
-        let mut result_vec : Array1<f32> = Array::zeros((self.dimension,));
+        let mut result_vec : &Array1<R32> = &Array::zeros((self.dimension,));
         let mut result_dist : f32 = f32::INFINITY;
         for vector in self.vectors.iter() {
             let as_floating = from_noisy(vector);
@@ -42,11 +45,11 @@ impl VectorSpace {
             let temp_dist = target.mahalanobis_dist(&temp);
 
             if (temp_dist < result_dist) {
-                result_vec = temp;
+                result_vec = vector;
                 result_dist = temp_dist;
             }
         }
-        (result_vec, result_dist)
+        (from_noisy(result_vec), result_dist)
     }
 }
 

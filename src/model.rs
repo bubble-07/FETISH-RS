@@ -8,8 +8,8 @@ use ndarray_einsum_beta::*;
 use std::ops;
 use std::rc::*;
 
+use crate::pseudoinverse::*;
 use crate::feature_collection::*;
-use crate::linear_feature_collection::*;
 use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
@@ -97,7 +97,7 @@ impl Model {
         let scaled_p_x = p_x_scale * p_x.clone();
 
         let inner = scaled_p_x + J_u_p_t_u_J;
-        let inner_inv = inner.invh().unwrap();
+        let inner_inv = pseudoinverse_h(&inner);
 
         let delta_x : Array1<f32> = inner_inv.dot(&J_u_p_t_r);
          
@@ -150,26 +150,6 @@ impl Model {
     //have schmears
     pub fn find_better_app(&self, arg : &Model, target : &Array1<f32>) -> (InverseSchmear, InverseSchmear) {
         self.find_better_internal(arg.get_inverse_schmear().flatten(), target)
-    }
-
-    //Find a better function in the case where the argument is a vector
-    pub fn find_better_func(&self, arg : &Array1<f32>, target : &Array1<f32>) -> InverseSchmear {
-        let k = self.get_features(arg);
-        let k_t_k = k.dot(&k);
-        let k_normed = k * (1.0f32 / k_t_k);
-
-        let func_inv_schmear = self.data.get_inverse_schmear();
-        let new_out = self.eval(arg);
-        let r = target - &new_out;
-
-        let delta_f : Array2<f32> = outer(&r, &k_normed);
-        let new_f = func_inv_schmear.mean + &delta_f;
-
-        let result = FuncInverseSchmear {
-            mean : new_f,
-            precision : func_inv_schmear.precision.clone()
-        };
-        result.flatten()
     }
 }
 
@@ -276,48 +256,12 @@ impl Model {
             total_feat_dims += collection.get_dimension();
         }
 
-        let mut mean : Array2<f32> = Array::zeros((out_dimensions, total_feat_dims));
-        let mut ind_one : usize = 0;
+        let mean : Array2<f32> = Array::zeros((out_dimensions, total_feat_dims));
 
-        for (i, collection_i) in feature_collections.iter().enumerate() {
-            let coll_i_size : usize = collection_i.get_dimension();
-            let end_ind_one = ind_one + coll_i_size;
+        let precision_mult : f32 = (1.0f32 / (PRIOR_SIGMA * PRIOR_SIGMA));
+        let in_precision : Array2<f32> = precision_mult * Array::eye(total_feat_dims);
+        let out_precision : Array2<f32> = precision_mult * Array::eye(out_dimensions);
 
-            let mean_block : Array2<f32> = collection_i.blank_mean(out_dimensions);
-
-            mean.slice_mut(s![.., ind_one..end_ind_one]).assign(&mean_block);
-
-            ind_one = end_ind_one;
-        }
-
-        let mut in_precision : Array2<f32> = Array::zeros((total_feat_dims, total_feat_dims));
-        let mut ind_one = 0;
-
-        for (i, collection_i) in feature_collections.iter().enumerate() {
-
-            let coll_i_size : usize = collection_i.get_dimension();
-            let end_ind_one = ind_one + coll_i_size;
-
-            let mut ind_two : usize = 0;
-
-            for (j, collection_j) in feature_collections.iter().enumerate() {
-                let coll_j_size : usize = collection_j.get_dimension();
-                let end_ind_two = ind_two + coll_j_size; 
-
-                let precision_block = if i == j {
-                    collection_i.blank_diagonal_precision(out_dimensions)
-                } else {
-                    collection_i.blank_interaction_precision(collection_j, out_dimensions)
-                };
-
-                in_precision.slice_mut(s![ind_one..end_ind_one, ind_two..end_ind_two])
-                         .assign(&precision_block);
-
-                ind_two = end_ind_two;
-            }
-            ind_one = end_ind_one;
-        }
-        let out_precision : Array2<f32> = Array::eye(out_dimensions);
         let precision = FuncScatterTensor::from_in_and_out_scatter(in_precision, out_precision);
 
         let data = NormalInverseGamma::new(mean, precision, INITIAL_INV_GAMMA_A, INITIAL_INV_GAMMA_B,

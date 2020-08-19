@@ -19,9 +19,13 @@ pub struct LinearSketch {
 }
 
 impl LinearSketch {
-    pub fn new(in_dimensions : usize, out_dimensions : usize) -> LinearSketch {
-        let projection_mat = Array::random((out_dimensions, in_dimensions), StandardNormal);
-        let projection_mat_pinv = pseudoinverse(&projection_mat);
+    pub fn new(in_dimensions : usize, out_dimensions : usize, alpha : f32) -> LinearSketch {
+        let mut projection_mat = Array::random((out_dimensions, in_dimensions), StandardNormal);
+        let mut projection_mat_pinv = pseudoinverse(&projection_mat);
+        
+        projection_mat *= alpha;
+        projection_mat_pinv *= (1.0f32 / alpha);
+
         LinearSketch {
             projection_mat,
             projection_mat_pinv

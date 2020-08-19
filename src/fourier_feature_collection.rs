@@ -4,6 +4,7 @@ extern crate ndarray_linalg;
 use ndarray::*;
 use ndarray_linalg::*;
 
+use crate::alpha_formulas::*;
 use crate::feature_collection::*;
 use crate::linalg_utils::*;
 use rand::prelude::*;
@@ -13,15 +14,16 @@ use crate::cauchy_fourier_features::*;
 
 pub struct FourierFeatureCollection {
     in_dimensions : usize,
-    reg_strength : f32,
     num_features : usize,
+    alpha : f32,
     ws : Array2<f32> //Matrix which is num_features x in_dimensions
 }
 
 impl FourierFeatureCollection {
     pub fn new(in_dimensions: usize, generator : fn(&mut ThreadRng, usize) -> Array1<f32>) -> FourierFeatureCollection {
-        let reg_strength = FOURIER_REG_STRENGTH;
         let num_features = num_fourier_features(in_dimensions);
+
+        let alpha = fourier_sketched_alpha(num_features);
 
         let mut ws = Array::zeros((num_features, in_dimensions));
         let mut rng = rand::thread_rng();
@@ -34,8 +36,8 @@ impl FourierFeatureCollection {
 
         FourierFeatureCollection {
             in_dimensions,
-            reg_strength,
             num_features,
+            alpha,
             ws
         }
     }
@@ -47,7 +49,9 @@ impl FeatureCollection for FourierFeatureCollection {
         let sine = dotted.mapv(f32::sin);
         let cosine = dotted.mapv(f32::cos);
         
-        stack(Axis(0), &[sine.view(), cosine.view()]).unwrap()
+        let result = stack(Axis(0), &[sine.view(), cosine.view()]).unwrap();
+
+        self.alpha * result
     }
 
     fn get_jacobian(&self, in_vec: &Array1<f32>) -> Array2<f32> {
@@ -61,8 +65,10 @@ impl FeatureCollection for FourierFeatureCollection {
         let part_one = scale_rows(&self.ws, &cos);
         let part_two = scale_rows(&self.ws, &neg_sine);
         
-        stack(Axis(0), &[part_one.view(), part_two.view()]).unwrap()
-            .into_dimensionality::<Ix2>().unwrap()
+        let result = stack(Axis(0), &[part_one.view(), part_two.view()]).unwrap()
+            .into_dimensionality::<Ix2>().unwrap();
+
+        self.alpha * result
     }
 
     fn get_in_dimensions(&self) -> usize {
@@ -71,10 +77,6 @@ impl FeatureCollection for FourierFeatureCollection {
     
     fn get_dimension(&self) -> usize {
         self.num_features * 2
-    }
-
-    fn get_regularization_strength(&self) -> f32 {
-        self.reg_strength
     }
 }
 

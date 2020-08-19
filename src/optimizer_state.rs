@@ -29,7 +29,6 @@ use crate::interpreter_state::*;
 use either::*;
 
 use crate::feature_collection::*;
-use crate::linear_feature_collection::*;
 use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
@@ -195,7 +194,9 @@ impl OptimizerState {
             Option::None => term_pointer,
             Option::Some(application_and_types) => {
                 let (application, func_type_id, arg_type_id) = application_and_types;
-                if (best_dist < term_dist) {
+                //It's crucial that this is <= rather than <, since we always want to expand
+                //if the best version of something is an existing term
+                if (best_dist <= term_dist) {
                     let target_mean = &target_inv_schmear.mean;
                     let (func_target, maybe_arg_target) = 
                         self.embedder_state.find_better_app(&application, target_mean);

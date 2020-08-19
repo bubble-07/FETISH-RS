@@ -8,7 +8,6 @@ use std::rc::*;
 
 use enum_dispatch::*;
 use crate::feature_collection::*;
-use crate::linear_feature_collection::*;
 use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
@@ -18,7 +17,6 @@ use crate::bayes_utils::*;
 #[enum_dispatch(FeatureCollection)]
 pub enum EnumFeatureCollection {
     SketchedLinearFeatureCollection,
-    LinearFeatureCollection,
     QuadraticFeatureCollection,
     FourierFeatureCollection
 }

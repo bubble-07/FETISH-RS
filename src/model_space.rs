@@ -7,9 +7,9 @@ use ndarray_linalg::*;
 use std::ops;
 use std::rc::*;
 
+use crate::alpha_formulas::*;
 use crate::vector_space::*;
 use crate::feature_collection::*;
-use crate::linear_feature_collection::*;
 use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
@@ -70,7 +70,9 @@ impl ModelSpace {
 
         let embedding_dim = total_feat_dims * out_dimensions;
         let sketched_embedding_dim = get_reduced_output_dimension(embedding_dim);
-        let output_sketch = LinearSketch::new(embedding_dim, sketched_embedding_dim);
+        let alpha = sketch_alpha(embedding_dim);
+
+        let output_sketch = LinearSketch::new(embedding_dim, sketched_embedding_dim, alpha);
 
         let model_space = ModelSpace {
             in_dimensions : in_dimensions,

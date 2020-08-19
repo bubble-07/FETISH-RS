@@ -1,12 +1,14 @@
 pub const CAUCHY_SCALING : f32 = 1.0;
 
-pub const FOURIER_REG_STRENGTH : f32 = 1.0;
 pub const FOURIER_COVERAGE_MULTIPLIER : usize = 3;
+pub const FOURIER_IMPORTANCE : f32 = 0.1f32;
 
-pub const LIN_REG_STRENGTH : f32 = 0.1;
-
-pub const QUAD_REG_STRENGTH : f32 = 5.0;
 pub const QUAD_PADDING_MULTIPLIER : usize = 1;
+pub const QUAD_IMPORTANCE : f32 = 0.1f32;
+
+pub const LIN_IMPORTANCE : f32 = 0.8f32;
+
+pub const PRIOR_SIGMA : f32 = 1.0f32;
 
 pub const DIM : usize = 2;
 

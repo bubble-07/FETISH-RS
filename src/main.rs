@@ -5,6 +5,7 @@
 #![allow(unused_variables)]
 
 mod bayes_utils;
+mod alpha_formulas;
 mod test_utils;
 mod array_utils;
 mod pseudoinverse;
@@ -12,7 +13,6 @@ mod linear_sketch;
 mod linalg_utils;
 mod vector_space;
 mod feature_collection;
-mod linear_feature_collection;
 mod sketched_linear_feature_collection;
 mod embedder_state;
 mod count_sketch;
