@@ -151,11 +151,13 @@ impl EmbedderState {
             TermReference::FuncRef(arg_ptr) => {
                 let arg_space = self.get_model_space(arg_ptr);
                 let arg_model = self.get_embedding(arg_ptr);
-                let (func_schmear, arg_schmear) = func_model.find_better_app(arg_model, target);
-                let reduced_func_schmear = func_space.compress_inverse_schmear(&func_schmear);
-                let reduced_arg_schmear = arg_space.compress_inverse_schmear(&arg_schmear);
+                let arg_inv_schmear = self.get_inverse_schmear_from_ptr(arg_ptr).flatten();
+                let compressed_arg_inv_schmear = arg_space.compress_inverse_schmear(&arg_inv_schmear);
 
-                (reduced_func_schmear, Either::Left(reduced_arg_schmear))
+                let (func_schmear, arg_schmear) = func_model.find_better_app(compressed_arg_inv_schmear, target);
+                let reduced_func_schmear = func_space.compress_inverse_schmear(&func_schmear);
+
+                (reduced_func_schmear, Either::Left(arg_schmear))
             },
             TermReference::VecRef(vec) => {
                 let (func_schmear, arg_vec) = func_model.find_better_vec_app(&from_noisy(vec), target);

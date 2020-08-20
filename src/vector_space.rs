@@ -22,6 +22,12 @@ impl VectorSpace {
     pub fn new(dimension : usize) -> VectorSpace {
         let mut vectors : HashSet<Array1<R32>> = HashSet::new();
         vectors.insert(Array::zeros((dimension,)));
+        for i in 0..dimension {
+            let mut vector = Array::zeros((dimension,));
+            vector[[i,]] = r32(1.0f32);
+            vectors.insert(vector);
+        }
+
         VectorSpace {
             dimension,
             vectors

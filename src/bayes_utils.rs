@@ -237,6 +237,11 @@ impl NormalInverseGamma {
         self.b += s * (other.b + 0.5 * (u_diff_l_u_diff_one + u_diff_l_u_diff_two));
 
         if (self.b < 0.0f32) {
+            println!("U diff l u diff one {}", u_diff_l_u_diff_one);
+            println!("U diff l u diff two {}", u_diff_l_u_diff_two);
+            println!("other b {}", other.b);
+            self.b -= s * (other.b + 0.5 * (u_diff_l_u_diff_one + u_diff_l_u_diff_two));
+            println!("self b {}", self.b);
             panic!();
         }
 

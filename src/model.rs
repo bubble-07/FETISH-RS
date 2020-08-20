@@ -148,8 +148,8 @@ impl Model {
 
     //Find a better function and a better argument in the case where both
     //have schmears
-    pub fn find_better_app(&self, arg : &Model, target : &Array1<f32>) -> (InverseSchmear, InverseSchmear) {
-        self.find_better_internal(arg.get_inverse_schmear().flatten(), target)
+    pub fn find_better_app(&self, arg_schmear : InverseSchmear, target : &Array1<f32>) -> (InverseSchmear, InverseSchmear) {
+        self.find_better_internal(arg_schmear, target)
     }
 }
 
