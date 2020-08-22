@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod least_squares;
 mod bayes_utils;
 mod alpha_formulas;
 mod test_utils;

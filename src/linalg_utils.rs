@@ -21,6 +21,11 @@ pub fn outer(a : &Array1<f32>, b : &Array1<f32>) -> Array2<f32> {
           .into_dimensionality::<Ix2>().unwrap()
 }
 
+pub fn normalize_frob(a : &Array2<f32>) -> Array2<f32> {
+    let sq_norm = frob_inner(a, a);
+    (1.0f32 / sq_norm) * a
+}
+
 pub fn frob_inner(a : &Array2<f32>, b : &Array2<f32>) -> f32 {
     einsum("ab,ab->", &[a, b]).unwrap()
           .into_dimensionality::<Ix0>().unwrap().into_scalar()

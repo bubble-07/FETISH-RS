@@ -43,19 +43,34 @@ impl VectorSpace {
 
     pub fn get_best_vector_arg(&self, sampled_function : &SampledFunction, target : &InverseSchmear) -> 
                           (Array1<f32>, f32) {
-        let mut result_vec : &Array1<R32> = &Array::zeros((self.dimension,));
+        let mut result_vec : Array1<f32> = Array::zeros((self.dimension,));
         let mut result_dist : f32 = f32::INFINITY;
+
         for vector in self.vectors.iter() {
             let as_floating = from_noisy(vector);
-            let temp = sampled_function.apply(&as_floating);
-            let temp_dist = target.mahalanobis_dist(&temp);
+            {
+                let temp = sampled_function.apply(&as_floating);
+                let temp_dist = target.mahalanobis_dist(&temp);
 
-            if (temp_dist < result_dist) {
-                result_vec = vector;
-                result_dist = temp_dist;
+                if (temp_dist < result_dist) {
+                    result_vec = from_noisy(vector);
+                    result_dist = temp_dist;
+                }
+            }
+            {
+                let better_vec = sampled_function.secant_method_iter(&as_floating, target);
+                let temp = sampled_function.apply(&better_vec);
+                let temp_dist = target.mahalanobis_dist(&temp);
+
+                if (temp_dist < result_dist) {
+                    result_vec = better_vec;
+                    result_dist = temp_dist;
+                }
             }
         }
-        (from_noisy(result_vec), result_dist)
+
+
+        (result_vec, result_dist)
     }
 }
 

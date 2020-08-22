@@ -114,9 +114,14 @@ impl OptimizerStateWithTarget {
         let target_space = optimizer_state.embedder_state.model_spaces.get(&target_type_id).unwrap();
         let reduced_target_inv_schmear = target_space.compress_inverse_schmear(&target_inv_schmear);
 
+        let normalized_target_inv_schmear = InverseSchmear {
+            mean : reduced_target_inv_schmear.mean,
+            precision : normalize_frob(&reduced_target_inv_schmear.precision)
+        };
+
         OptimizerStateWithTarget {
             optimizer_state,
-            target_inv_schmear : reduced_target_inv_schmear,
+            target_inv_schmear : normalized_target_inv_schmear,
             target_type_id,
             data_points
         }
