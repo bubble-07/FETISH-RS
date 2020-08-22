@@ -69,7 +69,7 @@ mod tests {
 
     #[test]
     fn compesss_schmear_and_compress_inv_schmear_align() {
-        let linear_sketch = LinearSketch::new(10, 5);
+        let linear_sketch = LinearSketch::new(10, 5, 1.0f32);
         let schmear = random_schmear(10);
         let inv_schmear = schmear.inverse();
         let compressed_schmear = linear_sketch.compress_schmear(&schmear);
@@ -80,7 +80,7 @@ mod tests {
 
     #[test]
     fn expand_then_sketch_is_identity() {
-        let linear_sketch = LinearSketch::new(20, 10);
+        let linear_sketch = LinearSketch::new(20, 10, 1.0f32);
         let vector = random_vector(10); 
         let expanded = linear_sketch.expand(&vector);
         let sketched = linear_sketch.sketch(&expanded);

@@ -328,9 +328,10 @@ mod tests {
 
         let perturbed_dist = arg_schmear.mahalanobis_dist(&perturbed_arg_mean);
 
+        let perturbed_arg_schmear = perturbed_arg_model.get_inverse_schmear().flatten();
 
         let (better_func_schmear, better_arg_schmear) = 
-            func_model.find_better_app(&perturbed_arg_model, &target);
+            func_model.find_better_app(perturbed_arg_schmear, &target);
 
         let better_func_mean = better_func_schmear.mean;
         let better_arg_mean = better_arg_schmear.mean;
@@ -361,7 +362,9 @@ mod tests {
 
         let target = func_model.eval(&actual_arg_mean);
 
-        let (better_func_schmear, better_arg_schmear) = func_model.find_better_app(&arg_model, &target);
+        let arg_schmear = arg_model.get_inverse_schmear().flatten();
+
+        let (better_func_schmear, better_arg_schmear) = func_model.find_better_app(arg_schmear, &target);
 
         let better_func_mean = better_func_schmear.mean;
         let better_arg_mean = better_arg_schmear.mean;
@@ -378,8 +381,10 @@ mod tests {
         let out_dimensions = 6;
         let (func_model, arg_model) = random_model_app(in_dimensions, middle_dimensions, out_dimensions);
 
+        let arg_schmear = arg_model.get_inverse_schmear().flatten();
+
         let target = random_vector(out_dimensions);
-        let (better_func_schmear, better_arg_schmear) = func_model.find_better_app(&arg_model, &target);
+        let (better_func_schmear, better_arg_schmear) = func_model.find_better_app(arg_schmear, &target);
 
         let better_func_mean = better_func_schmear.mean;
         let better_arg_mean = better_arg_schmear.mean;
