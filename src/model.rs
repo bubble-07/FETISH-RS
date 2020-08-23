@@ -306,6 +306,43 @@ mod tests {
     }
 
     #[test]
+    fn sampling_accurate() {
+        let epsilon = 10.0f32;
+        let num_samps = 1000;
+        let in_dimensions = 2;
+        let out_dimensions = 2;
+        let model = random_model(in_dimensions, out_dimensions);
+
+        let model_schmear = model.get_schmear().flatten();
+
+        let model_dims = model_schmear.mean.shape()[0];
+
+        let mut mean = Array::zeros((model_dims,));
+        let mut rng = rand::thread_rng();
+
+        let scale_fac = 1.0f32 / (num_samps as f32);
+
+        for i in 0..num_samps {
+            let sample = model.sample_as_vec(&mut rng);
+
+            mean += &(scale_fac * &sample);
+        }
+
+        assert_equal_vectors_to_within(&mean, &model_schmear.mean, epsilon);
+
+
+        let mut covariance = Array::zeros((model_dims, model_dims));
+        for i in 0..num_samps {
+            let sample = model.sample_as_vec(&mut rng);
+
+            let diff = &sample - &model_schmear.mean;
+            covariance += &(scale_fac * &outer(&diff, &diff));
+        }
+
+        assert_equal_matrices_to_within(&covariance, &model_schmear.covariance, epsilon);
+    }
+
+    #[test]
     fn find_better_app_always_better_arg_in_attraction_basin() {
         let epsilon = 0.01f32;
 

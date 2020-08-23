@@ -73,14 +73,11 @@ impl NormalInverseGamma {
         let t = self.mean.shape()[0];
         let s = self.mean.shape()[1];
         let std_norm_samp = Array::random((t, s), StandardNormal);
-        let sqrt_covariance = self.sigma.sqrt();
+
+        let covariance = self.get_covariance();
+        let sqrt_covariance = covariance.sqrt();
         let mut result : Array2<f32> = sqrt_covariance.transform(&std_norm_samp);
        
-        //Great, now we need to sample from the inverse-gamma part
-        //to determine a multiplier for the covariance
-        let inv_gamma_sample = gen_inverse_gamma_random(rng, self.a, self.b);
-        result *= inv_gamma_sample;
-
         //Add the mean to offset it right
         result += &self.mean;
         result
@@ -109,12 +106,12 @@ impl NormalInverseGamma {
 
     pub fn get_precision(&self) -> FuncScatterTensor {
         let mut result = self.precision.clone();
-        result *= (self.b / self.a);
+        result *= (self.a / self.b);
         result
     }
     pub fn get_covariance(&self) -> FuncScatterTensor {
         let mut result = self.sigma.clone();
-        result *= (self.a / self.b);
+        result *= (self.b / (self.a - 1.0f32));
         result
     }
 }

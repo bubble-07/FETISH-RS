@@ -34,8 +34,8 @@ pub fn random_sampled_function(in_dimensions : usize, out_dimensions : usize) ->
 pub fn random_normal_inverse_gamma(feature_dimensions : usize, out_dimensions : usize) -> NormalInverseGamma {
     let mean = random_matrix(out_dimensions, feature_dimensions);
     let precision = random_func_scatter_tensor(out_dimensions, feature_dimensions);
-    let a = 1.0f32;
-    let b = 1.0f32;
+    let a = 6.0f32;
+    let b = 0.5f32;
     let t = out_dimensions;
     let s = feature_dimensions;
     NormalInverseGamma::new(mean, precision, a, b, t, s)

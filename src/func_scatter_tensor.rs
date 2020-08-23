@@ -250,6 +250,39 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_inverse() {
+        let t = 5;
+        let s = 6;
+        let mat = random_matrix(t, s);
+        let scatter_tensor = random_func_scatter_tensor(t, s);
+        let scatter_tensor_inv = scatter_tensor.inverse();
+
+        let transformed = scatter_tensor.transform(&mat);
+        let actual = scatter_tensor_inv.transform(&transformed);
+
+        assert_equal_matrices(&actual, &mat);
+
+        let post_actual = scatter_tensor.transform(&actual);
+        assert_equal_matrices(&post_actual, &transformed);
+    }
+
+    #[test]
+    fn test_sqrt() {
+        let t = 5;
+        let s = 6;
+        let mat = random_matrix(t, s);
+        let scatter_tensor = random_func_scatter_tensor(t, s);
+        let scatter_tensor_sqrt = scatter_tensor.sqrt(); 
+
+        let expected = scatter_tensor.transform(&mat);
+
+        let half_actual = scatter_tensor_sqrt.transform(&mat);
+        let actual = scatter_tensor_sqrt.transform(&half_actual);
+
+        assert_equal_matrices(&actual, &expected);
+    }
+
+    #[test]
     fn test_rank_one_from_compressed_covariance() {
         let t = 10;
         let s = 10;
