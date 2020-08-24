@@ -339,7 +339,7 @@ mod tests {
             covariance += &(scale_fac * &outer(&diff, &diff));
         }
 
-        assert_equal_matrices_to_within(&covariance, &model_schmear.covariance, epsilon);
+        assert_equal_matrices_to_within(&covariance, &model_schmear.covariance, epsilon * (model_dims as f32));
     }
 
     #[test]

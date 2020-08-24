@@ -217,7 +217,7 @@ impl FuncScatterTensor {
         self.out_scatter += &(other_scale * &other.out_scatter);
 
         if (tot_scale < ZEROING_THRESH) {
-            panic!(); //Awwww, freak out!
+            return; //Must be a zero tensor, or close
         }
 
         //Divide through by the total scale

@@ -157,7 +157,7 @@ impl ModelSpace {
                                                                   &self.func_sketcher, &in_schmear.covariance);
         let precision = sigma.inverse();
 
-        let a : f32 = -0.5f32 * ((t * s) as f32) + 0.5f32;
+        let a : f32 = (-0.5f32 * (s as f32)) + 0.5f32;
         let b : f32 = 0.0f32;
         NormalInverseGamma::new(mean, precision, a, b, t, s)
     }

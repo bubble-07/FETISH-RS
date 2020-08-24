@@ -17,7 +17,9 @@ pub const OUT_TAPER_START : usize = 4;
 
 pub const TRAINING_POINTS_PER_ITER : usize = 5;
 
-pub const INITIAL_INV_GAMMA_A : f32 = 0.5f32;
+//A value of 1.0 for a ensures that with at least one data-point,
+//the expectation of the gamma is always defined
+pub const INITIAL_INV_GAMMA_A : f32 = 2.0f32;
 pub const INITIAL_INV_GAMMA_B : f32 = 1.0f32;
 
 //Numerical algorithm constants

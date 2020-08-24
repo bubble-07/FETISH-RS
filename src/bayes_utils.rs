@@ -106,7 +106,7 @@ impl NormalInverseGamma {
 
     pub fn get_precision(&self) -> FuncScatterTensor {
         let mut result = self.precision.clone();
-        result *= (self.a / self.b);
+        result *= ((self.a - 1.0f32) / self.b);
         result
     }
     pub fn get_covariance(&self) -> FuncScatterTensor {
@@ -147,18 +147,16 @@ impl NormalInverseGamma {
 impl NormalInverseGamma {
 
     fn update(&mut self, data_point : &DataPoint, downdate : bool) {
-        let out_precision = &data_point.out_inv_schmear.precision;
+        let mut out_precision = data_point.out_inv_schmear.precision.clone();
+        if (downdate) {
+            out_precision *= -1.0f32;
+        }
 
         let in_precision = outer(&data_point.in_vec, &data_point.in_vec);
 
         let precision_contrib = FuncScatterTensor::from_in_and_out_scatter(in_precision, out_precision.clone());
 
-        if (downdate) {
-            self.precision -= &precision_contrib;
-        } else {
-            self.precision += &precision_contrib;
-        }
-
+        self.precision += &precision_contrib;
 
         self.sigma = self.precision.inverse();
 
@@ -166,14 +164,9 @@ impl NormalInverseGamma {
 
         let out_precision_y : Array1<f32> = out_precision.dot(data_out_mean);
 
-        let mut x_out_precision_y = outer(&out_precision_y, &data_point.in_vec);
+        let x_out_precision_y = outer(&out_precision_y, &data_point.in_vec);
 
-        let mut y_T_out_precision_y = out_precision_y.dot(data_out_mean);
-
-        if (downdate == true) {
-            x_out_precision_y *= -1.0f32;
-            y_T_out_precision_y *= -1.0f32;
-        }
+        let y_T_out_precision_y = out_precision_y.dot(data_out_mean);
         
         let u_precision_u_zero = frob_inner(&self.mean, &self.precision_u);
 
@@ -190,7 +183,7 @@ impl NormalInverseGamma {
             panic!();
         }
 
-        self.a += (self.t as f32) * (if downdate == true {-0.5} else {0.5});
+        self.a += (if downdate == true {-0.5} else {0.5});
         if (self.a < 0.0f32) {
             panic!();
         }
@@ -211,52 +204,55 @@ impl ops::SubAssign<&DataPoint> for NormalInverseGamma {
 
 impl NormalInverseGamma {
     fn update_combine(&mut self, other : &NormalInverseGamma, downdate : bool) {
-        let mut precision_out = self.precision.clone();
-        if (downdate) {
-            self.precision_u -= &other.precision_u;
-            precision_out -= &other.precision;
-        } else {
-            self.precision_u += &other.precision_u;
-            precision_out += &other.precision;
-        }
+        let s = if (downdate) {-1.0f32} else {1.0f32};
 
-        self.sigma = precision_out.inverse();
-        let mean_out : Array2<f32> = self.sigma.transform(&self.precision_u);
+        let mut other_precision = other.precision.clone();
+        other_precision *= s;
+
+        let other_mean = &other.mean;
+        let other_precision_u = s * other.precision_u.clone();
+        let other_a = if (downdate) { -(self.s as f32) - other.a } else { other.a };
+        let other_b = s * other.b;
+
+        let mut precision_out = self.precision.clone();
+        precision_out += &other_precision;
+
+        let precision_u_out = &self.precision_u + &other.precision_u;
+
+        let sigma_out = precision_out.inverse();
+
+        let mean_out = sigma_out.transform(&precision_u_out);
+
+        let a_out = self.a + other.a + 0.5f32 * (self.s as f32);
 
         let mean_one_diff = &self.mean - &mean_out;
-        let mean_two_diff = &other.mean - &mean_out;
+        let mean_two_diff = other_mean - &mean_out;
 
         let u_diff_l_u_diff_one = self.precision.inner_product(&mean_one_diff, &mean_one_diff);
         let u_diff_l_u_diff_two = other.precision.inner_product(&mean_two_diff, &mean_two_diff);
-        
-        let s = if (downdate) {-1.0f32} else {1.0f32};
-        
-        self.b += s * (other.b + 0.5 * (u_diff_l_u_diff_one + u_diff_l_u_diff_two));
 
-        if (self.b < 0.0f32) {
+        let b_out = self.b + other.b + 0.5f32 * (u_diff_l_u_diff_one + u_diff_l_u_diff_two);
+
+
+        if (b_out < 0.0f32) {
             println!("U diff l u diff one {}", u_diff_l_u_diff_one);
             println!("U diff l u diff two {}", u_diff_l_u_diff_two);
-            println!("other b {}", other.b);
-            self.b -= s * (other.b + 0.5 * (u_diff_l_u_diff_one + u_diff_l_u_diff_two));
             println!("self b {}", self.b);
+            println!("other b {}", other.b);
             panic!();
         }
 
-
-        let a_base = -0.5 * ((self.t * self.s) as f32);
-
-        let my_a_centered = self.a - a_base;
-        let other_a_centered = other.a - a_base;
-        let combined_a_centered = my_a_centered + s * other_a_centered;
-        self.a = combined_a_centered + a_base;
-
-        if (self.a < 0.0f32) {
+        if (a_out < 0.0f32) {
             panic!();
         }
-
-        self.precision = precision_out;
 
         self.mean = mean_out;
+        self.precision_u = precision_u_out;
+        self.precision = precision_out;
+        self.sigma = sigma_out;
+
+        self.a = a_out;
+        self.b = b_out;
     }
 }
 
