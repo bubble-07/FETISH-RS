@@ -4,6 +4,7 @@ extern crate ndarray_linalg;
 use ndarray::*;
 use std::collections::HashMap;
 use crate::type_id::*;
+use crate::displayable_with_state::*;
 use crate::application_table::*;
 use crate::type_space::*;
 use crate::term::*;
@@ -14,6 +15,7 @@ use crate::term_application::*;
 use crate::term_application_result::*;
 use std::collections::HashSet;
 use crate::func_impl::*;
+use topological_sort::TopologicalSort;
 
 pub struct InterpreterState {
     pub application_tables : HashMap::<TypeId, ApplicationTable>,
@@ -105,6 +107,57 @@ impl InterpreterState {
 
             application_table.link(term_app.clone(), result_ref.clone());
             result_ref
+        }
+    }
+    
+    fn ensure_every_term_has_an_application(&mut self) {
+        let mut topo_sort = TopologicalSort::<TypeId>::new();
+        for i in 0..total_num_types() {
+            let type_id = i as TypeId;
+            if let Type::FuncType(arg_type_id, ret_type_id) = get_type(type_id) {
+                topo_sort.add_dependency(type_id, arg_type_id);
+                topo_sort.add_dependency(type_id, ret_type_id);
+            }
+        }
+
+        while (topo_sort.len() > 0) {
+            let mut type_ids = topo_sort.pop_all();
+            for func_type_id in type_ids.drain(..) {
+                if let Type::FuncType(arg_type_id, _) = get_type(func_type_id) {
+                    let func_space = self.type_spaces.get(&func_type_id).unwrap();
+
+                    for index in 0..func_space.get_num_terms() {
+                        let func_ptr = TermPointer {
+                            type_id : func_type_id,
+                            index
+                        };
+                        let num_existing_app_results = {
+                            let app_table = self.application_tables.get(&func_type_id).unwrap();
+                            let existing_app_results = app_table.get_app_results_with_func(&func_ptr);  
+                            existing_app_results.len()
+                        };
+
+                        if (num_existing_app_results == 0) {
+                            let arg_ref = match (get_type(arg_type_id)) {
+                                Type::FuncType(_, _) => {
+                                    let arg_space = self.type_spaces.get(&arg_type_id).unwrap();
+                                    let arg_ptr = arg_space.draw_random_ptr().unwrap();
+                                    TermReference::FuncRef(arg_ptr)
+                                },
+                                Type::VecType(dim) => {
+                                    TermReference::VecRef(Array::zeros((dim,)))
+                                }
+                            };
+                            let term_app = TermApplication {
+                                func_ptr : func_ptr.clone(),
+                                arg_ref : arg_ref
+                            };
+
+                            self.evaluate(&term_app);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -234,6 +287,7 @@ impl InterpreterState {
         }
 
         result.ensure_every_type_has_a_term();
+        result.ensure_every_term_has_an_application();
 
         result
     }

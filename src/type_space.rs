@@ -23,6 +23,10 @@ impl TypeSpace {
         }
     }
 
+    pub fn get_num_terms(&self) -> usize {
+        self.terms.len()
+    }
+
     pub fn draw_random_ptr(&self) -> Option<TermPointer> {
         if (self.terms.len() == 0) {
             Option::None
