@@ -8,6 +8,7 @@ use crate::term_reference::*;
 use crate::term::*;
 use crate::term_application::*;
 use enum_dispatch::*;
+use crate::test_utils::*;
 
 use ndarray::*;
 use ndarray_linalg::*;
@@ -349,7 +350,7 @@ impl HasFuncSignature for ConstImpl {
 }
 impl FuncImpl for ConstImpl {
     fn evaluate(&self, state : &mut InterpreterState, args : Vec::<TermReference>) -> TermReference {
-        let result_ptr : TermReference = args[1].clone();
+        let result_ptr : TermReference = args[0].clone();
         result_ptr
     }
 }
@@ -457,3 +458,79 @@ impl FuncImpl for MapImpl {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_addition() {
+        let mut state = InterpreterState::new();
+        let args = vec![term_ref(array![1.0f32, 2.0f32]), term_ref(array![3.0f32, 4.0f32])];
+
+        let addition_func = BinaryFuncImpl {
+            elem_type : *VECTOR_T,
+            f : EnumBinaryArrayOperator::AddOperator(AddOperator {})
+        };
+
+        let result = addition_func.evaluate(&mut state, args);
+        assert_equal_vector_term(result, array![4.0f32, 6.0f32]);
+    }
+    #[test]
+    fn test_rotate() {
+        let mut state = InterpreterState::new();
+        let args = vec![term_ref(array![5.0f32, 10.0f32])];
+
+        let rotate_func = RotateImpl {};
+
+        let result = rotate_func.evaluate(&mut state, args);
+        assert_equal_vector_term(result, array![10.0f32, 5.0f32]);
+    }
+
+    #[test]
+    fn test_set_head() {
+        let mut state = InterpreterState::new();
+        let args = vec![term_ref(array![1.0f32, 2.0f32]), term_ref(array![9.0f32])];
+
+        let set_head_func = SetHeadImpl {};
+
+        let result = set_head_func.evaluate(&mut state, args);
+        assert_equal_vector_term(result, array![9.0f32, 2.0f32]);
+    }
+
+    #[test]
+    fn test_head() {
+        let mut state = InterpreterState::new();
+        let args = vec![term_ref(array![1.0f32, 2.0f32])];
+        
+        let head_func = HeadImpl {};
+        
+        let result = head_func.evaluate(&mut state, args);
+        assert_equal_vector_term(result, array![1.0f32]);
+    }
+
+    #[test]
+    fn test_fill() {
+        let mut state = InterpreterState::new();
+        let args = vec![term_ref(array![3.0f32])];
+
+        let fill_func = FillImpl {};
+
+        let result = fill_func.evaluate(&mut state, args);
+        assert_equal_vector_term(result, array![3.0f32, 3.0f32]);
+    }
+    
+    #[test]
+    fn test_const() {
+        let mut state = InterpreterState::new();
+        let args = vec![term_ref(array![1.0f32, 2.0f32]), term_ref(array![3.0f32])];
+
+        let const_func = ConstImpl {
+            ret_type : *VECTOR_T,
+            ignored_type : *SCALAR_T
+        };
+
+        let result = const_func.evaluate(&mut state, args);
+        assert_equal_vector_term(result, array![1.0f32, 2.0f32]);
+    }
+
+}

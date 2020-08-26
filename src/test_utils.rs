@@ -19,6 +19,12 @@ use plotlib::style::BoxStyle;
 use plotlib::view::ContinuousView;
 use crate::model::*;
 use crate::bayes_utils::*;
+use crate::term_reference::*;
+use crate::array_utils::*;
+
+pub fn term_ref(in_array : Array1<f32>) -> TermReference {
+    TermReference::VecRef(to_noisy(&in_array))
+}
 
 pub fn random_sampled_function(in_dimensions : usize, out_dimensions : usize) -> SampledFunction {
     let feature_collections = get_rc_feature_collections(in_dimensions);
@@ -119,6 +125,14 @@ pub fn are_equal_vectors_to_within(one : &Array1<f32>, two : &Array1<f32>, withi
 
 pub fn assert_equal_vectors_to_within(one : &Array1<f32>, two : &Array1<f32>, within : f32) {
     if(!are_equal_vectors_to_within(one, two, within, true)) {
+        panic!();
+    }
+}
+
+pub fn assert_equal_vector_term(actual : TermReference, expected : Array1<f32>) {
+    if let TermReference::VecRef(vec) = actual {
+        assert_equal_vectors(&from_noisy(&vec), &expected);
+    } else {
         panic!();
     }
 }
