@@ -131,6 +131,7 @@ impl OptimizerStateWithTarget {
 impl OptimizerState {
     pub fn init_step(&mut self) {
         self.embedder_state.init_embeddings(&mut self.interpreter_state);
+        self.bayesian_update_step();
     }
     pub fn evaluate_training_data_step(&mut self, term_ptr : TermPointer, 
                                                   data_points : &Vec<(Array1<f32>, Array1<f32>)>) {

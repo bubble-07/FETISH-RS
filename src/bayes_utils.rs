@@ -180,6 +180,7 @@ impl NormalInverseGamma {
         self.b -= 0.5 * &u_precision_u_n;
 
         if (self.b < 0.0f32) {
+            error!("self.b is {}", self.b);
             panic!();
         }
 

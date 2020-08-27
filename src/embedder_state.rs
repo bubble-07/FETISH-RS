@@ -235,74 +235,87 @@ impl EmbedderState {
         embedding.get_mean_as_vec()
     }
 
-    //Propagagtes prior updates downwards
+    //Propagates prior updates downwards
     pub fn propagate_prior_recursive(&mut self, interpreter_state : &InterpreterState,
-                                 modified : HashSet::<TermPointer>,
-                                 all_modified : &mut HashSet::<TermPointer>) {
-        let mut follow_up : HashSet::<TermApplicationResult> = HashSet::new();
-        for elem in modified.iter() {
-            let mut funcs : Vec<TermApplicationResult> = interpreter_state.get_app_results_with_func(&elem).clone();
-            for func in funcs.drain(..) {
-                follow_up.insert(func);
+                                     to_propagate : HashSet::<TermPointer>,
+                                     all_modified : &mut HashSet::<TermPointer>) {
+        let mut topo_sort = TopologicalSort::<TermApplicationResult>::new();
+        let mut stack = Vec::<TermApplicationResult>::new();
+
+        for func_ptr in to_propagate {
+            let applications = interpreter_state.get_app_results_with_func(&func_ptr);
+            for application in applications {
+                if let TermReference::FuncRef(_) = application.get_ret_ref() {
+                    topo_sort.insert(application.clone());
+                    stack.push(application.clone());
+                }
             }
         }
-        if (follow_up.len() > 0) {
-            self.propagate_prior_recursive_helper(interpreter_state, follow_up, all_modified);
-        }
-    }
-
-    fn propagate_prior_recursive_helper(&mut self, interpreter_state : &InterpreterState,
-                                        modified : HashSet::<TermApplicationResult>,
-                                        all_modified : &mut HashSet::<TermPointer>) {
-        let mut follow_up : HashSet::<TermPointer> = HashSet::new();
-        for elem in modified.iter() {
-            let ret_ref : TermReference = elem.get_ret_ref();
+        while (stack.len() > 0) {
+            let elem = stack.pop().unwrap();
+            let func_ptr = elem.get_func_ptr();
+            let ret_ref = elem.get_ret_ref();
             if let TermReference::FuncRef(ret_func_ptr) = ret_ref {
-                self.propagate_prior(elem.clone());
-                follow_up.insert(ret_func_ptr.clone()); 
+                let applications = interpreter_state.get_app_results_with_func(&ret_func_ptr); 
+                for application in applications {
+                    if let TermReference::FuncRef(_) = application.get_ret_ref() {
+                        topo_sort.add_dependency(elem.clone(), application.clone());
+                        stack.push(application);
+                    }
+                }
+
                 all_modified.insert(ret_func_ptr);
             }
         }
-        if (follow_up.len() > 0) {
-            self.propagate_prior_recursive(interpreter_state, follow_up, all_modified);
+
+        while (!topo_sort.is_empty()) {
+            let to_process = topo_sort.pop_all();
+            for elem in to_process {
+                self.propagate_prior(elem.clone());
+            }
         }
     }
 
     //Propagates data updates upwards
-    pub fn propagate_data_recursive(&mut self, interpreter_state : &InterpreterState, 
-                                results : HashSet::<TermApplicationResult>,
-                                all_modified : &mut HashSet::<TermPointer>) {
-        let mut follow_up : HashSet::<TermPointer> = HashSet::new();
-        for elem in results.iter() {
-            self.propagate_data(elem.clone());
-            let func_ptr : TermPointer = elem.get_func_ptr(); 
-            follow_up.insert(func_ptr.clone());
+    pub fn propagate_data_recursive(&mut self, interpreter_state : &InterpreterState,
+                                    to_propagate : HashSet::<TermApplicationResult>,
+                                    all_modified : &mut HashSet::<TermPointer>) {
+        let mut topo_sort = TopologicalSort::<TermApplicationResult>::new();
+        let mut stack = Vec::<TermApplicationResult>::new();
+
+        for elem in to_propagate {
+            stack.push(elem.clone());
+        }
+
+        while (stack.len() > 0) {
+            let elem = stack.pop().unwrap();
+            let func_ptr = elem.get_func_ptr();
+            let func_ref = TermReference::FuncRef(func_ptr.clone());
+
             all_modified.insert(func_ptr);
-        }
-        if (follow_up.len() > 0) {
-            self.propagate_data_recursive_helper(interpreter_state, follow_up, all_modified);
-        }
-    }
 
-    fn propagate_data_recursive_helper(&mut self, interpreter_state : &InterpreterState, 
-                                       modified : HashSet::<TermPointer>,
-                                       all_modified : &mut HashSet::<TermPointer>) {
-        let mut follow_up : HashSet::<TermApplicationResult> = HashSet::new();
-        for elem in modified.iter() {
-            let elem_ref = TermReference::FuncRef(elem.clone());
+            let args = interpreter_state.get_app_results_with_arg(&func_ref);
+            for arg in args {
+                stack.push(arg.clone());
+                topo_sort.add_dependency(elem.clone(), arg.clone());
+            }
 
-            let mut args : Vec<TermApplicationResult> = interpreter_state.get_app_results_with_arg(&elem_ref).clone();
-            for arg in args.drain(..) {
-                follow_up.insert(arg);
+            let rets = interpreter_state.get_app_results_with_result(&func_ref);
+            for ret in rets {
+                stack.push(ret.clone());
+                topo_sort.add_dependency(elem.clone(), ret.clone());
             }
-            let mut rets : Vec<TermApplicationResult> = interpreter_state.get_app_results_with_result(&elem_ref).clone();
-            for ret in rets.drain(..) {
-                follow_up.insert(ret);
+
+            topo_sort.insert(elem);
+        }
+
+        while (!topo_sort.is_empty()) {
+            let to_process = topo_sort.pop_all();
+            for elem in to_process {
+                self.propagate_data(elem);
             }
         }
-        if (follow_up.len() > 0) {
-            self.propagate_data_recursive(interpreter_state, follow_up, all_modified);
-        }
+        
     }
 
     //Given a TermApplicationResult, compute the estimated output from the application
