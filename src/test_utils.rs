@@ -37,6 +37,20 @@ pub fn random_sampled_function(in_dimensions : usize, out_dimensions : usize) ->
     }
 }
 
+pub fn standard_normal_inverse_gamma(feature_dimensions : usize, out_dimensions : usize) -> NormalInverseGamma {
+    let mean = Array::zeros((out_dimensions, feature_dimensions));
+    
+    let in_precision = Array::eye(feature_dimensions);
+    let out_precision = Array::eye(out_dimensions);
+    let precision = FuncScatterTensor::from_in_and_out_scatter(in_precision, out_precision); 
+
+    let a = 2.0f32;
+    let b = 1.0f32;
+    let t = out_dimensions;
+    let s = feature_dimensions;
+    NormalInverseGamma::new(mean, precision, a, b, t, s)
+}
+
 pub fn random_normal_inverse_gamma(feature_dimensions : usize, out_dimensions : usize) -> NormalInverseGamma {
     let mean = random_matrix(out_dimensions, feature_dimensions);
     let precision = random_func_scatter_tensor(out_dimensions, feature_dimensions);

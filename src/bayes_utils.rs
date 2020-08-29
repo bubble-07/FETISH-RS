@@ -6,6 +6,7 @@ use ndarray::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
 use crate::linalg_utils::*;
+use crate::test_utils::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
 use crate::func_scatter_tensor::*;
@@ -180,7 +181,7 @@ impl NormalInverseGamma {
         self.b -= 0.5 * &u_precision_u_n;
 
         if (self.b < 0.0f32) {
-            error!("self.b is {}", self.b);
+            println!("self.b is {}", self.b);
             panic!();
         }
 
@@ -265,5 +266,39 @@ impl ops::AddAssign<&NormalInverseGamma> for NormalInverseGamma {
 impl ops::SubAssign<&NormalInverseGamma> for NormalInverseGamma {
     fn sub_assign(&mut self, other : &NormalInverseGamma) {
         self.update_combine(other, true);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_model_convergence_noiseless() {
+        let num_samps = 1000;
+        let s = 5;
+        let t = 4;
+        let mut model = standard_normal_inverse_gamma(s, t);
+
+        let mat = random_matrix(t, s);
+        for i in 0..num_samps {
+            let vec = random_vector(s);
+            let out = mat.dot(&vec);
+            let out_precision = 100.0f32 * random_psd_matrix(t);
+
+            let out_inv_schmear = InverseSchmear {
+                mean : out,
+                precision : out_precision
+            };
+
+            let data_point = DataPoint {
+                in_vec : vec,
+                out_inv_schmear
+            };
+
+            model += &data_point;
+        }
+
+        assert_equal_matrices(&model.mean, &mat);
     }
 }
