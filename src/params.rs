@@ -17,15 +17,6 @@ pub const OUT_TAPER_START : usize = 4;
 
 pub const TRAINING_POINTS_PER_ITER : usize = 5;
 
-//A value of 1.0 for a ensures that with at least one data-point,
-//the expectation of the gamma is always defined
-//but with zero it is now.
-pub const INITIAL_INV_GAMMA_A : f32 = 1.0f32;
-
-//This needs to be strictly greater than zero for covariance and precision
-//to both be well-defined
-pub const INITIAL_INV_GAMMA_B : f32 = 1.0f32;
-
 //Numerical algorithm constants
 pub const ZEROING_THRESH : f32 = 0.0001f32;
 

@@ -12,7 +12,6 @@ use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::sketched_linear_feature_collection::*;
-use crate::bayes_utils::*;
 
 #[enum_dispatch(FeatureCollection)]
 pub enum EnumFeatureCollection {

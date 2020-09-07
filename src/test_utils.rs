@@ -18,7 +18,8 @@ use plotlib::repr::{Histogram, HistogramBins};
 use plotlib::style::BoxStyle;
 use plotlib::view::ContinuousView;
 use crate::model::*;
-use crate::bayes_utils::*;
+use crate::data_point::*;
+use crate::normal_inverse_wishart::*;
 use crate::term_reference::*;
 use crate::array_utils::*;
 
@@ -37,28 +38,23 @@ pub fn random_sampled_function(in_dimensions : usize, out_dimensions : usize) ->
     }
 }
 
-pub fn standard_normal_inverse_gamma(feature_dimensions : usize, out_dimensions : usize) -> NormalInverseGamma {
+pub fn standard_normal_inverse_wishart(feature_dimensions : usize, out_dimensions : usize) -> NormalInverseWishart {
     let mean = Array::zeros((out_dimensions, feature_dimensions));
     
     let in_precision = Array::eye(feature_dimensions);
     let out_precision = Array::eye(out_dimensions);
-    let precision = FuncScatterTensor::from_in_and_out_scatter(in_precision, out_precision); 
+    let little_v = (out_dimensions as f32) + 2.0f32;
 
-    let a = 2.0f32;
-    let b = 1.0f32;
-    let t = out_dimensions;
-    let s = feature_dimensions;
-    NormalInverseGamma::new(mean, precision, a, b, t, s)
+    NormalInverseWishart::new(mean, in_precision, out_precision, little_v)
 }
 
-pub fn random_normal_inverse_gamma(feature_dimensions : usize, out_dimensions : usize) -> NormalInverseGamma {
+pub fn random_normal_inverse_wishart(feature_dimensions : usize, out_dimensions : usize) -> NormalInverseWishart {
     let mean = random_matrix(out_dimensions, feature_dimensions);
-    let precision = random_func_scatter_tensor(out_dimensions, feature_dimensions);
-    let a = 6.0f32;
-    let b = 0.5f32;
-    let t = out_dimensions;
-    let s = feature_dimensions;
-    NormalInverseGamma::new(mean, precision, a, b, t, s)
+    let precision = random_psd_matrix(feature_dimensions);
+    let big_v = random_psd_matrix(out_dimensions);
+    let little_v = (out_dimensions as f32) + 4.0f32;
+
+    NormalInverseWishart::new(mean, precision, big_v, little_v)
 }
 //Yields a pair of models (func, arg), of type (in_dimensions -> middle_dimensions) ->
 //out_dimensions
@@ -73,7 +69,7 @@ pub fn random_model(in_dimensions : usize, out_dimensions : usize) -> Model {
     let feature_collections = get_rc_feature_collections(in_dimensions);
     let total_feat_dims = get_total_feat_dims(&feature_collections); 
     let mut result = Model::new(feature_collections, in_dimensions, out_dimensions);
-    result.data = random_normal_inverse_gamma(total_feat_dims, out_dimensions);
+    result.data = random_normal_inverse_wishart(total_feat_dims, out_dimensions);
     result 
 }
 

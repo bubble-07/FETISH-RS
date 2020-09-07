@@ -7,6 +7,10 @@ use ndarray_linalg::*;
 use std::ops;
 use std::rc::*;
 
+use crate::embedder_state::*;
+use crate::pseudoinverse::*;
+use crate::term_pointer::*;
+use crate::normal_inverse_wishart::*;
 use crate::alpha_formulas::*;
 use crate::vector_space::*;
 use crate::feature_collection::*;
@@ -19,7 +23,6 @@ use crate::linalg_utils::*;
 use crate::linear_sketch::*;
 use crate::model::*;
 use crate::params::*;
-use crate::bayes_utils::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
 use crate::sampled_function::*;
@@ -146,20 +149,39 @@ impl ModelSpace {
         (result_func_key, result_arg_key, result_dist)
     }
 
-    pub fn schmear_to_prior(&self, in_schmear : &Schmear) -> NormalInverseGamma {
+    pub fn schmear_to_prior(&self, embedder_state : &EmbedderState, 
+                        func_ptr : &TermPointer, in_schmear : &Schmear) -> NormalInverseWishart {
         let s : usize = self.feature_dimensions;
         let t : usize = self.out_dimensions;
 
         let mean_flat = self.func_sketcher.expand(&in_schmear.mean);
         let mean = mean_flat.into_shape((t, s)).unwrap();
 
-        let sigma = FuncScatterTensor::from_compressed_covariance(t, s, 
+        let big_sigma = FuncScatterTensor::from_compressed_covariance(t, s, 
                                                                   &self.func_sketcher, &in_schmear.covariance);
-        let precision = sigma.inverse();
+        let little_sigma = big_sigma.scale;
 
-        let a : f32 = (-0.5f32 * (s as f32)) + 0.5f32;
-        let b : f32 = 0.0f32;
-        NormalInverseGamma::new(mean, precision, a, b, t, s)
+        let in_sigma = &big_sigma.in_scatter;
+        let in_sigma_inv = pseudoinverse_h(in_sigma);
+
+        let out_sigma = big_sigma.out_scatter;
+
+        let dest_model = embedder_state.get_embedding(func_ptr);
+        let single_observation_weight = dest_model.get_single_observation_weight();
+
+        let in_weight = single_observation_weight * (1.0f32 / little_sigma).sqrt();
+        let out_weight = single_observation_weight * little_sigma.sqrt();
+
+        
+        let mut in_precision = in_sigma_inv;
+        in_precision *= in_weight;
+
+        let mut big_v = out_sigma;
+        big_v *= out_weight;
+
+        let little_v = (t as f32) + 1.0f32;
+
+        NormalInverseWishart::new(mean, in_precision, big_v, little_v)
     }
 
     fn get_feature_jacobian(&self, in_vec: &Array1<f32>) -> Array2<f32> {

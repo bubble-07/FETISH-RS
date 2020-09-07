@@ -19,7 +19,7 @@ use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::term_application::*;
 use crate::func_impl::*;
-use crate::bayes_utils::*;
+use crate::data_point::*;
 use crate::model::*;
 use crate::model_space::*;
 use crate::schmear::*;
@@ -96,15 +96,11 @@ impl OptimizerStateWithTarget {
         
         let mut target_model : Model = Model::new(rc_feature_collections, in_dimensions, out_dimensions);
 
-        let out_precision = Array::eye(out_dimensions);
-
         for (in_vec, out_vec) in data_points.iter() {
             let data_point = DataPoint {
                 in_vec : in_vec.clone(),
-                out_inv_schmear : InverseSchmear {
-                    mean : out_vec.clone(),
-                    precision : out_precision.clone()
-                }
+                out_vec : out_vec.clone(),
+                weight : 1.0f32
             };
             target_model += data_point;
         }

@@ -4,8 +4,14 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod det_weighted_point;
+mod sized_determinant;
+mod sherman_morrison;
+mod data_point;
+mod normal_inverse_wishart;
+mod normal_inverse_wishart_sampler;
+mod wishart;
 mod least_squares;
-mod bayes_utils;
 mod alpha_formulas;
 mod test_utils;
 mod array_utils;
@@ -57,7 +63,6 @@ use std::rc::*;
 use crate::feature_collection::*;
 use crate::displayable_with_state::*;
 use crate::term_pointer::*;
-use crate::bayes_utils::*;
 use crate::inverse_schmear::*;
 use crate::model::*;
 use rand::prelude::*;

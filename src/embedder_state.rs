@@ -9,6 +9,8 @@ use std::collections::HashSet;
 use std::collections::HashMap;
 use std::rc::*;
 use either::*;
+use crate::det_weighted_point::*;
+use crate::data_point::*;
 use crate::interpreter_state::*;
 use crate::displayable_with_state::*;
 use crate::type_id::*;
@@ -20,7 +22,6 @@ use crate::term_reference::*;
 use crate::term_application::*;
 use crate::term_application_result::*;
 use crate::func_impl::*;
-use crate::bayes_utils::*;
 use crate::model::*;
 use crate::model_space::*;
 use crate::schmear::*;
@@ -30,6 +31,7 @@ use crate::func_inverse_schmear::*;
 use crate::feature_collection::*;
 use crate::enum_feature_collection::*;
 use crate::vector_space::*;
+use crate::normal_inverse_wishart::*;
 use topological_sort::TopologicalSort;
 
 extern crate pretty_env_logger;
@@ -223,16 +225,16 @@ impl EmbedderState {
         }
     }
 
-    fn get_mean_from_ref(&self, term_ref : &TermReference) -> Array1<f32> {
+    fn get_det_weighted_mean_from_ref(&self, term_ref : &TermReference) -> DetWeightedPoint {
         match term_ref {
-            TermReference::FuncRef(func_ptr) => self.get_mean_from_ptr(func_ptr),
-            TermReference::VecRef(vec) => from_noisy(vec)
+            TermReference::FuncRef(func_ptr) => self.get_det_weighted_mean_from_ptr(func_ptr),
+            TermReference::VecRef(vec) => DetWeightedPoint::from_vector(from_noisy(vec))
         }
     }
 
-    fn get_mean_from_ptr(&self, term_ptr : &TermPointer) -> Array1<f32> {
+    fn get_det_weighted_mean_from_ptr(&self, term_ptr : &TermPointer) -> DetWeightedPoint {
         let embedding : &Model = self.get_embedding(term_ptr);
-        embedding.get_mean_as_vec()
+        embedding.get_det_weighted_mean()
     }
 
     //Propagates prior updates downwards
@@ -339,9 +341,9 @@ impl EmbedderState {
         };
 
         let out_schmear : Schmear = func_space.apply_schmears(&func_schmear, &arg_schmear);
-        let out_prior : NormalInverseGamma = ret_space.schmear_to_prior(&out_schmear);
 
         if let TermReference::FuncRef(ret_ptr) = term_app_res.get_ret_ref() {
+            let out_prior : NormalInverseWishart = ret_space.schmear_to_prior(&self, &ret_ptr, &out_schmear);
             //Actually perform the update
             let ret_embedding : &mut Model = self.get_mut_embedding(ret_ptr);
             if (ret_embedding.has_prior(&term_app_res.term_app)) {
@@ -359,11 +361,17 @@ impl EmbedderState {
         let arg_ref = term_app_res.get_arg_ref();
         let ret_ref = term_app_res.get_ret_ref();
 
-        let mut arg_mean : Array1::<f32> = self.get_mean_from_ref(&arg_ref);
-        let mut out_inv_schmear : InverseSchmear = self.get_inverse_schmear_from_ref(&ret_ref);
+        let arg_det_weighted_point = self.get_det_weighted_mean_from_ref(&arg_ref);
+        let ret_det_weighted_point = self.get_det_weighted_mean_from_ref(&ret_ref);
+
+        let combined_det = arg_det_weighted_point.det.tensor(&ret_det_weighted_point.det);
+        let weight = combined_det.get_singular_value_geom_mean();
+
+        let mut arg_mean : Array1::<f32> = arg_det_weighted_point.vec;
+        let mut ret_mean : Array1::<f32> = ret_det_weighted_point.vec;
 
         trace!("Propagating data for space of size {}->{}", arg_mean.shape()[0],
-                                                            out_inv_schmear.mean.shape()[0]);
+                                                            ret_mean.shape()[0]);
 
         let in_type = term_app_res.get_arg_type();
         if (!is_vector_type(in_type)) {
@@ -374,12 +382,13 @@ impl EmbedderState {
         let out_type = term_app_res.get_ret_type();
         if (!is_vector_type(out_type)) {
             let out_space = self.model_spaces.get(&out_type).unwrap();
-            out_inv_schmear = out_space.compress_inverse_schmear(&out_inv_schmear);
+            ret_mean = out_space.sketch(&ret_mean);
         }
 
         let data_point = DataPoint {
             in_vec : arg_mean,
-            out_inv_schmear
+            out_vec : ret_mean,
+            weight : weight
         };
 
         let func_embedding : &mut Model = self.get_mut_embedding(term_app_res.get_func_ptr());

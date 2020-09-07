@@ -3,11 +3,13 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
-use ndarray_einsum_beta::*;
 
 use std::ops;
 use std::rc::*;
 
+use crate::sized_determinant::*;
+use crate::det_weighted_point::*;
+use crate::data_point::*;
 use crate::pseudoinverse::*;
 use crate::feature_collection::*;
 use crate::quadratic_feature_collection::*;
@@ -15,7 +17,7 @@ use crate::fourier_feature_collection::*;
 use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
 use crate::linalg_utils::*;
-use crate::bayes_utils::*;
+use crate::normal_inverse_wishart::*;
 use crate::term_application::*;
 use crate::func_scatter_tensor::*;
 use crate::term_pointer::*;
@@ -40,8 +42,8 @@ pub struct Model {
     in_dimensions : usize,
     out_dimensions : usize,
     feature_collections : Rc<[EnumFeatureCollection; 3]>,
-    pub data : NormalInverseGamma,
-    prior_updates : HashMap::<PriorUpdateKey, NormalInverseGamma>,
+    pub data : NormalInverseWishart,
+    prior_updates : HashMap::<PriorUpdateKey, NormalInverseWishart>,
     data_updates : HashMap::<DataUpdateKey, DataPoint>
 }
 
@@ -169,6 +171,20 @@ impl Model {
     pub fn get_mean_as_vec(&self) -> Array1::<f32> {
         self.data.get_mean_as_vec()
     }
+    pub fn get_det_weighted_mean(&self) -> DetWeightedPoint {
+        self.data.get_det_weighted_mean()
+    }
+
+    pub fn get_single_observation_weight(&self) -> f32 {
+        let in_weight = self.data.precision.opnorm_fro().unwrap();
+        let out_weight = self.data.big_v.opnorm_fro().unwrap();
+        let combined_weight = (in_weight * out_weight).sqrt();
+
+        let num_observations = self.data.little_v - (self.data.t as f32);
+
+        combined_weight / num_observations
+    }
+
     pub fn get_inverse_schmear(&self) -> FuncInverseSchmear {
         self.data.get_inverse_schmear()
     }
@@ -218,7 +234,8 @@ impl Model {
         let feat_vec = self.get_features(&data_point.in_vec);
         let feat_data_point = DataPoint {
             in_vec : feat_vec,
-            out_inv_schmear : data_point.out_inv_schmear
+            out_vec : data_point.out_vec,
+            weight : data_point.weight
         };
 
         self.data += &feat_data_point;
@@ -234,7 +251,7 @@ impl Model {
     pub fn has_prior(&self, update_key : &PriorUpdateKey) -> bool {
         self.prior_updates.contains_key(update_key)
     }
-    pub fn update_prior(&mut self, update_key : PriorUpdateKey, distr : NormalInverseGamma) {
+    pub fn update_prior(&mut self, update_key : PriorUpdateKey, distr : NormalInverseWishart) {
         self.data += &distr;
         self.prior_updates.insert(update_key, distr);
     }
@@ -248,7 +265,7 @@ impl Model {
     pub fn new(feature_collections : Rc<[EnumFeatureCollection; 3]>,
               in_dimensions : usize, out_dimensions : usize) -> Model {
 
-        let prior_updates : HashMap::<PriorUpdateKey, NormalInverseGamma> = HashMap::new();
+        let prior_updates : HashMap::<PriorUpdateKey, NormalInverseWishart> = HashMap::new();
         let data_updates : HashMap::<DataUpdateKey, DataPoint> = HashMap::new();
 
         let mut total_feat_dims : usize = 0;
@@ -261,11 +278,9 @@ impl Model {
         let precision_mult : f32 = (1.0f32 / (PRIOR_SIGMA * PRIOR_SIGMA));
         let in_precision : Array2<f32> = precision_mult * Array::eye(total_feat_dims);
         let out_precision : Array2<f32> = precision_mult * Array::eye(out_dimensions);
+        let little_v = out_dimensions as f32;
 
-        let precision = FuncScatterTensor::from_in_and_out_scatter(in_precision, out_precision);
-
-        let data = NormalInverseGamma::new(mean, precision, INITIAL_INV_GAMMA_A, INITIAL_INV_GAMMA_B,
-                                           out_dimensions, total_feat_dims);
+        let data = NormalInverseWishart::new(mean, in_precision, out_precision, little_v);
     
         Model {
             in_dimensions,
