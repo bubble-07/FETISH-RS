@@ -5,6 +5,7 @@ use std::ops;
 use ndarray::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
+use crate::test_utils::*;
 use crate::pseudoinverse::*;
 use crate::func_scatter_tensor::*;
 use crate::func_inverse_schmear::*;
@@ -27,6 +28,7 @@ use rand_distr::StandardNormal;
 
 ///Normal-inverse-wishart distribution representation
 ///for bayesian inference
+#[derive(Clone)]
 pub struct NormalInverseWishart {
     pub mean : Array2<f32>,
     pub precision_u : Array2<f32>,
@@ -50,6 +52,11 @@ pub fn mean_to_array(mean : &Array2<f32>) -> Array1<f32> {
 }
 
 impl NormalInverseWishart {
+    pub fn recompute_derived(&mut self) {
+        self.sigma = pseudoinverse_h(&self.precision);
+        self.precision_u = self.mean.dot(&self.precision);
+    }
+
     pub fn get_total_dims(&self) -> usize {
         self.s * self.t
     }
@@ -262,22 +269,18 @@ mod tests {
         let num_samps = 1000;
         let s = 5;
         let t = 4;
-        let mut model = standard_normal_inverse_gamma(s, t);
+        let out_weight = 100.0f32;
+        let mut model = standard_normal_inverse_wishart(s, t);
 
         let mat = random_matrix(t, s);
         for i in 0..num_samps {
             let vec = random_vector(s);
             let out = mat.dot(&vec);
-            let out_precision = 100.0f32 * random_psd_matrix(t);
-
-            let out_inv_schmear = InverseSchmear {
-                mean : out,
-                precision : out_precision
-            };
 
             let data_point = DataPoint {
                 in_vec : vec,
-                out_inv_schmear
+                out_vec : out,
+                weight : out_weight
             };
 
             model += &data_point;
