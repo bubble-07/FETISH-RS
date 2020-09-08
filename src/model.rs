@@ -278,7 +278,7 @@ impl Model {
         let precision_mult : f32 = (1.0f32 / (PRIOR_SIGMA * PRIOR_SIGMA));
         let in_precision : Array2<f32> = precision_mult * Array::eye(total_feat_dims);
         let out_precision : Array2<f32> = precision_mult * Array::eye(out_dimensions);
-        let little_v = out_dimensions as f32;
+        let little_v = (out_dimensions as f32) + 1.0f32;
 
         let data = NormalInverseWishart::new(mean, in_precision, out_precision, little_v);
     
