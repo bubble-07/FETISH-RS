@@ -3,6 +3,8 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
+use crate::test_utils::*;
+use crate::pseudoinverse::*;
 use crate::linalg_utils::*;
 use std::ops::AddAssign;
 use std::ops::SubAssign;
@@ -24,4 +26,26 @@ pub fn sherman_morrison_update(A : &mut Array2<f32>, A_inv : &mut Array2<f32>,
     let scaled = scale * &numerator;
 
     A_inv.sub_assign(&scaled);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sherman_morrison() {
+        let dim = 5;
+        let A = random_psd_matrix(dim);
+        let A_inv = pseudoinverse_h(&A);
+        let w = random_scalar();
+        let u = random_vector(dim); 
+
+        let mut A_updated = A.clone(); 
+        let mut A_inv_updated = A_inv.clone();
+        sherman_morrison_update(&mut A_updated, &mut A_inv_updated, w, &u);
+
+        let expected_A_inv = pseudoinverse_h(&A_updated);
+
+        assert_equal_matrices_to_within(&A_inv_updated, &expected_A_inv, 0.001f32);
+    }
 }

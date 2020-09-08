@@ -38,6 +38,7 @@ use std::collections::HashMap;
 type PriorUpdateKey = TermApplication;
 type DataUpdateKey = TermReference;
 
+#[derive(Clone)]
 pub struct Model {
     in_dimensions : usize,
     out_dimensions : usize,
@@ -318,6 +319,22 @@ mod tests {
         result.data.recompute_derived();
 
         result
+    }
+
+    #[test]
+    fn data_updates_undo_cleanly() {
+        let t = 5;
+        let s = 4;
+        
+        let expected = random_model(s, t);
+
+        let mut model = expected.clone();
+        let data_point = random_data_point(s, t);
+
+        model += data_point.clone();
+        model -= data_point.clone();
+
+        assert_equal_distributions_to_within(&model.data, &expected.data, 0.001f32);
     }
 
     #[test]

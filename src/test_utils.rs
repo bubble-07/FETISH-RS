@@ -2,9 +2,11 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
+use crate::data_point::*;
 use crate::schmear::*;
 use crate::inverse_schmear::*;
 use crate::params::*;
+use rand::prelude::*;
 use ndarray_linalg::*;
 use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
@@ -25,6 +27,27 @@ use crate::array_utils::*;
 
 pub fn term_ref(in_array : Array1<f32>) -> TermReference {
     TermReference::VecRef(to_noisy(&in_array))
+}
+
+pub fn random_scalar() -> f32 {
+    let mut rng = rand::thread_rng();
+    let result : f32 = rng.gen();
+    result
+}
+
+pub fn random_data_point(in_dimensions : usize, out_dimensions : usize) -> DataPoint {
+    let in_vec = random_vector(in_dimensions);
+    let out_vec = random_vector(out_dimensions);
+
+    let mut rng = rand::thread_rng();
+    let weight_sqrt : f32 = rng.gen();
+    let weight = weight_sqrt * weight_sqrt;
+    
+    DataPoint {
+        in_vec,
+        out_vec,
+        weight
+    }
 }
 
 pub fn random_sampled_function(in_dimensions : usize, out_dimensions : usize) -> SampledFunction {
@@ -104,6 +127,13 @@ pub fn are_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, with
     } else {
         true
     }
+}
+
+pub fn assert_equal_distributions_to_within(one : &NormalInverseWishart, two : &NormalInverseWishart, within : f32) {
+    assert_equal_matrices_to_within(&one.mean, &two.mean, within);
+    assert_equal_matrices_to_within(&one.precision, &two.precision, within);
+    assert_equal_matrices_to_within(&one.big_v, &two.big_v, within);
+    assert_eps_equals_to_within(one.little_v, two.little_v, within);
 }
 
 pub fn assert_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, within : f32) {
