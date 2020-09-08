@@ -265,6 +265,22 @@ mod tests {
     use super::*;
 
     #[test]
+    fn prior_updates_undo_cleanly() {
+        let t = 5;
+        let s = 4;
+
+        let expected = random_model(s, t);
+
+        let mut model = expected.clone();
+        let other = random_model(s, t);
+
+        model.data += &other.data;
+        model.data -= &other.data;
+
+        assert_equal_distributions_to_within(&model.data, &expected.data, 0.1f32);
+    }
+
+    #[test]
     fn test_model_convergence_noiseless() {
         let num_samps = 1000;
         let s = 5;
