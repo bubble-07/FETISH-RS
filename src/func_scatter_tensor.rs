@@ -260,10 +260,24 @@ mod tests {
         let transformed = scatter_tensor.transform(&mat);
         let actual = scatter_tensor_inv.transform(&transformed);
 
-        assert_equal_matrices(&actual, &mat);
+        assert_equal_matrices_to_within(&actual, &mat, 0.001f32);
 
         let post_actual = scatter_tensor.transform(&actual);
-        assert_equal_matrices(&post_actual, &transformed);
+        assert_equal_matrices_to_within(&post_actual, &transformed, 0.001f32);
+    }
+
+    #[test]
+    fn inverse_involutive() {
+        let t = 4;
+        let s = 5;
+        
+        let expected = random_func_scatter_tensor(t, s);
+        let expected_inv = expected.inverse();
+        let actual = expected_inv.inverse();
+
+        assert_equal_matrices_to_within(&actual.in_scatter, &expected.in_scatter, 0.001f32);
+        assert_equal_matrices_to_within(&actual.out_scatter, &expected.out_scatter, 0.001f32);
+        assert_eps_equals_to_within(actual.scale, expected.scale, 0.001f32);
     }
 
     #[test]
@@ -279,7 +293,7 @@ mod tests {
         let half_actual = scatter_tensor_sqrt.transform(&mat);
         let actual = scatter_tensor_sqrt.transform(&half_actual);
 
-        assert_equal_matrices(&actual, &expected);
+        assert_equal_matrices_to_within(&actual, &expected, 0.1f32);
     }
 
     #[test]
@@ -291,9 +305,9 @@ mod tests {
         let linear_sketch = LinearSketch::trivial_sketch(t * s);
         let from_compressed = FuncScatterTensor::from_compressed_covariance(t, s, &linear_sketch, &covariance);
 
-        assert_eps_equals(from_compressed.scale, func_scatter_tensor.scale);
-        assert_equal_matrices(&from_compressed.in_scatter, &func_scatter_tensor.in_scatter);
-        assert_equal_matrices(&from_compressed.out_scatter, &func_scatter_tensor.out_scatter);
+        assert_eps_equals_to_within(from_compressed.scale, func_scatter_tensor.scale, 0.01f32);
+        assert_equal_matrices_to_within(&from_compressed.in_scatter, &func_scatter_tensor.in_scatter, 0.01f32);
+        assert_equal_matrices_to_within(&from_compressed.out_scatter, &func_scatter_tensor.out_scatter, 0.01f32);
     }
 
     #[test]
@@ -347,7 +361,7 @@ mod tests {
         assert_equal_matrices(&subtracted_tensor.in_scatter, &tensor.in_scatter);
         assert_equal_matrices(&subtracted_tensor.out_scatter, &tensor.out_scatter);
 
-        assert_eps_equals(halved_tensor.scale, subtracted_tensor.scale);
+        assert_eps_equals_to_within(halved_tensor.scale, subtracted_tensor.scale, 0.001f32);
     }
 
 }

@@ -151,12 +151,16 @@ pub fn assert_equal_vectors(one : &Array1<f32>, two : &Array1<f32>) {
     assert_equal_vectors_to_within(one, two, ZEROING_THRESH);
 }
 
-pub fn assert_eps_equals(one : f32, two : f32) {
+pub fn assert_eps_equals_to_within(one : f32, two : f32, epsilon : f32) {
     let diff = one - two;
-    if (diff.abs() > ZEROING_THRESH) {
+    if (diff.abs() > epsilon) {
         println!("Actual: {} Expected: {}", one, two);
         panic!();
     }
+}
+
+pub fn assert_eps_equals(one : f32, two : f32) {
+    assert_eps_equals_to_within(one, two, ZEROING_THRESH);
 }
 pub fn assert_greater(one : f32, two : f32) {
     if (two >= one) {
@@ -179,7 +183,7 @@ pub fn random_diag_matrix(t : usize) -> Array2<f32> {
     result
 }
 pub fn random_psd_matrix(t : usize) -> Array2<f32> {
-    let matrix_sqrt = random_diag_matrix(t);
+    let matrix_sqrt = random_matrix(t, t);
     let matrix = matrix_sqrt.t().dot(&matrix_sqrt);
     matrix
 }

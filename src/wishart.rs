@@ -11,6 +11,7 @@ use ndarray_rand::rand_distr::ChiSquared;
 
 use crate::feature_collection::*;
 use crate::params::*;
+use crate::test_utils::*;
 
 use ndarray_linalg::cholesky::*;
 
@@ -74,5 +75,36 @@ impl Wishart {
         //Great, now yield the Cholesky factorization of the result
         let result = self.scale_cholesky_factor.dot(&A);
         result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wishart_has_right_mean() {
+        let num_samps = 200;
+        let dim = 4;
+        let degrees_of_freedom = 9;
+
+        let scatter = random_psd_matrix(dim);
+
+        let mut true_mean = scatter.clone();
+        true_mean *= degrees_of_freedom as f32;
+
+        let mut actual_mean = Array::zeros((dim,dim));
+        let mut rng = rand::thread_rng();
+
+        let wishart = Wishart::new(scatter, degrees_of_freedom as f32);
+
+        for i in 0..num_samps {
+            let samp = wishart.sample(&mut rng);
+            actual_mean += &samp; 
+        }
+        let scale_fac = 1.0f32 / (num_samps as f32);
+        actual_mean *= scale_fac;
+
+        assert_equal_matrices_to_within(&actual_mean, &true_mean, 16.0f32);
     }
 }

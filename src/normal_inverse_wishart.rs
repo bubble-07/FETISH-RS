@@ -128,7 +128,7 @@ impl NormalInverseWishart {
 impl NormalInverseWishart {
     pub fn new(mean : Array2<f32>, precision : Array2<f32>, big_v : Array2<f32>, little_v : f32) -> NormalInverseWishart {
         let precision_u : Array2<f32> = mean.dot(&precision);
-        let sigma : Array2<f32> = precision.invh().unwrap();
+        let sigma : Array2<f32> = pseudoinverse_h(&precision);
         let t = mean.shape()[0];
         let s = mean.shape()[1];
 

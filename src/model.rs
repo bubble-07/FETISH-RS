@@ -340,8 +340,10 @@ mod tests {
         for i in 0..num_samps {
             let sample = model.sample_as_vec(&mut rng);
 
-            mean += &(scale_fac * &sample);
+            mean += &sample;
         }
+
+        mean *= scale_fac;
 
         assert_equal_vectors_to_within(&mean, &model_schmear.mean, epsilon);
 

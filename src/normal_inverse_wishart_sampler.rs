@@ -40,7 +40,7 @@ impl NormalInverseWishartSampler {
         }
     }
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
-        let out_chol = self.wishart.sample_cholesky_factor(rng);
+        let out_chol = self.wishart.sample_inv_cholesky_factor(rng);
         let in_chol = &self.covariance_cholesky_factor;
 
         let X = Array::random((self.t, self.s), StandardNormal);
