@@ -9,9 +9,11 @@ use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
 use ndarray_rand::rand_distr::ChiSquared;
 
+use crate::pseudoinverse::*;
 use crate::feature_collection::*;
 use crate::params::*;
 use crate::test_utils::*;
+use crate::linalg_utils::*;
 
 use ndarray_linalg::cholesky::*;
 
@@ -25,7 +27,7 @@ pub struct Wishart {
 
 impl Wishart {
     pub fn new(scale_mat : Array2<f32>, degrees_of_freedom : f32) -> Wishart {
-        let scale_cholesky_factor = scale_mat.cholesky(UPLO::Lower).unwrap();
+        let scale_cholesky_factor = sqrtm(&scale_mat);
         let dim = scale_mat.shape()[0];
         Wishart {
             scale_mat,
@@ -45,7 +47,9 @@ impl Wishart {
     }
 
     pub fn sample_inv_cholesky_factor(&self, rng : &mut ThreadRng) -> Array2<f32> {
-        self.sample_cholesky_factor(rng).inv().unwrap()
+        let cholesky_factor = self.sample_cholesky_factor(rng);
+        let result = pseudoinverse_h(&cholesky_factor);
+        result
     }
 
     pub fn sample_cholesky_factor(&self, rng : &mut ThreadRng) -> Array2<f32> {

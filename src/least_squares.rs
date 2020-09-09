@@ -15,9 +15,14 @@ use ndarray_linalg::{LeastSquaresSvd};
 //Solves Ax = b with minimal norm determined
 //by the passed quadratic form
 pub fn least_squares(A : &Array2<f32>, b : &Array1<f32>, Q : &Array2<f32>) -> Array1<f32> {
+    let dim = A.shape()[1];
+
     let L = sqrtm(Q);
     let LA = L.dot(A);
     let Lb = L.dot(b);
-    let x = LA.least_squares(&Lb).unwrap().solution;
-    x
+    let ls = LA.least_squares(&Lb);
+    match (LA.least_squares(&Lb)) {
+        Result::Ok(res) => res.solution,
+        Result::Err(_) => Array::zeros((dim,))
+    }
 }

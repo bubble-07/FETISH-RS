@@ -12,6 +12,7 @@ use ndarray_rand::rand_distr::ChiSquared;
 use crate::feature_collection::*;
 use crate::params::*;
 use crate::wishart::*;
+use crate::linalg_utils::*;
 use crate::normal_inverse_wishart::*;
 
 use ndarray_linalg::cholesky::*;
@@ -28,7 +29,7 @@ impl NormalInverseWishartSampler {
     pub fn new(distr : &NormalInverseWishart) -> NormalInverseWishartSampler {
         let wishart : Wishart = Wishart::new(distr.big_v.clone(), distr.little_v);
         let mean = distr.mean.clone();
-        let covariance_cholesky_factor = distr.sigma.cholesky(UPLO::Lower).unwrap();
+        let covariance_cholesky_factor = sqrtm(&distr.sigma);
         let s = distr.s;
         let t = distr.t;
         NormalInverseWishartSampler {
