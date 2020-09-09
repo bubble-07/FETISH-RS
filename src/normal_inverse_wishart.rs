@@ -185,11 +185,15 @@ impl NormalInverseWishart {
 
         self.little_v += s;
 
-        let mean_diff = &out_mean - &self.mean;
-        let r = y - &out_mean.dot(x);
+        let x_norm_sq = x.dot(x);
+        let update_mean = (1.0f32 / x_norm_sq) * outer(y, x);
+        let update_precision = w * outer(x, x);
 
-        self.big_v += &outer(&r, &r);
-        self.big_v += &mean_diff.dot(&self.precision).dot(&mean_diff.t());
+        let initial_mean_diff = &out_mean - &self.mean;
+        let update_mean_diff = &out_mean - &update_mean;
+
+        self.big_v += &update_mean_diff.dot(&update_precision).dot(&update_mean_diff.t());
+        self.big_v += &initial_mean_diff.dot(&self.precision).dot(&initial_mean_diff.t());
 
         self.mean = out_mean;
         self.precision = out_precision;

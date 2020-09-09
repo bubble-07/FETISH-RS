@@ -275,9 +275,9 @@ mod tests {
         let expected_inv = expected.inverse();
         let actual = expected_inv.inverse();
 
-        assert_equal_matrices_to_within(&actual.in_scatter, &expected.in_scatter, 0.001f32);
-        assert_equal_matrices_to_within(&actual.out_scatter, &expected.out_scatter, 0.001f32);
-        assert_eps_equals_to_within(actual.scale, expected.scale, 0.001f32);
+        assert_equal_matrices_to_within(&actual.in_scatter, &expected.in_scatter, 0.01f32);
+        assert_equal_matrices_to_within(&actual.out_scatter, &expected.out_scatter, 0.01f32);
+        assert_eps_equals_to_within(actual.scale, expected.scale, 0.01f32);
     }
 
     #[test]
