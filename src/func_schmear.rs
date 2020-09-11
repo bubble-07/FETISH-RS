@@ -11,6 +11,7 @@ use noisy_float::prelude::*;
 
 use crate::inverse_schmear::*;
 use crate::schmear::*;
+use crate::linalg_utils::*;
 use crate::cauchy_fourier_features::*;
 use crate::func_scatter_tensor::*;
 
@@ -30,5 +31,23 @@ impl FuncSchmear {
             mean,
             covariance
         }
+    }
+    ///Computes the output schmear of this func schmear applied
+    ///to a given argument schmear
+    pub fn apply(&self, x : &Schmear) -> Schmear {
+        let sigma_dot_u = frob_inner(&self.covariance.in_scatter, &x.covariance);
+        let u_inner_product = self.covariance.in_scatter.dot(&x.mean).dot(&x.mean);
+        let v_scale = (sigma_dot_u + u_inner_product) * self.covariance.scale;
+        let v_contrib = v_scale * &self.covariance.out_scatter;
+
+        let m_sigma_m_t = self.mean.dot(&x.covariance).dot(&self.mean.t());
+
+        let result_covariance = v_contrib + &m_sigma_m_t;
+        let result_mean = self.mean.dot(&x.mean);
+        let result = Schmear {
+            mean : result_mean,
+            covariance : result_covariance
+        };
+        result
     }
 }

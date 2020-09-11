@@ -192,33 +192,26 @@ impl ModelSpace {
         to_features(&self.feature_collections, in_vec)
     }
 
-    pub fn apply_schmears(&self, f : &FuncSchmear, x : &Schmear) -> Schmear {
-        self.compute_out_schmear(&f.mean, &f.covariance, x)
-    }
-
-    pub fn compute_out_schmear(&self, f_mean : &Array2<f32>, f_covar : &FuncScatterTensor,
-                           x : &Schmear) -> Schmear {
+    fn featurize_schmear(&self, x : &Schmear) -> Schmear {
         let x_mean = &x.mean;
         let x_covar = &x.covariance;
 
-        let feat_vec = self.get_features(&x_mean);
+        let feat_mean = self.get_features(&x_mean);
         let feature_jacobian = self.get_feature_jacobian(&x_mean);
-        let jacobian = f_mean.dot(&feature_jacobian);
 
-        //There are two terms here for covariance -- J_f(x) sigma_x J_f(x)^T
-        let data_contrib = jacobian.dot(x_covar).dot(&jacobian.t());
+        let feat_covariance = feature_jacobian.dot(x_covar).dot(&feature_jacobian.t());
 
-        //and the double-contraction of sigma_f by featurized x's
-        let feat_outer = outer(&feat_vec, &feat_vec);
-        let model_contrib = f_covar.transform_in_out(&feat_outer);
-       
-        let out_covar = data_contrib + model_contrib;
-        let out_mean = f_mean.dot(&feat_vec);
+        let feat_schmear = Schmear {
+            mean : feat_mean,
+            covariance : feat_covariance
+        };
+        feat_schmear
+    }
 
-        Schmear {
-            mean : out_mean,
-            covariance : out_covar
-        }
+    pub fn apply_schmears(&self, f : &FuncSchmear, x : &Schmear) -> Schmear {
+        let feat_schmear = self.featurize_schmear(x);
+        let result = f.apply(&feat_schmear);
+        result
     }
 
     pub fn add_model(&mut self, model_key : ModelKey) {
