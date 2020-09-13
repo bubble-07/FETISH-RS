@@ -4,6 +4,7 @@ extern crate ndarray_linalg;
 use ndarray::*;
 use crate::data_point::*;
 use crate::schmear::*;
+use crate::func_schmear::*;
 use crate::inverse_schmear::*;
 use crate::params::*;
 use rand::prelude::*;
@@ -238,6 +239,16 @@ pub fn random_func_scatter_tensor(t : usize, s : usize) -> FuncScatterTensor {
     let in_mat = random_psd_matrix(s);
     let out_mat = random_psd_matrix(t);
     FuncScatterTensor::from_in_and_out_scatter(in_mat, out_mat)
+}
+
+pub fn random_func_schmear(t : usize, s : usize) -> FuncSchmear {
+    let scatter_tensor = random_func_scatter_tensor(t, s);
+    let mean = random_matrix(t, s);
+    let result = FuncSchmear {
+        mean : mean,
+        covariance : scatter_tensor
+    };
+    result
 }
 
 pub fn empirical_gradient<F>(f : F, x : &Array1<f32>) -> Array1<f32>

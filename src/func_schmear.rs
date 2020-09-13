@@ -9,6 +9,12 @@ use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
 use noisy_float::prelude::*;
 
+use rand::prelude::*;
+use ndarray_rand::RandomExt;
+use ndarray_rand::rand_distr::StandardNormal;
+use ndarray_rand::rand_distr::ChiSquared;
+
+use crate::test_utils::*;
 use crate::inverse_schmear::*;
 use crate::schmear::*;
 use crate::linalg_utils::*;
@@ -51,3 +57,55 @@ impl FuncSchmear {
         result
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn schmear_application_accurate() {
+        let t = 3;
+        let s = 3;
+        let num_samps = 10000;
+
+        let normal_inverse_wishart = random_normal_inverse_wishart(s, t);
+
+        let func_schmear = normal_inverse_wishart.get_schmear();
+
+        let arg_mean = random_vector(s);
+        let arg_covariance_sqrt = random_matrix(s, s);
+        let arg_covariance = arg_covariance_sqrt.dot(&arg_covariance_sqrt.t());
+        let arg_schmear = Schmear {
+            mean : arg_mean.clone(),
+            covariance : arg_covariance.clone()
+        };
+
+        let actual_out_schmear = func_schmear.apply(&arg_schmear);
+
+        let mut expected_out_mean = Array::zeros((t,));
+        let mut expected_out_covariance = Array::zeros((t, t));
+
+        let mut rng = rand::thread_rng();
+
+        for _ in 0..num_samps {
+            let func_samp = normal_inverse_wishart.sample(&mut rng);
+
+            let standard_normal_arg_vec = Array::random((s,), StandardNormal);
+            let arg_samp = &arg_mean + &arg_covariance_sqrt.dot(&standard_normal_arg_vec);
+
+            let out_samp = func_samp.dot(&arg_samp);
+
+            let out_diff = &out_samp - &actual_out_schmear.mean;
+
+            expected_out_mean += &out_samp;
+            expected_out_covariance += &outer(&out_diff, &out_diff);
+        }
+
+        expected_out_mean *= 1.0f32 / (num_samps as f32);
+        expected_out_covariance *= 1.0f32 / (num_samps as f32);
+
+        assert_equal_vectors_to_within(&actual_out_schmear.mean, &expected_out_mean, 1.0f32);
+        assert_equal_matrices_to_within(&actual_out_schmear.covariance, &expected_out_covariance, 10.0f32);
+    }
+}
+
