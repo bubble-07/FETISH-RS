@@ -70,11 +70,7 @@ mod tests {
         let func_scale_mult = 0.01f32;
         let arg_scale_mult = 0.01f32;
 
-        let mut normal_inverse_wishart = random_normal_inverse_wishart(s, t);
-        normal_inverse_wishart.big_v *= func_scale_mult * func_scale_mult;
-        normal_inverse_wishart.little_v *= 5.0f32;
-        //normal_inverse_wishart.precision *= 1.0f32 / func_scale_mult;
-        normal_inverse_wishart.recompute_derived();
+        let normal_inverse_wishart = random_normal_inverse_wishart(s, t);
 
         let func_schmear = normal_inverse_wishart.get_schmear();
 
