@@ -184,7 +184,7 @@ impl FuncScatterTensor {
         let in_scatter_norm = self.in_scatter.opnorm_fro().unwrap();
         let out_scatter_norm = self.out_scatter.opnorm_fro().unwrap();
         let combined_norm = in_scatter_norm * out_scatter_norm;
-        if (combined_norm < ZEROING_THRESH) {
+        if (combined_norm < FUNC_SCATTER_TENSOR_ZEROING_THRESH) {
             //To smol to matter
             return;
         }
@@ -216,7 +216,7 @@ impl FuncScatterTensor {
         self.in_scatter += &(other_scale * &other.in_scatter);
         self.out_scatter += &(other_scale * &other.out_scatter);
 
-        if (tot_scale < ZEROING_THRESH) {
+        if (tot_scale < FUNC_SCATTER_TENSOR_ZEROING_THRESH) {
             return; //Must be a zero tensor, or close
         }
 
@@ -260,10 +260,10 @@ mod tests {
         let transformed = scatter_tensor.transform(&mat);
         let actual = scatter_tensor_inv.transform(&transformed);
 
-        assert_equal_matrices_to_within(&actual, &mat, 0.001f32);
+        assert_equal_matrices_to_within(&actual, &mat, 0.01f32);
 
         let post_actual = scatter_tensor.transform(&actual);
-        assert_equal_matrices_to_within(&post_actual, &transformed, 0.001f32);
+        assert_equal_matrices_to_within(&post_actual, &transformed, 0.01f32);
     }
 
     #[test]

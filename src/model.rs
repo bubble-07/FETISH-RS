@@ -334,7 +334,7 @@ mod tests {
         model += data_point.clone();
         model -= data_point.clone();
 
-        assert_equal_distributions_to_within(&model.data, &expected.data, 0.1f32);
+        assert_equal_distributions_to_within(&model.data, &expected.data, 1.0f32);
     }
 
     #[test]

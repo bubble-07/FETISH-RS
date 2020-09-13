@@ -18,7 +18,11 @@ pub const OUT_TAPER_START : usize = 4;
 pub const TRAINING_POINTS_PER_ITER : usize = 5;
 
 //Numerical algorithm constants
-pub const ZEROING_THRESH : f32 = 0.0001f32;
+pub const PINV_TRUNCATION_THRESH : f32 = 0.0001f32;
+
+pub const FUNC_SCATTER_TENSOR_ZEROING_THRESH : f32 = 1e-15f32;
+
+pub const DEFAULT_TEST_THRESH : f32 = 0.001f32;
 
 pub const NUM_OPT_ITERS : u64 = 20;
 pub const LBFGS_HISTORY : usize = 6;

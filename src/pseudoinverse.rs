@@ -24,9 +24,15 @@ pub fn pseudoinverse(in_mat : &Array2<f32>) -> Array2<f32> {
     let u = maybe_u.unwrap();
     let v_t = maybe_v_t.unwrap();
 
+    let mut max_singular_value = 0.0f32;
+    for i in 0..sigma.shape()[0] {
+        max_singular_value = max_singular_value.max(sigma[[i,]]);
+    }
+    let thresh = max_singular_value * PINV_TRUNCATION_THRESH;
+
     let mut sigma_inv = Array::zeros((v_t.shape()[0], u.shape()[1]));
     for i in 0..sigma.shape()[0] {
-        if (sigma[[i,]] > ZEROING_THRESH) {
+        if (sigma[[i,]] > thresh) {
             sigma_inv[[i,i]] = 1.0f32 / sigma[[i,]];
         }
     }

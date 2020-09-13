@@ -42,7 +42,7 @@ impl FuncSchmear {
     ///to a given argument schmear
     pub fn apply(&self, x : &Schmear) -> Schmear {
         let sigma_dot_u = frob_inner(&self.covariance.in_scatter, &x.covariance);
-        let u_inner_product = self.covariance.in_scatter.dot(&x.mean).dot(&x.mean);
+        let u_inner_product = x.mean.dot(&self.covariance.in_scatter).dot(&x.mean);
         let v_scale = (sigma_dot_u + u_inner_product) * self.covariance.scale;
         let v_contrib = v_scale * &self.covariance.out_scatter;
 
@@ -66,14 +66,21 @@ mod tests {
     fn schmear_application_accurate() {
         let t = 3;
         let s = 3;
-        let num_samps = 10000;
+        let num_samps = 1000;
+        let func_scale_mult = 0.01f32;
+        let arg_scale_mult = 0.01f32;
 
-        let normal_inverse_wishart = random_normal_inverse_wishart(s, t);
+        let mut normal_inverse_wishart = random_normal_inverse_wishart(s, t);
+        normal_inverse_wishart.big_v *= func_scale_mult * func_scale_mult;
+        normal_inverse_wishart.little_v *= 5.0f32;
+        //normal_inverse_wishart.precision *= 1.0f32 / func_scale_mult;
+        normal_inverse_wishart.recompute_derived();
 
         let func_schmear = normal_inverse_wishart.get_schmear();
 
         let arg_mean = random_vector(s);
-        let arg_covariance_sqrt = random_matrix(s, s);
+        let mut arg_covariance_sqrt = random_matrix(s, s);
+        arg_covariance_sqrt *= arg_scale_mult; 
         let arg_covariance = arg_covariance_sqrt.dot(&arg_covariance_sqrt.t());
         let arg_schmear = Schmear {
             mean : arg_mean.clone(),
@@ -87,8 +94,12 @@ mod tests {
 
         let mut rng = rand::thread_rng();
 
+        let scale_fac = 1.0f32 / (num_samps as f32);
+
         for _ in 0..num_samps {
             let func_samp = normal_inverse_wishart.sample(&mut rng);
+
+            let func_diff = &func_samp - &func_schmear.mean;
 
             let standard_normal_arg_vec = Array::random((s,), StandardNormal);
             let arg_samp = &arg_mean + &arg_covariance_sqrt.dot(&standard_normal_arg_vec);
@@ -97,12 +108,9 @@ mod tests {
 
             let out_diff = &out_samp - &actual_out_schmear.mean;
 
-            expected_out_mean += &out_samp;
-            expected_out_covariance += &outer(&out_diff, &out_diff);
+            expected_out_mean += &(scale_fac * &out_samp);
+            expected_out_covariance += &(scale_fac * &outer(&out_diff, &out_diff));
         }
-
-        expected_out_mean *= 1.0f32 / (num_samps as f32);
-        expected_out_covariance *= 1.0f32 / (num_samps as f32);
 
         assert_equal_vectors_to_within(&actual_out_schmear.mean, &expected_out_mean, 1.0f32);
         assert_equal_matrices_to_within(&actual_out_schmear.covariance, &expected_out_covariance, 10.0f32);

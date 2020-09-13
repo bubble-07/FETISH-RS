@@ -144,7 +144,7 @@ pub fn assert_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, w
 }
 
 pub fn assert_equal_matrices(one : &Array2<f32>, two : &Array2<f32>) {
-    assert_equal_matrices_to_within(one, two, ZEROING_THRESH);
+    assert_equal_matrices_to_within(one, two, DEFAULT_TEST_THRESH);
 }
 
 pub fn are_equal_vectors_to_within(one : &Array1<f32>, two : &Array1<f32>, within : f32, print : bool) -> bool {
@@ -179,7 +179,7 @@ pub fn assert_equal_vector_term(actual : TermReference, expected : Array1<f32>) 
 }
 
 pub fn assert_equal_vectors(one : &Array1<f32>, two : &Array1<f32>) {
-    assert_equal_vectors_to_within(one, two, ZEROING_THRESH);
+    assert_equal_vectors_to_within(one, two, DEFAULT_TEST_THRESH);
 }
 
 pub fn assert_eps_equals_to_within(one : f32, two : f32, epsilon : f32) {
@@ -191,7 +191,7 @@ pub fn assert_eps_equals_to_within(one : f32, two : f32, epsilon : f32) {
 }
 
 pub fn assert_eps_equals(one : f32, two : f32) {
-    assert_eps_equals_to_within(one, two, ZEROING_THRESH);
+    assert_eps_equals_to_within(one, two, DEFAULT_TEST_THRESH);
 }
 pub fn assert_greater(one : f32, two : f32) {
     if (two >= one) {

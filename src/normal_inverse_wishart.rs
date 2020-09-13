@@ -281,7 +281,7 @@ mod tests {
         model.data += &other.data;
         model.data -= &other.data;
 
-        assert_equal_distributions_to_within(&model.data, &expected.data, 0.1f32);
+        assert_equal_distributions_to_within(&model.data, &expected.data, 1.0f32);
     }
 
     #[test]

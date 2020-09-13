@@ -37,7 +37,9 @@ impl Wishart {
         }
     }
     pub fn sample_inv(&self, rng : &mut ThreadRng) -> Array2<f32> {
-        self.sample(rng).invh().unwrap()
+        let sample = self.sample(rng);
+        let result = pseudoinverse_h(&sample);
+        result
     }
 
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
@@ -47,9 +49,9 @@ impl Wishart {
     }
 
     pub fn sample_inv_cholesky_factor(&self, rng : &mut ThreadRng) -> Array2<f32> {
-        let cholesky_factor = self.sample_cholesky_factor(rng);
-        let result = pseudoinverse_h(&cholesky_factor);
-        result
+        let sample_inv = self.sample_inv(rng);
+        let cholesky_factor = sqrtm(&sample_inv);
+        cholesky_factor
     }
 
     pub fn sample_cholesky_factor(&self, rng : &mut ThreadRng) -> Array2<f32> {
