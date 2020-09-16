@@ -37,7 +37,6 @@ impl FuncScatterTensor {
         let mut in_scatter : Array2<f32> = Array::zeros((s, s));
         let mut out_scatter : Array2<f32> = Array::zeros((t, t));
 
-
         //Start off by decomposing the covariance into its eigendecomposition
         let maybe_eigh = covariance.eigh(UPLO::Lower);
         if let Result::Err(e) = &maybe_eigh {

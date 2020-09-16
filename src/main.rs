@@ -6,6 +6,7 @@
 
 mod det_weighted_point;
 mod sized_determinant;
+mod sigma_points;
 mod sherman_morrison;
 mod data_point;
 mod normal_inverse_wishart;

@@ -7,6 +7,7 @@ use ndarray_linalg::*;
 use std::ops;
 use std::rc::*;
 
+use crate::sigma_points::*;
 use crate::embedder_state::*;
 use crate::pseudoinverse::*;
 use crate::term_pointer::*;
@@ -188,24 +189,13 @@ impl ModelSpace {
         to_jacobian(&self.feature_collections, in_vec)
     }
 
-    fn get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
+    pub fn get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
         to_features(&self.feature_collections, in_vec)
     }
 
     fn featurize_schmear(&self, x : &Schmear) -> Schmear {
-        let x_mean = &x.mean;
-        let x_covar = &x.covariance;
-
-        let feat_mean = self.get_features(&x_mean);
-        let feature_jacobian = self.get_feature_jacobian(&x_mean);
-
-        let feat_covariance = feature_jacobian.dot(x_covar).dot(&feature_jacobian.t());
-
-        let feat_schmear = Schmear {
-            mean : feat_mean,
-            covariance : feat_covariance
-        };
-        feat_schmear
+        let result = unscented_transform_schmear(x, &self); 
+        result
     }
 
     pub fn apply_schmears(&self, f : &FuncSchmear, x : &Schmear) -> Schmear {
