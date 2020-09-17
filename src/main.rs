@@ -4,8 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
-mod det_weighted_point;
-mod sized_determinant;
+mod data_update;
 mod sigma_points;
 mod sherman_morrison;
 mod data_point;

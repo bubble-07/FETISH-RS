@@ -17,6 +17,8 @@ pub const OUT_TAPER_START : usize = 4;
 
 pub const TRAINING_POINTS_PER_ITER : usize = 5;
 
+pub const HIGHER_ORDER_PENALTY : f32 = 2.0f32;
+
 //Numerical algorithm constants
 pub const PINV_TRUNCATION_THRESH : f32 = 0.0001f32;
 

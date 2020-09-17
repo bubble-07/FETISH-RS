@@ -183,8 +183,9 @@ impl OptimizerState {
         for (func_type_id, arg_type_id) in application_type_ids.drain(..) {
             trace!("Thompson sampling for application of {}", get_type(func_type_id));
             let func_space = self.embedder_state.model_spaces.get(&func_type_id).unwrap();
-            let (application, dist) = self.embedder_state.thompson_sample_app(func_type_id, arg_type_id, 
+            let (application, mut dist) = self.embedder_state.thompson_sample_app(func_type_id, arg_type_id, 
                                                                               target_inv_schmear);
+            dist *= HIGHER_ORDER_PENALTY;
 
             trace!("Obtained {} with loss {}", application.display(&self.interpreter_state), dist);
             if (dist < best_dist) {

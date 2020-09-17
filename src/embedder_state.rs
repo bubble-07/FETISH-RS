@@ -3,13 +3,14 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
+use crate::sigma_points::*;
 use crate::array_utils::*;
 use noisy_float::prelude::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use std::rc::*;
 use either::*;
-use crate::det_weighted_point::*;
+use crate::data_update::*;
 use crate::data_point::*;
 use crate::interpreter_state::*;
 use crate::displayable_with_state::*;
@@ -225,18 +226,6 @@ impl EmbedderState {
         }
     }
 
-    fn get_det_weighted_mean_from_ref(&self, term_ref : &TermReference) -> DetWeightedPoint {
-        match term_ref {
-            TermReference::FuncRef(func_ptr) => self.get_det_weighted_mean_from_ptr(func_ptr),
-            TermReference::VecRef(vec) => DetWeightedPoint::from_vector(from_noisy(vec))
-        }
-    }
-
-    fn get_det_weighted_mean_from_ptr(&self, term_ptr : &TermPointer) -> DetWeightedPoint {
-        let embedding : &Model = self.get_embedding(term_ptr);
-        embedding.get_det_weighted_mean()
-    }
-
     //Propagates prior updates downwards
     pub fn propagate_prior_recursive(&mut self, interpreter_state : &InterpreterState,
                                      to_propagate : HashSet::<TermPointer>,
@@ -361,17 +350,13 @@ impl EmbedderState {
         let arg_ref = term_app_res.get_arg_ref();
         let ret_ref = term_app_res.get_ret_ref();
 
-        let arg_det_weighted_point = self.get_det_weighted_mean_from_ref(&arg_ref);
-        let ret_det_weighted_point = self.get_det_weighted_mean_from_ref(&ret_ref);
+        let arg_schmear = self.get_schmear_from_ref(&arg_ref);
+        let mut ret_schmear = self.get_schmear_from_ref(&ret_ref);
 
-        let combined_det = arg_det_weighted_point.det.tensor(&ret_det_weighted_point.det);
-        let weight = combined_det.get_singular_value_geom_mean();
-
-        let mut arg_mean : Array1::<f32> = arg_det_weighted_point.vec;
-        let mut ret_mean : Array1::<f32> = ret_det_weighted_point.vec;
+        let mut arg_mean : Array1::<f32> = arg_schmear.mean;
 
         trace!("Propagating data for space of size {}->{}", arg_mean.shape()[0],
-                                                            ret_mean.shape()[0]);
+                                                            ret_schmear.mean.shape()[0]);
 
         let in_type = term_app_res.get_arg_type();
         if (!is_vector_type(in_type)) {
@@ -382,20 +367,16 @@ impl EmbedderState {
         let out_type = term_app_res.get_ret_type();
         if (!is_vector_type(out_type)) {
             let out_space = self.model_spaces.get(&out_type).unwrap();
-            ret_mean = out_space.sketch(&ret_mean);
+            ret_schmear = out_space.compress_schmear(&ret_schmear);
         }
 
-        let data_point = DataPoint {
-            in_vec : arg_mean,
-            out_vec : ret_mean,
-            weight : weight
-        };
+        let data_update = construct_data_update(arg_mean, &ret_schmear);
 
         let func_embedding : &mut Model = self.get_mut_embedding(term_app_res.get_func_ptr());
         if (func_embedding.has_data(&arg_ref)) {
             func_embedding.downdate_data(&arg_ref);
         }
-        func_embedding.update_data(arg_ref, data_point);
+        func_embedding.update_data(arg_ref, data_update);
     }
 
 }

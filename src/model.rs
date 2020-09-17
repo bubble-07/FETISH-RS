@@ -7,8 +7,7 @@ use ndarray_linalg::*;
 use std::ops;
 use std::rc::*;
 
-use crate::sized_determinant::*;
-use crate::det_weighted_point::*;
+use crate::data_update::*;
 use crate::data_point::*;
 use crate::pseudoinverse::*;
 use crate::feature_collection::*;
@@ -45,7 +44,7 @@ pub struct Model {
     feature_collections : Rc<[EnumFeatureCollection; 3]>,
     pub data : NormalInverseWishart,
     prior_updates : HashMap::<PriorUpdateKey, NormalInverseWishart>,
-    data_updates : HashMap::<DataUpdateKey, DataPoint>
+    data_updates : HashMap::<DataUpdateKey, DataUpdate>
 }
 
 pub fn to_features(feature_collections : &[EnumFeatureCollection; 3], in_vec : &Array1<f32>) -> Array1<f32> {
@@ -172,9 +171,6 @@ impl Model {
     pub fn get_mean_as_vec(&self) -> Array1::<f32> {
         self.data.get_mean_as_vec()
     }
-    pub fn get_det_weighted_mean(&self) -> DetWeightedPoint {
-        self.data.get_det_weighted_mean()
-    }
 
     pub fn get_single_observation_weight(&self) -> f32 {
         let in_weight = self.data.precision.opnorm_fro().unwrap();
@@ -194,7 +190,7 @@ impl Model {
         self.data.get_schmear()
     }
 
-    fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32> {
+    pub fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32> {
         to_features(&self.feature_collections, in_vec)
     }
 
@@ -230,21 +226,23 @@ impl Model {
     pub fn has_data(&self, update_key : &DataUpdateKey) -> bool {
         self.data_updates.contains_key(update_key)
     }
-    pub fn update_data(&mut self, update_key : DataUpdateKey, data_point : DataPoint) {
-        //Need to upgrade the input schmear to a featurized input schmear
-        let feat_vec = self.get_features(&data_point.in_vec);
-        let feat_data_point = DataPoint {
-            in_vec : feat_vec,
-            out_vec : data_point.out_vec,
-            weight : data_point.weight
-        };
+    pub fn update_data(&mut self, update_key : DataUpdateKey, data_update : DataUpdate) {
+        let feat_update = data_update.featurize(&self);
 
-        self.data += &feat_data_point;
-        self.data_updates.insert(update_key, feat_data_point);
+        let data_points = feat_update.get_data_points();
+        for data_point in data_points.iter() {
+            self.data += data_point;
+        }
+
+        self.data_updates.insert(update_key, feat_update);
     }
     pub fn downdate_data(&mut self, update_key : &DataUpdateKey) {
-        let added_point : DataPoint = self.data_updates.remove(update_key).unwrap();
-        self.data -= &added_point;
+        let data_update = self.data_updates.remove(update_key).unwrap();
+
+        let data_points = data_update.get_data_points();
+        for data_point in data_points.iter() {
+            self.data -= data_point;
+        }
     }
 }
 
@@ -267,7 +265,7 @@ impl Model {
               in_dimensions : usize, out_dimensions : usize) -> Model {
 
         let prior_updates : HashMap::<PriorUpdateKey, NormalInverseWishart> = HashMap::new();
-        let data_updates : HashMap::<DataUpdateKey, DataPoint> = HashMap::new();
+        let data_updates : HashMap::<DataUpdateKey, DataUpdate> = HashMap::new();
 
         let mut total_feat_dims : usize = 0;
         for collection in feature_collections.iter() {

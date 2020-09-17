@@ -17,8 +17,6 @@ use crate::sherman_morrison::*;
 use crate::inverse_schmear::*;
 use crate::cauchy_fourier_features::*;
 use crate::linalg_utils::*;
-use crate::sized_determinant::*;
-use crate::det_weighted_point::*;
 use crate::normal_inverse_wishart_sampler::*;
 
 use rand::prelude::*;
@@ -77,20 +75,6 @@ impl NormalInverseWishart {
     }
     pub fn get_mean(&self) -> Array2<f32> {
         self.mean.clone()
-    }
-    pub fn get_det_weighted_mean(&self) -> DetWeightedPoint {
-        let scale = self.little_v - (self.t as f32) - 1.0f32;
-        let in_det = SizedDeterminant::from_psd_matrix(&self.precision);
-        let mut out_det = SizedDeterminant::from_psd_matrix(&self.big_v);
-        out_det.invert();
-        out_det.scale(scale);
-        let total_det = in_det.tensor(&out_det);
-
-        let mean = self.get_mean_as_vec();
-        DetWeightedPoint {
-            det : total_det,
-            vec : mean
-        }
     }
 
     pub fn get_schmear(&self) -> FuncSchmear {
@@ -183,7 +167,7 @@ impl NormalInverseWishart {
 
         let out_mean = self.precision_u.dot(&self.sigma);
 
-        self.little_v += s;
+        self.little_v += w;
 
         let x_norm_sq = x.dot(x);
         let update_mean = (1.0f32 / x_norm_sq) * outer(y, x);
@@ -194,6 +178,10 @@ impl NormalInverseWishart {
 
         self.big_v += &update_mean_diff.dot(&update_precision).dot(&update_mean_diff.t());
         self.big_v += &initial_mean_diff.dot(&self.precision).dot(&initial_mean_diff.t());
+
+        if (self.big_v[[0, 0]] < 0.0f32) {
+            println!("Big v became negative due to data update");
+        }
 
         self.mean = out_mean;
         self.precision = out_precision;
@@ -250,6 +238,12 @@ impl NormalInverseWishart {
         self.big_v += &other_big_v;
         self.big_v += &u_diff_l_u_diff_one;
         self.big_v += &u_diff_l_u_diff_two;
+
+        if (self.big_v[[0, 0]] < 0.0f32) {
+            println!("Big v became negative due to prior update");
+            println!("Big v: {}", &self.big_v);
+            println!("Other big v: {}", &other_big_v);
+        }
     }
 }
 
