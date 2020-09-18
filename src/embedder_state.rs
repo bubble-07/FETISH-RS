@@ -219,13 +219,6 @@ impl EmbedderState {
         embedding.get_inverse_schmear()
     }
 
-    fn get_inverse_schmear_from_ref(&self, term_ref : &TermReference) -> InverseSchmear {
-        match term_ref {
-            TermReference::FuncRef(func_ptr) => self.get_inverse_schmear_from_ptr(func_ptr).flatten(),
-            TermReference::VecRef(vec) => InverseSchmear::ident_precision_from_noisy(vec)
-        }
-    }
-
     //Propagates prior updates downwards
     pub fn propagate_prior_recursive(&mut self, interpreter_state : &InterpreterState,
                                      to_propagate : HashSet::<TermPointer>,
@@ -364,13 +357,17 @@ impl EmbedderState {
             arg_mean = in_space.sketch(&arg_mean);  
         }
 
+
         let out_type = term_app_res.get_ret_type();
-        if (!is_vector_type(out_type)) {
+        let data_update = if (is_vector_type(out_type)) {
+            let ret_mean = ret_schmear.mean;
+            construct_vector_data_update(arg_mean, ret_mean)
+        } else {
             let out_space = self.model_spaces.get(&out_type).unwrap();
             ret_schmear = out_space.compress_schmear(&ret_schmear);
-        }
+            construct_data_update(arg_mean, &ret_schmear)
+        };
 
-        let data_update = construct_data_update(arg_mean, &ret_schmear);
 
         let func_embedding : &mut Model = self.get_mut_embedding(term_app_res.get_func_ptr());
         if (func_embedding.has_data(&arg_ref)) {

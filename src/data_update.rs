@@ -42,6 +42,16 @@ impl DataUpdate {
     }
 }
 
+pub fn construct_vector_data_update(in_vec : Array1<f32>, out_vec : Array1<f32>) -> DataUpdate {
+    let mut out_sigma_points = Vec::new();
+    out_sigma_points.push(out_vec);
+
+    DataUpdate {
+        in_vec,
+        out_sigma_points
+    }
+}
+
 pub fn construct_data_update(in_vec : Array1<f32>, out_schmear : &Schmear) -> DataUpdate {
     let out_sigma_points = get_sigma_points(out_schmear);
     DataUpdate {

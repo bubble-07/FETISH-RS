@@ -44,14 +44,4 @@ impl InverseSchmear {
             precision
         }
      }
-
-    pub fn ident_precision_from_noisy(vec : &Array1<R32>) -> InverseSchmear {
-        let n = vec.len();
-        let precision = Array::eye(n);
-        let mean = from_noisy(vec);
-        InverseSchmear {
-            mean,
-            precision
-        }
-    }
 }
