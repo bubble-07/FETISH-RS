@@ -219,6 +219,21 @@ impl EmbedderState {
         embedding.get_inverse_schmear()
     }
 
+    fn get_compressed_schmear_from_ptr(&self, term_ptr : &TermPointer) -> Schmear {
+        let type_id = &term_ptr.type_id;
+        let model_space = self.model_spaces.get(type_id).unwrap();
+        let full_schmear = self.get_schmear_from_ptr(term_ptr).flatten();
+        let result = model_space.compress_schmear(&full_schmear);
+        result
+    }
+
+    fn get_compressed_schmear_from_ref(&self, term_ref : &TermReference) -> Schmear {
+        match term_ref {
+            TermReference::FuncRef(func_ptr) => self.get_compressed_schmear_from_ptr(&func_ptr),
+            TermReference::VecRef(vec) => Schmear::from_vector(&vec)
+        }
+    }
+
     //Propagates prior updates downwards
     pub fn propagate_prior_recursive(&mut self, interpreter_state : &InterpreterState,
                                      to_propagate : HashSet::<TermPointer>,
@@ -307,7 +322,6 @@ impl EmbedderState {
     //exists for the given application of terms, this will first remove that update
     fn propagate_prior(&mut self, term_app_res : TermApplicationResult) {
         let func_schmear : FuncSchmear = self.get_schmear_from_ptr(&term_app_res.get_func_ptr());
-        let full_arg_schmear : Schmear = self.get_schmear_from_ref(&term_app_res.get_arg_ref());
        
         //Get the model space for the func type
         let func_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_func_type()).unwrap();
@@ -316,11 +330,7 @@ impl EmbedderState {
         trace!("Propagating prior for space of size {}->{}", func_space.feature_dimensions, 
                                                              func_space.out_dimensions);
 
-        let maybe_arg_space = self.model_spaces.get(&term_app_res.get_arg_type());
-        let arg_schmear : Schmear = match (maybe_arg_space) {
-            Option::Some(arg_space) => arg_space.compress_schmear(&full_arg_schmear),
-            Option::None => full_arg_schmear
-        };
+        let arg_schmear = self.get_compressed_schmear_from_ref(&term_app_res.get_arg_ref());
 
         let out_schmear : Schmear = func_space.apply_schmears(&func_schmear, &arg_schmear);
 
@@ -343,31 +353,21 @@ impl EmbedderState {
         let arg_ref = term_app_res.get_arg_ref();
         let ret_ref = term_app_res.get_ret_ref();
 
-        let arg_schmear = self.get_schmear_from_ref(&arg_ref);
-        let mut ret_schmear = self.get_schmear_from_ref(&ret_ref);
+        let arg_schmear = self.get_compressed_schmear_from_ref(&arg_ref);
+        let ret_schmear = self.get_compressed_schmear_from_ref(&ret_ref);
 
-        let mut arg_mean : Array1::<f32> = arg_schmear.mean;
+        let arg_mean : Array1::<f32> = arg_schmear.mean;
 
         trace!("Propagating data for space of size {}->{}", arg_mean.shape()[0],
                                                             ret_schmear.mean.shape()[0]);
-
-        let in_type = term_app_res.get_arg_type();
-        if (!is_vector_type(in_type)) {
-            let in_space = self.model_spaces.get(&in_type).unwrap();
-            arg_mean = in_space.sketch(&arg_mean);  
-        }
-
 
         let out_type = term_app_res.get_ret_type();
         let data_update = if (is_vector_type(out_type)) {
             let ret_mean = ret_schmear.mean;
             construct_vector_data_update(arg_mean, ret_mean)
         } else {
-            let out_space = self.model_spaces.get(&out_type).unwrap();
-            ret_schmear = out_space.compress_schmear(&ret_schmear);
             construct_data_update(arg_mean, &ret_schmear)
         };
-
 
         let func_embedding : &mut Model = self.get_mut_embedding(term_app_res.get_func_ptr());
         if (func_embedding.has_data(&arg_ref)) {

@@ -34,17 +34,14 @@ use rand::prelude::*;
 
 use std::collections::HashMap;
 
-type PriorUpdateKey = TermApplication;
-type DataUpdateKey = TermReference;
-
 #[derive(Clone)]
 pub struct Model {
     in_dimensions : usize,
     out_dimensions : usize,
     feature_collections : Rc<[EnumFeatureCollection; 3]>,
     pub data : NormalInverseWishart,
-    prior_updates : HashMap::<PriorUpdateKey, NormalInverseWishart>,
-    data_updates : HashMap::<DataUpdateKey, DataUpdate>
+    prior_updates : HashMap::<TermApplication, NormalInverseWishart>,
+    data_updates : HashMap::<TermReference, DataUpdate>
 }
 
 pub fn to_features(feature_collections : &[EnumFeatureCollection; 3], in_vec : &Array1<f32>) -> Array1<f32> {
@@ -179,7 +176,12 @@ impl Model {
 
         let num_observations = self.data.little_v - (self.data.t as f32);
 
-        combined_weight / num_observations
+        let result = combined_weight / num_observations;
+        
+        if (result < 0.0f32) {
+            println!("Single obs weight below zero: {}", result);
+        }
+        result
     }
 
     pub fn get_inverse_schmear(&self) -> FuncInverseSchmear {
@@ -223,38 +225,29 @@ impl ops::SubAssign<DataPoint> for Model {
 }
 
 impl Model {
-    pub fn has_data(&self, update_key : &DataUpdateKey) -> bool {
+    pub fn has_data(&self, update_key : &TermReference) -> bool {
         self.data_updates.contains_key(update_key)
     }
-    pub fn update_data(&mut self, update_key : DataUpdateKey, data_update : DataUpdate) {
+    pub fn update_data(&mut self, update_key : TermReference, data_update : DataUpdate) {
         let feat_update = data_update.featurize(&self);
-
-        let data_points = feat_update.get_data_points();
-        for data_point in data_points.iter() {
-            self.data += data_point;
-        }
-
+        self.data += &feat_update;
         self.data_updates.insert(update_key, feat_update);
     }
-    pub fn downdate_data(&mut self, update_key : &DataUpdateKey) {
+    pub fn downdate_data(&mut self, update_key : &TermReference) {
         let data_update = self.data_updates.remove(update_key).unwrap();
-
-        let data_points = data_update.get_data_points();
-        for data_point in data_points.iter() {
-            self.data -= data_point;
-        }
+        self.data -= &data_update;
     }
 }
 
 impl Model {
-    pub fn has_prior(&self, update_key : &PriorUpdateKey) -> bool {
+    pub fn has_prior(&self, update_key : &TermApplication) -> bool {
         self.prior_updates.contains_key(update_key)
     }
-    pub fn update_prior(&mut self, update_key : PriorUpdateKey, distr : NormalInverseWishart) {
+    pub fn update_prior(&mut self, update_key : TermApplication, distr : NormalInverseWishart) {
         self.data += &distr;
         self.prior_updates.insert(update_key, distr);
     }
-    pub fn downdate_prior(&mut self, key : &PriorUpdateKey) {
+    pub fn downdate_prior(&mut self, key : &TermApplication) {
         let distr = self.prior_updates.remove(key).unwrap();
         self.data -= &distr;
     }
@@ -264,8 +257,8 @@ impl Model {
     pub fn new(feature_collections : Rc<[EnumFeatureCollection; 3]>,
               in_dimensions : usize, out_dimensions : usize) -> Model {
 
-        let prior_updates : HashMap::<PriorUpdateKey, NormalInverseWishart> = HashMap::new();
-        let data_updates : HashMap::<DataUpdateKey, DataUpdate> = HashMap::new();
+        let prior_updates : HashMap::<TermApplication, NormalInverseWishart> = HashMap::new();
+        let data_updates : HashMap::<TermReference, DataUpdate> = HashMap::new();
 
         let mut total_feat_dims : usize = 0;
         for collection in feature_collections.iter() {

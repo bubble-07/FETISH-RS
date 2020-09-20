@@ -5,6 +5,7 @@ use std::ops;
 use ndarray::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
+use crate::data_update::*;
 use crate::test_utils::*;
 use crate::pseudoinverse::*;
 use crate::func_scatter_tensor::*;
@@ -181,10 +182,32 @@ impl NormalInverseWishart {
 
         if (self.big_v[[0, 0]] < 0.0f32) {
             println!("Big v became negative due to data update");
+            println!("In vec: {}", &data_point.in_vec);
+            println!("Out vec: {}", &data_point.out_vec);
+            println!("Weight: {}", &data_point.weight);
+            println!("Big v: {}", &self.big_v);
         }
 
         self.mean = out_mean;
         self.precision = out_precision;
+    }
+}
+
+impl ops::AddAssign<&DataUpdate> for NormalInverseWishart {
+    fn add_assign(&mut self, update : &DataUpdate) {
+        let data_points = update.get_data_points();
+        for data_point in data_points.iter() {
+            self.update(data_point, false);
+        }
+    }
+}
+
+impl ops::SubAssign<&DataUpdate> for NormalInverseWishart {
+    fn sub_assign(&mut self, update : &DataUpdate) {
+        let data_points = update.get_data_points();
+        for data_point in data_points.iter() {
+            self.update(data_point, true);
+        }
     }
 }
 

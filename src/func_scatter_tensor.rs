@@ -67,6 +67,11 @@ impl FuncScatterTensor {
 
                 let coef = singular_val * eigenval;
 
+                if (coef < 0.0f32) {
+                    println!("Coef went below zero: {}", coef);
+                    println!("Input covariance: {}", covariance);
+                }
+
                 in_scatter += &(coef * outer(&in_vec, &in_vec));
                 out_scatter += &(coef * &outer(&out_vec, &out_vec));
             }
@@ -114,6 +119,9 @@ impl FuncScatterTensor {
         let sq_norm = double_reduced.dot(&double_reduced);
 
         let scale = dot / sq_norm;
+        if (scale < 0.0f32) {
+            println!("Scale became negative: {}", scale);
+        }
 
         let mut result = FuncScatterTensor {
             in_scatter,

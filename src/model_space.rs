@@ -166,6 +166,9 @@ impl ModelSpace {
         let in_sigma_inv = pseudoinverse_h(in_sigma);
 
         let out_sigma = big_sigma.out_scatter;
+        if (out_sigma[[0, 0]] < 0.0f32) {
+            println!("out sigma value somehow negative: {}", out_sigma);
+        }
 
         let dest_model = embedder_state.get_embedding(func_ptr);
         let single_observation_weight = dest_model.get_single_observation_weight();
