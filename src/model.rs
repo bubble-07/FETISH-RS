@@ -41,7 +41,7 @@ pub struct Model {
     feature_collections : Rc<[EnumFeatureCollection; 3]>,
     pub data : NormalInverseWishart,
     prior_updates : HashMap::<TermApplication, NormalInverseWishart>,
-    data_updates : HashMap::<TermReference, DataUpdate>
+    pub data_updates : HashMap::<TermReference, DataUpdate>
 }
 
 pub fn to_features(feature_collections : &[EnumFeatureCollection; 3], in_vec : &Array1<f32>) -> Array1<f32> {

@@ -245,8 +245,10 @@ impl EmbedderState {
             let applications = interpreter_state.get_app_results_with_func(&func_ptr);
             for application in applications {
                 if let TermReference::FuncRef(_) = application.get_ret_ref() {
-                    topo_sort.insert(application.clone());
-                    stack.push(application.clone());
+                    if (self.has_nontrivial_prior_update(&application)) {
+                        topo_sort.insert(application.clone());
+                        stack.push(application.clone());
+                    }
                 }
             }
         }
@@ -258,8 +260,10 @@ impl EmbedderState {
                 let applications = interpreter_state.get_app_results_with_func(&ret_func_ptr); 
                 for application in applications {
                     if let TermReference::FuncRef(_) = application.get_ret_ref() {
-                        topo_sort.add_dependency(elem.clone(), application.clone());
-                        stack.push(application);
+                        if (self.has_nontrivial_prior_update(&application)) {
+                            topo_sort.add_dependency(elem.clone(), application.clone());
+                            stack.push(application);
+                        }
                     }
                 }
 
@@ -317,12 +321,39 @@ impl EmbedderState {
         
     }
 
+    fn get_prior_propagation_func_schmear(&self, term_app_res : &TermApplicationResult) -> FuncSchmear {
+        let func_model = self.get_embedding(&term_app_res.get_func_ptr());
+        //If the model for the function has any data update involving
+        //the argument, we need to consider the model with it removed
+        let arg_ref = &term_app_res.get_arg_ref();
+        let func_schmear = if (func_model.has_data(arg_ref)) {
+            let data_update = func_model.data_updates.get(arg_ref).unwrap();
+            let mut downdated_distr = func_model.data.clone();
+            downdated_distr -= data_update;
+
+            downdated_distr.get_schmear()
+        } else {
+            func_model.get_schmear()
+        };
+        func_schmear 
+    }
+
+    fn has_nontrivial_prior_update(&self, term_app_res : &TermApplicationResult) -> bool {
+        let func_model = self.get_embedding(&term_app_res.get_func_ptr());
+        let arg_ref = &term_app_res.get_arg_ref();
+        let mut num_data_updates = func_model.data_updates.len();
+        if (func_model.has_data(arg_ref)) {
+            num_data_updates -= 1;
+        }
+        num_data_updates > 0
+    }
+
     //Given a TermApplicationResult, compute the estimated output from the application
     //and use it to update the model for the result. If an existing update
     //exists for the given application of terms, this will first remove that update
     fn propagate_prior(&mut self, term_app_res : TermApplicationResult) {
-        let func_schmear : FuncSchmear = self.get_schmear_from_ptr(&term_app_res.get_func_ptr());
-       
+        let func_schmear = self.get_prior_propagation_func_schmear(&term_app_res);
+      
         //Get the model space for the func type
         let func_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_func_type()).unwrap();
         let ret_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_ret_type()).unwrap();
