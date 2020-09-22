@@ -176,6 +176,7 @@ impl ModelSpace {
         let in_weight = single_observation_weight * (1.0f32 / little_sigma).sqrt();
         let out_weight = single_observation_weight * little_sigma.sqrt();
 
+        println!("Weights (obs, in, out): {},{},{}", single_observation_weight, in_weight, out_weight);
         
         let mut in_precision = in_sigma_inv;
         in_precision *= in_weight;
