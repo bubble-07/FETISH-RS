@@ -52,6 +52,10 @@ impl LinearSketch {
     pub fn expand(&self, mean : &Array1<f32>) -> Array1<f32> {
         self.projection_mat_pinv.dot(mean)
     }
+    pub fn expand_covariance(&self, covariance : &Array2<f32>) -> Array2<f32> {
+        self.projection_mat_pinv.dot(covariance).dot(&self.projection_mat_pinv.t())
+    }
+
     pub fn get_expansion_matrix(&self) -> Array2<f32> {
         self.projection_mat_pinv.clone()
     }

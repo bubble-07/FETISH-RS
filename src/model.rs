@@ -169,21 +169,6 @@ impl Model {
         self.data.get_mean_as_vec()
     }
 
-    pub fn get_single_observation_weight(&self) -> f32 {
-        let in_weight = self.data.precision.opnorm_fro().unwrap();
-        let out_weight = self.data.big_v.opnorm_fro().unwrap();
-        let combined_weight = (in_weight * out_weight).sqrt();
-
-        let num_observations = self.data.little_v - (self.data.t as f32);
-
-        let result = combined_weight / num_observations;
-        
-        if (result < 0.0f32) {
-            println!("Single obs weight below zero: {}", result);
-        }
-        result
-    }
-
     pub fn get_inverse_schmear(&self) -> FuncInverseSchmear {
         self.data.get_inverse_schmear()
     }

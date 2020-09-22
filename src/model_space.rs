@@ -158,32 +158,28 @@ impl ModelSpace {
         let mean_flat = self.func_sketcher.expand(&in_schmear.mean);
         let mean = mean_flat.into_shape((t, s)).unwrap();
 
-        let big_sigma = FuncScatterTensor::from_compressed_covariance(t, s, 
-                                                                  &self.func_sketcher, &in_schmear.covariance);
-        let little_sigma = big_sigma.scale;
-
-        let in_sigma = &big_sigma.in_scatter;
-        let in_sigma_inv = pseudoinverse_h(in_sigma);
-
-        let out_sigma = big_sigma.out_scatter;
-        if (out_sigma[[0, 0]] < 0.0f32) {
-            println!("out sigma value somehow negative: {}", out_sigma);
-        }
+        //The (t * s) x (t * s) big sigma
+        let big_sigma = self.func_sketcher.expand_covariance(&in_schmear.covariance);
+        //t x s x t x s
+        let big_sigma_tensor = big_sigma.into_shape((t, s, t, s)).unwrap();
+        let big_sigma_tensor_reordered = big_sigma_tensor.permuted_axes([0, 2, 1, 3]);
+        //(t * t) x (s * s)
+        let big_sigma_matrix = big_sigma_tensor_reordered.into_shape((t * t, s * s)).unwrap();
 
         let dest_model = embedder_state.get_embedding(func_ptr);
-        let single_observation_weight = dest_model.get_single_observation_weight();
 
-        let in_weight = single_observation_weight * (1.0f32 / little_sigma).sqrt();
-        let out_weight = single_observation_weight * little_sigma.sqrt();
+        let existing_big_v = &dest_model.data.big_v;
+        let mut existing_big_v_inv = pseudoinverse_h(existing_big_v);
+        existing_big_v_inv *= (dest_model.data.little_v - (t as f32) - 1.0f32) / (t as f32); 
 
-        println!("Weights (obs, in, out): {},{},{}", single_observation_weight, in_weight, out_weight);
-        
-        let mut in_precision = in_sigma_inv;
-        in_precision *= in_weight;
+        let existing_big_v_inv_flat = existing_big_v_inv.into_shape((t * t,)).unwrap();
 
-        let mut big_v = out_sigma;
-        big_v *= out_weight;
+        //(s * s)
+        let result_in_covariance_flat = existing_big_v_inv_flat.dot(&big_sigma_matrix);
+        let result_in_covariance = result_in_covariance_flat.into_shape((s, s)).unwrap();
+        let in_precision = pseudoinverse_h(&result_in_covariance);
 
+        let big_v = Array::zeros((t, t));
         let little_v = (t as f32) + 1.0f32;
 
         NormalInverseWishart::new(mean, in_precision, big_v, little_v)

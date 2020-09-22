@@ -45,7 +45,6 @@ impl FuncSchmear {
         let u_inner_product = x.mean.dot(&self.covariance.in_scatter).dot(&x.mean);
         let v_scale = (sigma_dot_u + u_inner_product) * self.covariance.scale;
         let v_contrib = v_scale * &self.covariance.out_scatter;
-        println!("v scale: {}", v_scale);
 
         if (v_scale < 0.0f32) {
             println!("v scale became negative: {}", v_scale);
