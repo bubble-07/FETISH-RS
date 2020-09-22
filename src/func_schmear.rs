@@ -43,12 +43,12 @@ impl FuncSchmear {
     pub fn apply(&self, x : &Schmear) -> Schmear {
         let sigma_dot_u = frob_inner(&self.covariance.in_scatter, &x.covariance);
         let u_inner_product = x.mean.dot(&self.covariance.in_scatter).dot(&x.mean);
-        let v_scale = (sigma_dot_u + u_inner_product) * self.covariance.scale;
+        let v_scale = sigma_dot_u + u_inner_product;
         let v_contrib = v_scale * &self.covariance.out_scatter;
 
         if (v_scale < 0.0f32) {
             println!("v scale became negative: {}", v_scale);
-            println!("components: {}, {}, {}",  sigma_dot_u, u_inner_product, self.covariance.scale);
+            println!("components: {}, {}",  sigma_dot_u, u_inner_product);
         }
 
         let m_sigma_m_t = self.mean.dot(&x.covariance).dot(&self.mean.t());

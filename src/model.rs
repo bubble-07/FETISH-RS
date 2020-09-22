@@ -83,7 +83,7 @@ impl Model {
         let u_f_J = u_f.dot(&J);
 
         let p_t = p_f.out_scatter;
-        let p_s = p_f.scale * p_f.in_scatter;
+        let p_s = p_f.in_scatter;
 
 
         let J_u_p_t = u_f_J.t().dot(&p_t);
