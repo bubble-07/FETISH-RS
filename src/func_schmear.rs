@@ -49,6 +49,10 @@ impl FuncSchmear {
         if (v_scale < 0.0f32) {
             println!("v scale became negative: {}", v_scale);
             println!("components: {}, {}",  sigma_dot_u, u_inner_product);
+            if (u_inner_product < 0.0f32) {
+                println!("Non-psd in scatter: {}", &self.covariance.in_scatter);
+                println!("x mean: {}", &x.mean);
+            }
         }
 
         let m_sigma_m_t = self.mean.dot(&x.covariance).dot(&self.mean.t());

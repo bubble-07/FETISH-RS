@@ -163,8 +163,9 @@ impl ModelSpace {
         //t x s x t x s
         let big_sigma_tensor = big_sigma.into_shape((t, s, t, s)).unwrap();
         let big_sigma_tensor_reordered = big_sigma_tensor.permuted_axes([0, 2, 1, 3]);
+        let big_sigma_tensor_standard = big_sigma_tensor_reordered.as_standard_layout();
         //(t * t) x (s * s)
-        let big_sigma_matrix = big_sigma_tensor_reordered.into_shape((t * t, s * s)).unwrap();
+        let big_sigma_matrix = big_sigma_tensor_standard.into_shape((t * t, s * s)).unwrap();
 
         let dest_model = embedder_state.get_embedding(func_ptr);
 
