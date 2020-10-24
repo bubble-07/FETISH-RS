@@ -89,67 +89,6 @@ impl ModelSpace {
         model_space
     }
 
-    //Samples a function applied to a bare vec
-    pub fn thompson_sample_vec(&self, rng : &mut ThreadRng, other : &VectorSpace, target : &InverseSchmear) ->
-                              (ModelKey, Array1<f32>, f32) {
-        let mut result_key : ModelKey = 0 as ModelKey;
-        let mut result_vec : Array1<f32> = Array::zeros((self.in_dimensions,));
-        let mut result_dist = f32::INFINITY;
-        for (key, model) in self.models.iter() {
-            //Sample an array from the model
-            let sample : SampledFunction = model.sample(rng);
-            let (temp, temp_dist) = other.get_best_vector_arg(&sample, target);
-            if (temp_dist < result_dist) {
-                result_vec = temp;
-                result_dist = temp_dist;
-                result_key = *key;
-            }
-        }
-        (result_key, result_vec, result_dist)
-    }
-
-    //Samples a bare term
-    pub fn thompson_sample_term(&self, rng : &mut ThreadRng, inv_schmear : &InverseSchmear) -> (ModelKey, f32) {
-        let mut result_key : ModelKey = 0 as ModelKey;
-        let mut result_dist = f32::INFINITY;
-        for (key, model) in self.models.iter() {
-            //Sample a vector from the model
-            let sample : Array1<f32> = model.sample_as_vec(rng);
-            let compressed_sample = self.func_sketcher.sketch(&sample);
-            let model_dist = inv_schmear.mahalanobis_dist(&compressed_sample);
-            if (model_dist <= result_dist) {
-                result_key = *key;
-                result_dist = model_dist;
-            }
-        }
-        (result_key, result_dist)
-    }
-
-    //Samples an application of terms
-    pub fn thompson_sample_app(&self, rng : &mut ThreadRng, other : &ModelSpace, inv_schmear : &InverseSchmear) ->
-                              (ModelKey, ModelKey, f32) {
-        let mut result_func_key : ModelKey = 0 as ModelKey;
-        let mut result_arg_key : ModelKey = 0 as ModelKey;
-        let mut result_dist = f32::INFINITY;
-        for (func_key, func_model) in self.models.iter() {
-            //Sample a function from the function distribution
-            let func_sample : SampledFunction = func_model.sample(rng);
-            for (arg_key, arg_model) in other.models.iter() {
-                let raw_arg_sample : Array1<f32> = arg_model.sample_as_vec(rng);
-                let arg_sample : Array1<f32> = other.func_sketcher.sketch(&raw_arg_sample);
-
-                let result : Array1<f32> = func_sample.apply(&arg_sample);
-                let model_dist = inv_schmear.mahalanobis_dist(&result);
-                if (model_dist < result_dist) {
-                    result_func_key = *func_key;
-                    result_arg_key = *arg_key;
-                    result_dist = model_dist;
-                }
-            }
-        }
-        (result_func_key, result_arg_key, result_dist)
-    }
-
     pub fn schmear_to_prior(&self, embedder_state : &EmbedderState, 
                         func_ptr : &TermPointer, in_schmear : &Schmear) -> NormalInverseWishart {
         let s : usize = self.feature_dimensions;
