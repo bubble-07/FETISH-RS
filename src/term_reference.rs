@@ -18,6 +18,15 @@ pub enum TermReference {
     VecRef(Array1<R32>)
 }
 
+impl TermReference {
+    pub fn get_type(&self) -> TypeId {
+        match (&self) {
+            TermReference::FuncRef(func_ptr) => func_ptr.type_id,
+            TermReference::VecRef(vec) => get_type_id(&Type::VecType(vec.shape()[0]))
+        }
+    }
+}
+
 impl From<&Array1<f32>> for TermReference {
     fn from(vec : &Array1<f32>) -> Self {
         TermReference::VecRef(to_noisy(vec))

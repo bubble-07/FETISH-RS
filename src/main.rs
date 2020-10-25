@@ -4,6 +4,9 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod holed_application;
+mod holed_linear_expression;
+mod linear_expression;
 mod data_update;
 mod sigma_points;
 mod sherman_morrison;

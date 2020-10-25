@@ -7,6 +7,7 @@ use crate::type_id::*;
 use crate::displayable_with_state::*;
 use crate::application_table::*;
 use crate::type_space::*;
+use crate::linear_expression::*;
 use crate::term::*;
 use crate::params::*;
 use crate::term_pointer::*;
@@ -61,6 +62,16 @@ impl InterpreterState {
         for table in self.application_tables.values() {
             let mut temp = table.get_app_results_with_result(result_term);
             result.append(&mut temp);
+        }
+        result
+    }
+
+    pub fn evaluate_linear_expression(&mut self, linear_expression : LinearExpression) -> TermReference {
+        let mut result = linear_expression.cap;
+        for i in (0..linear_expression.chain.chain.len()).rev() {
+            let holed_application = &linear_expression.chain.chain[i];
+            let term_application = holed_application.cap(result);
+            result = self.evaluate(&term_application);
         }
         result
     }
