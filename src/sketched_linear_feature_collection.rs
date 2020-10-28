@@ -11,6 +11,7 @@ use crate::alpha_formulas::*;
 use crate::feature_collection::*;
 use crate::params::*;
 
+#[derive(Clone)]
 pub struct SketchedLinearFeatureCollection {
     in_dimensions : usize,
     out_dimensions : usize,

@@ -12,6 +12,7 @@ use crate::params::*;
 use crate::test_utils::*;
 use crate::cauchy_fourier_features::*;
 
+#[derive(Clone)]
 pub struct FourierFeatureCollection {
     in_dimensions : usize,
     num_features : usize,

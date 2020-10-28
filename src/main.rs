@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod space_info;
 mod holed_application;
 mod holed_linear_expression;
 mod linear_expression;

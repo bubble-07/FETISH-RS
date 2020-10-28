@@ -13,6 +13,7 @@ use crate::params::*;
 use crate::pseudoinverse::*;
 use crate::test_utils::*;
 
+#[derive(Clone)]
 pub struct LinearSketch {
     projection_mat : Array2<f32>,
     projection_mat_pinv : Array2<f32>

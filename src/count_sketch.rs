@@ -11,6 +11,7 @@ use rand::prelude::*;
 
 use rand::distributions::{Bernoulli, Distribution};
 
+#[derive(Clone)]
 pub struct CountSketch {
     in_dims : usize,
     out_dims : usize,

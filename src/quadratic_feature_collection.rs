@@ -16,6 +16,7 @@ use crate::params::*;
 use crate::test_utils::*;
 use crate::alpha_formulas::*;
 
+#[derive(Clone)]
 pub struct QuadraticFeatureCollection {
     in_dimensions : usize,
     alpha : f32,

@@ -7,6 +7,7 @@ use ndarray_linalg::*;
 use std::ops;
 use std::rc::*;
 
+use crate::space_info::*;
 use crate::data_update::*;
 use crate::data_point::*;
 use crate::pseudoinverse::*;
@@ -29,29 +30,39 @@ use crate::params::*;
 use crate::test_utils::*;
 
 use crate::sampled_function::*;
-use arraymap::ArrayMap;
 use rand::prelude::*;
 
 use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct Model {
-    in_dimensions : usize,
-    out_dimensions : usize,
-    feature_collections : Rc<[EnumFeatureCollection; 3]>,
+    pub space_info : Rc<SpaceInfo>,
     pub data : NormalInverseWishart,
     prior_updates : HashMap::<TermApplication, NormalInverseWishart>,
     pub data_updates : HashMap::<TermReference, DataUpdate>
 }
 
-pub fn to_features(feature_collections : &[EnumFeatureCollection; 3], in_vec : &Array1<f32>) -> Array1<f32> {
-    let comps = feature_collections.map(|coll| coll.get_features(in_vec));
-    stack(Axis(0), &[comps[0].view(), comps[1].view(), comps[2].view()]).unwrap()
+pub fn to_features(feature_collections : &Vec<EnumFeatureCollection>, in_vec : &Array1<f32>) -> Array1<f32> {
+    let comps = feature_collections.iter()
+                                   .map(|coll| coll.get_features(in_vec))
+                                   .collect::<Vec<_>>();
+    let comp_views = comps.iter()
+                          .map(|comp| ArrayView::from(comp))
+                          .collect::<Vec<_>>();
+
+    stack(Axis(0), &comp_views).unwrap()
 }
 
-pub fn to_jacobian(feature_collections : &[EnumFeatureCollection; 3], in_vec : &Array1<f32>) -> Array2<f32> {
-    let comps = feature_collections.map(|coll| coll.get_jacobian(in_vec));
-    stack(Axis(0), &[comps[0].view(), comps[1].view(), comps[2].view()]).unwrap()
+pub fn to_jacobian(feature_collections : &Vec<EnumFeatureCollection>, in_vec : &Array1<f32>) -> Array2<f32> {
+    let comps = feature_collections.iter()
+                                   .map(|coll| coll.get_jacobian(in_vec))
+                                   .collect::<Vec<_>>();
+
+    let comp_views = comps.iter()
+                          .map(|comp| ArrayView::from(comp))
+                          .collect::<Vec<_>>();
+
+    stack(Axis(0), &comp_views).unwrap()
 }
 
 impl Model {
@@ -65,9 +76,9 @@ impl Model {
     pub fn sample(&self, rng : &mut ThreadRng) -> SampledFunction {
         let mat = self.data.sample(rng);
         SampledFunction {
-            in_dimensions : self.in_dimensions,
+            in_dimensions : self.space_info.in_dimensions,
             mat : mat,
-            feature_collections : self.feature_collections.clone()
+            feature_collections : self.space_info.feature_collections.clone()
         }
     }
     pub fn sample_as_vec(&self, rng : &mut ThreadRng) -> Array1::<f32> {
@@ -86,7 +97,7 @@ impl Model {
     }
 
     pub fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32> {
-        to_features(&self.feature_collections, in_vec)
+        to_features(&self.space_info.feature_collections, in_vec)
     }
 
     fn get_data(&self, in_data : DataPoint) -> DataPoint {
@@ -147,30 +158,21 @@ impl Model {
 }
 
 impl Model {
-    pub fn new(feature_collections : Rc<[EnumFeatureCollection; 3]>,
-              in_dimensions : usize, out_dimensions : usize) -> Model {
-
+    pub fn new(space_info : Rc<SpaceInfo>) -> Model {
         let prior_updates : HashMap::<TermApplication, NormalInverseWishart> = HashMap::new();
         let data_updates : HashMap::<TermReference, DataUpdate> = HashMap::new();
 
-        let mut total_feat_dims : usize = 0;
-        for collection in feature_collections.iter() {
-            total_feat_dims += collection.get_dimension();
-        }
-
-        let mean : Array2<f32> = Array::zeros((out_dimensions, total_feat_dims));
+        let mean : Array2<f32> = Array::zeros((space_info.out_dimensions, space_info.feature_dimensions));
 
         let precision_mult : f32 = (1.0f32 / (PRIOR_SIGMA * PRIOR_SIGMA));
-        let in_precision : Array2<f32> = precision_mult * Array::eye(total_feat_dims);
-        let out_precision : Array2<f32> = precision_mult * Array::eye(out_dimensions);
-        let little_v = (out_dimensions as f32) + 1.0f32;
+        let in_precision : Array2<f32> = precision_mult * Array::eye(space_info.feature_dimensions);
+        let out_precision : Array2<f32> = precision_mult * Array::eye(space_info.out_dimensions);
+        let little_v = (space_info.out_dimensions as f32) + 1.0f32;
 
         let data = NormalInverseWishart::new(mean, in_precision, out_precision, little_v);
     
         Model {
-            in_dimensions,
-            out_dimensions,
-            feature_collections,
+            space_info : space_info,
             data,
             prior_updates,
             data_updates

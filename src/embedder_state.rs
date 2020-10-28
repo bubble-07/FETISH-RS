@@ -9,7 +9,6 @@ use noisy_float::prelude::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use std::rc::*;
-use either::*;
 use crate::data_update::*;
 use crate::data_point::*;
 use crate::interpreter_state::*;
@@ -81,8 +80,8 @@ impl EmbedderState {
 
                     info!("Creating model space with dims {} -> {}", arg_dimension, ret_dimension);
                     let model_space = ModelSpace::new(arg_dimension, ret_dimension);
-                    let model_sketched_dims = model_space.get_sketched_dimensions();
-                    let model_full_dims = model_space.get_full_dimensions();
+                    let model_sketched_dims = model_space.space_info.get_sketched_dimensions();
+                    let model_full_dims = model_space.space_info.get_full_dimensions();
                     model_spaces.insert(func_type_id, model_space);
                     full_dimensions.insert(func_type_id, model_full_dims);
                     reduced_dimensions.insert(func_type_id, model_sketched_dims);
@@ -149,7 +148,7 @@ impl EmbedderState {
         let type_id = &term_ptr.type_id;
         let model_space = self.model_spaces.get(type_id).unwrap();
         let full_schmear = self.get_schmear_from_ptr(term_ptr).flatten();
-        let result = model_space.compress_schmear(&full_schmear);
+        let result = model_space.space_info.compress_schmear(&full_schmear);
         result
     }
 
@@ -284,12 +283,12 @@ impl EmbedderState {
         let func_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_func_type()).unwrap();
         let ret_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_ret_type()).unwrap();
 
-        trace!("Propagating prior for space of size {}->{}", func_space.feature_dimensions, 
-                                                             func_space.out_dimensions);
+        trace!("Propagating prior for space of size {}->{}", func_space.space_info.feature_dimensions, 
+                                                             func_space.space_info.out_dimensions);
 
         let arg_schmear = self.get_compressed_schmear_from_ref(&term_app_res.get_arg_ref());
 
-        let out_schmear : Schmear = func_space.apply_schmears(&func_schmear, &arg_schmear);
+        let out_schmear : Schmear = func_space.space_info.apply_schmears(&func_schmear, &arg_schmear);
 
         if let TermReference::FuncRef(ret_ptr) = term_app_res.get_ret_ref() {
             let out_prior : NormalInverseWishart = ret_space.schmear_to_prior(&self, &ret_ptr, &out_schmear);

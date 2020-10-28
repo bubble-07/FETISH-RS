@@ -14,30 +14,26 @@ use crate::cauchy_fourier_features::*;
 use crate::sketched_linear_feature_collection::*;
 
 #[enum_dispatch(FeatureCollection)]
+#[derive(Clone)]
 pub enum EnumFeatureCollection {
     SketchedLinearFeatureCollection,
     QuadraticFeatureCollection,
     FourierFeatureCollection
 }
 
-pub fn get_feature_collections(in_dimensions : usize) -> [EnumFeatureCollection; 3] {
+pub fn get_feature_collections(in_dimensions : usize) -> Vec<EnumFeatureCollection> {
     let linear_collection = SketchedLinearFeatureCollection::new(in_dimensions);
     let quadratic_collection = QuadraticFeatureCollection::new(in_dimensions);
     let fourier_collection = FourierFeatureCollection::new(in_dimensions, gen_cauchy_random);
-    let feature_collections = [EnumFeatureCollection::from(linear_collection),
+    let feature_collections = vec![EnumFeatureCollection::from(linear_collection),
                                EnumFeatureCollection::from(quadratic_collection),
                                EnumFeatureCollection::from(fourier_collection)];
     feature_collections
 }
 
-pub fn get_rc_feature_collections(in_dimensions : usize) -> Rc<[EnumFeatureCollection; 3]> {
-    let feature_collections = get_feature_collections(in_dimensions);
-    Rc::new(feature_collections)
-}
-
-pub fn get_total_feat_dims(rc_feature_collections : &Rc<[EnumFeatureCollection; 3]>) -> usize {
+pub fn get_total_feat_dims(feature_collections : &Vec<EnumFeatureCollection>) -> usize {
     let mut total_feat_dims : usize = 0;
-    for collection in rc_feature_collections.iter() {
+    for collection in feature_collections.iter() {
         total_feat_dims += collection.get_dimension();
     }
     total_feat_dims

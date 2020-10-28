@@ -12,6 +12,7 @@ use crate::test_utils::*;
 use crate::linalg_utils::*;
 use crate::inverse_schmear::*;
 use crate::linalg_utils::*;
+use crate::space_info::*;
 
 pub fn get_sigma_points(in_schmear : &Schmear) -> Vec<Array1<f32>> {
     let mean = &in_schmear.mean;
@@ -58,11 +59,11 @@ fn sigma_points_to_schmear(in_points : Vec<Array1<f32>>) -> Schmear {
     result
 }
 
-pub fn unscented_transform_schmear(in_schmear : &Schmear, model_space : &ModelSpace) -> Schmear {
+pub fn unscented_transform_schmear(in_schmear : &Schmear, space_info : &SpaceInfo) -> Schmear {
     let in_sigma_points = get_sigma_points(in_schmear);
     let mut out_sigma_points = Vec::new();
     for in_sigma_point in in_sigma_points {
-        let out_sigma_point = model_space.get_features(&in_sigma_point);
+        let out_sigma_point = space_info.get_features(&in_sigma_point);
         out_sigma_points.push(out_sigma_point);
     }
     

@@ -25,11 +25,11 @@ use crate::linear_sketch::*;
 use crate::model::*;
 use crate::params::*;
 use crate::schmear::*;
+use crate::space_info::*;
 use crate::func_schmear::*;
 use crate::sampled_function::*;
 use crate::inverse_schmear::*;
 use crate::func_inverse_schmear::*;
-use arraymap::ArrayMap;
 use rand::prelude::*;
 
 extern crate pretty_env_logger;
@@ -39,66 +39,35 @@ use std::collections::HashMap;
 type ModelKey = usize;
 
 pub struct ModelSpace {
-    pub in_dimensions : usize,
-    pub feature_dimensions : usize,
-    pub out_dimensions : usize,
-    pub feature_collections : Rc<[EnumFeatureCollection; 3]>,
-    models : HashMap<ModelKey, Model>,
-    func_sketcher : LinearSketch
+    pub space_info : Rc<SpaceInfo>,
+    models : HashMap<ModelKey, Model>
 }
 
 impl ModelSpace {
-    pub fn get_full_dimensions(&self) -> usize {
-        self.feature_dimensions * self.out_dimensions
-    }
-    pub fn get_sketched_dimensions(&self) -> usize {
-        self.func_sketcher.get_output_dimension()
-    }
-
-    pub fn sketch(&self, mean : &Array1<f32>) -> Array1<f32> {
-        self.func_sketcher.sketch(mean)
-    }
-
-    pub fn compress_inverse_schmear(&self, inv_schmear : &InverseSchmear) -> InverseSchmear {
-        self.func_sketcher.compress_inverse_schmear(inv_schmear)
-    }
-    pub fn compress_schmear(&self, schmear : &Schmear) -> Schmear {
-        self.func_sketcher.compress_schmear(schmear)
-    }
-
     pub fn new(in_dimensions : usize, out_dimensions : usize) -> ModelSpace {
-        let rc_feature_collections = get_rc_feature_collections(in_dimensions);
-        let total_feat_dims = get_total_feat_dims(&rc_feature_collections);
+        let space_info = SpaceInfo::new(in_dimensions, out_dimensions);
+        ModelSpace::from_space_info(space_info)
+    }
 
-        info!("And feature dims {}", total_feat_dims);
-
-        let embedding_dim = total_feat_dims * out_dimensions;
-        let sketched_embedding_dim = get_reduced_output_dimension(embedding_dim);
-        let alpha = sketch_alpha(embedding_dim);
-
-        let output_sketch = LinearSketch::new(embedding_dim, sketched_embedding_dim, alpha);
-
+    fn from_space_info(space_info : SpaceInfo) -> ModelSpace {
         let model_space = ModelSpace {
-            in_dimensions : in_dimensions,
-            feature_dimensions : total_feat_dims,
-            out_dimensions : out_dimensions,
-            feature_collections : rc_feature_collections,
             models : HashMap::new(),
-            func_sketcher : output_sketch
+            space_info : Rc::new(space_info)
         };
         model_space
+
     }
 
     pub fn schmear_to_prior(&self, embedder_state : &EmbedderState, 
                         func_ptr : &TermPointer, in_schmear : &Schmear) -> NormalInverseWishart {
-        let s : usize = self.feature_dimensions;
-        let t : usize = self.out_dimensions;
+        let s : usize = self.space_info.feature_dimensions;
+        let t : usize = self.space_info.out_dimensions;
 
-        let mean_flat = self.func_sketcher.expand(&in_schmear.mean);
+        let mean_flat = self.space_info.func_sketcher.expand(&in_schmear.mean);
         let mean = mean_flat.into_shape((t, s)).unwrap();
 
         //The (t * s) x (t * s) big sigma
-        let big_sigma = self.func_sketcher.expand_covariance(&in_schmear.covariance);
+        let big_sigma = self.space_info.func_sketcher.expand_covariance(&in_schmear.covariance);
         //t x s x t x s
         let big_sigma_tensor = big_sigma.into_shape((t, s, t, s)).unwrap();
         let big_sigma_tensor_reordered = big_sigma_tensor.permuted_axes([0, 2, 1, 3]);
@@ -124,28 +93,8 @@ impl ModelSpace {
 
         NormalInverseWishart::new(mean, in_precision, big_v, little_v)
     }
-
-    fn get_feature_jacobian(&self, in_vec: &Array1<f32>) -> Array2<f32> {
-        to_jacobian(&self.feature_collections, in_vec)
-    }
-
-    pub fn get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
-        to_features(&self.feature_collections, in_vec)
-    }
-
-    fn featurize_schmear(&self, x : &Schmear) -> Schmear {
-        let result = unscented_transform_schmear(x, &self); 
-        result
-    }
-
-    pub fn apply_schmears(&self, f : &FuncSchmear, x : &Schmear) -> Schmear {
-        let feat_schmear = self.featurize_schmear(x);
-        let result = f.apply(&feat_schmear);
-        result
-    }
-
     pub fn add_model(&mut self, model_key : ModelKey) {
-        let model = Model::new(Rc::clone(&self.feature_collections), self.in_dimensions, self.out_dimensions);
+        let model = Model::new(Rc::clone(&self.space_info));
         self.models.insert(model_key, model);
     }
     

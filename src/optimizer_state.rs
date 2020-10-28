@@ -26,7 +26,6 @@ use crate::schmear::*;
 use crate::inverse_schmear::*;
 use crate::embedder_state::*;
 use crate::interpreter_state::*;
-use either::*;
 
 use crate::feature_collection::*;
 use crate::quadratic_feature_collection::*;
@@ -86,11 +85,11 @@ impl OptimizerStateWithTarget {
         let optimizer_state = OptimizerState::new();
         
         let target_space = optimizer_state.embedder_state.model_spaces.get(&target_type_id).unwrap();
-        let rc_feature_collections = target_space.feature_collections.clone();
+        let space_info = target_space.space_info.clone();
 
         info!("Readying target");
         
-        let mut target_model : Model = Model::new(rc_feature_collections, in_dimensions, out_dimensions);
+        let mut target_model : Model = Model::new(space_info);
 
         for (in_vec, out_vec) in data_points.iter() {
             let data_point = DataPoint {
@@ -104,7 +103,7 @@ impl OptimizerStateWithTarget {
         let target_inv_schmear : InverseSchmear = target_model.get_inverse_schmear().flatten();
 
         let target_space = optimizer_state.embedder_state.model_spaces.get(&target_type_id).unwrap();
-        let reduced_target_inv_schmear = target_space.compress_inverse_schmear(&target_inv_schmear);
+        let reduced_target_inv_schmear = target_space.space_info.compress_inverse_schmear(&target_inv_schmear);
 
         let normalized_target_inv_schmear = InverseSchmear {
             mean : reduced_target_inv_schmear.mean,

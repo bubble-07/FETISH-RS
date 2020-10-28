@@ -19,7 +19,7 @@ extern crate pretty_env_logger;
 pub struct SampledFunction {
     pub in_dimensions : usize,
     pub mat : Array2<f32>,
-    pub feature_collections : Rc<[EnumFeatureCollection; 3]>
+    pub feature_collections : Vec<EnumFeatureCollection>
 }
 
 impl SampledFunction {
