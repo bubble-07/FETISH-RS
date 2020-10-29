@@ -7,7 +7,6 @@ use std::collections::HashSet;
 use noisy_float::prelude::*;
 use crate::array_utils::*;
 use crate::inverse_schmear::*;
-use crate::sampled_function::*;
 
 pub struct VectorSpace {
     dimension : usize,

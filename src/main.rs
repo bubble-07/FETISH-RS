@@ -4,6 +4,8 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod sampled_embedder_state;
+mod sampled_embedding_space;
 mod space_info;
 mod holed_application;
 mod holed_linear_expression;
@@ -50,7 +52,6 @@ mod term_reference;
 mod term_application_result;
 mod term_application;
 mod type_space;
-mod sampled_function;
 mod optimizer_state;
 mod displayable_with_state;
 

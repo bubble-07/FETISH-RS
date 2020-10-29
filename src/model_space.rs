@@ -27,7 +27,6 @@ use crate::params::*;
 use crate::schmear::*;
 use crate::space_info::*;
 use crate::func_schmear::*;
-use crate::sampled_function::*;
 use crate::inverse_schmear::*;
 use crate::func_inverse_schmear::*;
 use rand::prelude::*;

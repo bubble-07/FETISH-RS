@@ -15,7 +15,6 @@ use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
 use crate::linalg_utils::*;
 use crate::func_scatter_tensor::*;
-use crate::sampled_function::*;
 use crate::enum_feature_collection::*;
 use crate::inverse_schmear::*;
 use plotlib::page::Page;
@@ -50,17 +49,6 @@ pub fn random_data_point(in_dimensions : usize, out_dimensions : usize) -> DataP
         in_vec,
         out_vec,
         weight
-    }
-}
-
-pub fn random_sampled_function(in_dimensions : usize, out_dimensions : usize) -> SampledFunction {
-    let feature_collections = get_feature_collections(in_dimensions);
-    let total_feat_dims = get_total_feat_dims(&feature_collections); 
-    let mat = random_matrix(out_dimensions, total_feat_dims);
-    SampledFunction {
-        in_dimensions,
-        mat,
-        feature_collections
     }
 }
 

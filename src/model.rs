@@ -29,7 +29,6 @@ use crate::func_inverse_schmear::*;
 use crate::params::*;
 use crate::test_utils::*;
 
-use crate::sampled_function::*;
 use rand::prelude::*;
 
 use std::collections::HashMap;
@@ -73,13 +72,8 @@ impl Model {
 
 
 impl Model {
-    pub fn sample(&self, rng : &mut ThreadRng) -> SampledFunction {
-        let mat = self.data.sample(rng);
-        SampledFunction {
-            in_dimensions : self.space_info.in_dimensions,
-            mat : mat,
-            feature_collections : self.space_info.feature_collections.clone()
-        }
+    pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
+        self.data.sample(rng)
     }
     pub fn sample_as_vec(&self, rng : &mut ThreadRng) -> Array1::<f32> {
         self.data.sample_as_vec(rng)

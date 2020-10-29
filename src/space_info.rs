@@ -26,7 +26,6 @@ use crate::model::*;
 use crate::params::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
-use crate::sampled_function::*;
 use crate::inverse_schmear::*;
 use crate::func_inverse_schmear::*;
 use rand::prelude::*;
@@ -61,7 +60,20 @@ impl SpaceInfo {
         self.func_sketcher.compress_schmear(schmear)
     }
 
-    fn get_feature_jacobian(&self, in_vec: &Array1<f32>) -> Array2<f32> {
+    pub fn jacobian(&self, mat : &Array2<f32>, input : &Array1<f32>) -> Array2<f32> {
+        let feat_jacobian = to_jacobian(&self.feature_collections, input);
+        let result : Array2<f32> = mat.dot(&feat_jacobian);
+        result
+    }
+
+    pub fn apply(&self, mat : &Array2<f32>, input : &Array1<f32>) -> Array1<f32> {
+        let features : Array1<f32> = to_features(&self.feature_collections, input);
+        let result : Array1<f32> = mat.dot(&features);
+        result
+    }
+    
+
+    pub fn get_feature_jacobian(&self, in_vec: &Array1<f32>) -> Array2<f32> {
         to_jacobian(&self.feature_collections, in_vec)
     }
 
