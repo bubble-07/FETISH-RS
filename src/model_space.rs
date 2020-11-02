@@ -30,6 +30,7 @@ use crate::func_schmear::*;
 use crate::inverse_schmear::*;
 use crate::func_inverse_schmear::*;
 use rand::prelude::*;
+use crate::sampled_embedding_space::*;
 
 extern crate pretty_env_logger;
 
@@ -55,6 +56,15 @@ impl ModelSpace {
         };
         model_space
 
+    }
+
+    pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbeddingSpace {
+        let mut result = SampledEmbeddingSpace::new(Rc::clone(&self.space_info));
+        for (key, model) in self.models.iter() {
+            let sample = model.sample(rng);
+            result.models.insert(*key, sample);
+        }
+        result
     }
 
     pub fn schmear_to_prior(&self, embedder_state : &EmbedderState, 

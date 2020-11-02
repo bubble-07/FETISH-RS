@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod sampled_term_embedding;
 mod ellipsoid;
 mod sampled_embedder_state;
 mod sampled_embedding_space;

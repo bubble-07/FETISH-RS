@@ -60,6 +60,12 @@ impl SpaceInfo {
         self.func_sketcher.compress_schmear(schmear)
     }
 
+    pub fn inflate_compressed_vector(&self, compressed_func : &Array1<f32>) -> Array2<f32> {
+        let full_flat_func = self.func_sketcher.expand(compressed_func);
+        let result = full_flat_func.into_shape((self.out_dimensions, self.feature_dimensions)).unwrap();
+        result
+    }
+
     pub fn jacobian(&self, mat : &Array2<f32>, input : &Array1<f32>) -> Array2<f32> {
         let feat_jacobian = to_jacobian(&self.feature_collections, input);
         let result : Array2<f32> = mat.dot(&feat_jacobian);

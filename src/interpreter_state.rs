@@ -68,8 +68,7 @@ impl InterpreterState {
 
     pub fn evaluate_linear_expression(&mut self, linear_expression : LinearExpression) -> TermReference {
         let mut result = linear_expression.cap;
-        for i in (0..linear_expression.chain.chain.len()).rev() {
-            let holed_application = &linear_expression.chain.chain[i];
+        for holed_application in linear_expression.chain.chain.iter().rev() {
             let term_application = holed_application.cap(result);
             result = self.evaluate(&term_application);
         }
