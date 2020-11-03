@@ -26,8 +26,17 @@ pub const FUNC_SCATTER_TENSOR_ZEROING_THRESH : f32 = 1e-15f32;
 
 pub const DEFAULT_TEST_THRESH : f32 = 0.001f32;
 
-pub const NUM_OPT_ITERS : u64 = 20;
+pub const ENCLOSING_ELLIPSOID_DIRECTION_MULTIPLIER : usize = 4;
+pub const ENCLOSING_ELLIPSOID_INITIAL_SCALE : f32 = 0.000000001f32;
+pub const ENCLOSING_ELLIPSOID_MAXIMAL_SCALE : f32 = 100000.0f32;
+pub const ENCLOSING_ELLIPSOID_GROWTH_FACTOR : f32 = 2.0f32;
+pub const ENCLOSING_ELLIPSOID_BRENT_REL_ERROR : f32 = 0.0001f32;
+pub const ENCLOSING_ELLIPSOID_BRENT_MAX_ITERS : u64 = 100;
+
+pub const NUM_OPT_ITERS : u64 = 100;
 pub const LBFGS_HISTORY : usize = 6;
+pub const MORE_THUENTE_A : f32 = 1e-4;
+pub const MORE_THUENTE_B : f32 = 0.9;
 
 pub fn log_tapered_linear(k : usize, x : usize) -> usize {
     if (x < k) {

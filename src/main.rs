@@ -4,6 +4,8 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod featurization_boundary_point_solver;
+mod local_featurization_inverse_solver;
 mod sampled_term_embedding;
 mod ellipsoid;
 mod sampled_embedder_state;

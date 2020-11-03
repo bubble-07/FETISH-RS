@@ -50,3 +50,7 @@ pub fn gen_inverse_gamma_random(rng : &mut ThreadRng, a : f32, b : f32) -> f32 {
 pub fn gen_cauchy_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {
     generate_cauchy_random(rng, dims)
 }
+
+pub fn gen_nsphere_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {
+    generate_nsphere_random(rng, dims)
+}
