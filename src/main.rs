@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod minimum_volume_enclosing_ellipsoid;
 mod featurization_boundary_point_solver;
 mod local_featurization_inverse_solver;
 mod sampled_term_embedding;

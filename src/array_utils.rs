@@ -23,3 +23,15 @@ pub fn to_noisy(vec : &Array1<f32>) -> Array1<R32> {
     }
     result
 }
+
+pub fn max_index_and_value(vec : &ArrayView1<f32>) -> (usize, f32) {
+    let mut max_index = 0; 
+    let mut max_value = vec[[0,]];
+    for i in 1..vec.shape()[0] {
+        if (vec[[i,]] > max_value) {
+            max_value = vec[[i,]];
+            max_index = i;
+        }
+    }
+    (max_index, max_value)
+}

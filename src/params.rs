@@ -38,6 +38,8 @@ pub const LBFGS_HISTORY : usize = 6;
 pub const MORE_THUENTE_A : f32 = 1e-4;
 pub const MORE_THUENTE_B : f32 = 0.9;
 
+pub const ENCLOSING_ELLIPSOID_TOLERANCE : f32 = 0.00001;
+
 pub fn log_tapered_linear(k : usize, x : usize) -> usize {
     if (x < k) {
         x

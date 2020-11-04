@@ -25,6 +25,16 @@ pub struct Ellipsoid {
 }
 
 impl Ellipsoid {
+    pub fn new(center : Array1<f32>, skew : Array2<f32>) -> Ellipsoid {
+        let inv_schmear = InverseSchmear {
+            mean : center,
+            precision : skew
+        };
+        Ellipsoid {
+            inv_schmear
+        }
+    }
+
     pub fn contains(&self, vec : &Array1<f32>) -> bool {
         self.mahalanobis_dist(vec) < 1.0f32
     }
