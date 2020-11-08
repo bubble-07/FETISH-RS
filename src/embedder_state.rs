@@ -22,7 +22,7 @@ use crate::term_reference::*;
 use crate::term_application::*;
 use crate::term_application_result::*;
 use crate::func_impl::*;
-use crate::model::*;
+use crate::term_model::*;
 use crate::model_space::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
@@ -109,7 +109,7 @@ impl EmbedderState {
         space.has_model(term_ptr.index)
     }
 
-    pub fn get_embedding(&self, term_ptr : &TermPointer) -> &Model {
+    pub fn get_embedding(&self, term_ptr : &TermPointer) -> &TermModel {
         let space = self.get_model_space(term_ptr);
         space.get_model(term_ptr.index)
     }
@@ -118,7 +118,7 @@ impl EmbedderState {
         self.model_spaces.get(&term_ptr.type_id).unwrap()
     }
 
-    pub fn get_mut_embedding(&mut self, term_ptr : TermPointer) -> &mut Model {
+    pub fn get_mut_embedding(&mut self, term_ptr : TermPointer) -> &mut TermModel {
         let space : &mut ModelSpace = self.model_spaces.get_mut(&term_ptr.type_id).unwrap();
         space.get_model_mut(term_ptr.index)
     }
@@ -135,12 +135,12 @@ impl EmbedderState {
         }
     }
     fn get_schmear_from_ptr(&self, term_ptr : &TermPointer) -> FuncSchmear {
-        let embedding : &Model = self.get_embedding(term_ptr);
+        let embedding : &TermModel = self.get_embedding(term_ptr);
         embedding.get_schmear()
     }
 
     fn get_inverse_schmear_from_ptr(&self, term_ptr : &TermPointer) -> FuncInverseSchmear {
-        let embedding : &Model = self.get_embedding(term_ptr);
+        let embedding : &TermModel = self.get_embedding(term_ptr);
         embedding.get_inverse_schmear()
     }
 
@@ -253,7 +253,7 @@ impl EmbedderState {
         let arg_ref = &term_app_res.get_arg_ref();
         let func_schmear = if (func_model.has_data(arg_ref)) {
             let data_update = func_model.data_updates.get(arg_ref).unwrap();
-            let mut downdated_distr = func_model.data.clone();
+            let mut downdated_distr = func_model.model.data.clone();
             downdated_distr -= data_update;
 
             downdated_distr.get_schmear()
@@ -293,7 +293,7 @@ impl EmbedderState {
         if let TermReference::FuncRef(ret_ptr) = term_app_res.get_ret_ref() {
             let out_prior : NormalInverseWishart = ret_space.schmear_to_prior(&self, &ret_ptr, &out_schmear);
             //Actually perform the update
-            let ret_embedding : &mut Model = self.get_mut_embedding(ret_ptr);
+            let ret_embedding : &mut TermModel = self.get_mut_embedding(ret_ptr);
             if (ret_embedding.has_prior(&term_app_res.term_app)) {
                 ret_embedding.downdate_prior(&term_app_res.term_app);
             }
@@ -325,7 +325,7 @@ impl EmbedderState {
             construct_data_update(arg_mean, &ret_schmear)
         };
 
-        let func_embedding : &mut Model = self.get_mut_embedding(term_app_res.get_func_ptr());
+        let func_embedding : &mut TermModel = self.get_mut_embedding(term_app_res.get_func_ptr());
         if (func_embedding.has_data(&arg_ref)) {
             func_embedding.downdate_data(&arg_ref);
         }

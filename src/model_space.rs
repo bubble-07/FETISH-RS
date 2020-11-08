@@ -22,7 +22,7 @@ use crate::enum_feature_collection::*;
 use crate::func_scatter_tensor::*;
 use crate::linalg_utils::*;
 use crate::linear_sketch::*;
-use crate::model::*;
+use crate::term_model::*;
 use crate::params::*;
 use crate::schmear::*;
 use crate::space_info::*;
@@ -40,7 +40,7 @@ type ModelKey = usize;
 
 pub struct ModelSpace {
     pub space_info : Rc<SpaceInfo>,
-    models : HashMap<ModelKey, Model>
+    models : HashMap<ModelKey, TermModel>
 }
 
 impl ModelSpace {
@@ -86,9 +86,9 @@ impl ModelSpace {
 
         let dest_model = embedder_state.get_embedding(func_ptr);
 
-        let existing_big_v = &dest_model.data.big_v;
+        let existing_big_v = &dest_model.model.data.big_v;
         let mut existing_big_v_inv = pseudoinverse_h(existing_big_v);
-        existing_big_v_inv *= (dest_model.data.little_v - (t as f32) - 1.0f32) / (t as f32); 
+        existing_big_v_inv *= (dest_model.model.data.little_v - (t as f32) - 1.0f32) / (t as f32); 
 
         let existing_big_v_inv_flat = existing_big_v_inv.into_shape((t * t,)).unwrap();
 
@@ -103,14 +103,14 @@ impl ModelSpace {
         NormalInverseWishart::new(mean, in_precision, big_v, little_v)
     }
     pub fn add_model(&mut self, model_key : ModelKey) {
-        let model = Model::new(Rc::clone(&self.space_info));
+        let model = TermModel::new(Rc::clone(&self.space_info));
         self.models.insert(model_key, model);
     }
     
-    pub fn get_model_mut(&mut self, model_key : ModelKey) -> &mut Model {
+    pub fn get_model_mut(&mut self, model_key : ModelKey) -> &mut TermModel {
         self.models.get_mut(&model_key).unwrap()
     }
-    pub fn get_model(&self, model_key : ModelKey) -> &Model {
+    pub fn get_model(&self, model_key : ModelKey) -> &TermModel {
         self.models.get(&model_key).unwrap()
     }
     pub fn has_model(&self, model_key : ModelKey) -> bool {

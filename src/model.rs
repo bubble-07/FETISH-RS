@@ -37,8 +37,6 @@ use std::collections::HashMap;
 pub struct Model {
     pub space_info : Rc<SpaceInfo>,
     pub data : NormalInverseWishart,
-    prior_updates : HashMap::<TermApplication, NormalInverseWishart>,
-    pub data_updates : HashMap::<TermReference, DataUpdate>
 }
 
 pub fn to_features(feature_collections : &Vec<EnumFeatureCollection>, in_vec : &Array1<f32>) -> Array1<f32> {
@@ -122,40 +120,20 @@ impl ops::SubAssign<DataPoint> for Model {
     }
 }
 
-impl Model {
-    pub fn has_data(&self, update_key : &TermReference) -> bool {
-        self.data_updates.contains_key(update_key)
-    }
-    pub fn update_data(&mut self, update_key : TermReference, data_update : DataUpdate) {
-        let feat_update = data_update.featurize(&self);
-        self.data += &feat_update;
-        self.data_updates.insert(update_key, feat_update);
-    }
-    pub fn downdate_data(&mut self, update_key : &TermReference) {
-        let data_update = self.data_updates.remove(update_key).unwrap();
-        self.data -= &data_update;
+impl ops::AddAssign<&NormalInverseWishart> for Model {
+    fn add_assign(&mut self, other : &NormalInverseWishart) {
+        self.data += other;
     }
 }
 
-impl Model {
-    pub fn has_prior(&self, update_key : &TermApplication) -> bool {
-        self.prior_updates.contains_key(update_key)
-    }
-    pub fn update_prior(&mut self, update_key : TermApplication, distr : NormalInverseWishart) {
-        self.data += &distr;
-        self.prior_updates.insert(update_key, distr);
-    }
-    pub fn downdate_prior(&mut self, key : &TermApplication) {
-        let distr = self.prior_updates.remove(key).unwrap();
-        self.data -= &distr;
+impl ops::SubAssign<&NormalInverseWishart> for Model {
+    fn sub_assign(&mut self, other : &NormalInverseWishart) {
+        self.data -= other;
     }
 }
 
 impl Model {
     pub fn new(space_info : Rc<SpaceInfo>) -> Model {
-        let prior_updates : HashMap::<TermApplication, NormalInverseWishart> = HashMap::new();
-        let data_updates : HashMap::<TermReference, DataUpdate> = HashMap::new();
-
         let mean : Array2<f32> = Array::zeros((space_info.out_dimensions, space_info.feature_dimensions));
 
         let precision_mult : f32 = (1.0f32 / (PRIOR_SIGMA * PRIOR_SIGMA));
@@ -167,9 +145,7 @@ impl Model {
     
         Model {
             space_info : space_info,
-            data,
-            prior_updates,
-            data_updates
+            data : data
         }
     }
 }
