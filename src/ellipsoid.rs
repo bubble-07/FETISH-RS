@@ -9,7 +9,7 @@ use crate::linalg_utils::*;
 use crate::inverse_schmear::*;
 use crate::space_info::*;
 use crate::params::*;
-use crate::cauchy_fourier_features::*;
+use crate::rand_utils::*;
 use crate::local_featurization_inverse_solver::*;
 use crate::featurization_boundary_point_solver::*;
 use std::rc::*;

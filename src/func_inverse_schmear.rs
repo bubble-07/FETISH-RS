@@ -9,7 +9,6 @@ use ndarray_linalg::solveh::*;
 use noisy_float::prelude::*;
 
 use crate::inverse_schmear::*;
-use crate::cauchy_fourier_features::*;
 use crate::func_scatter_tensor::*;
 
 pub struct FuncInverseSchmear {

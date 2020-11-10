@@ -9,7 +9,7 @@ use crate::ellipsoid::*;
 use crate::ellipsoid_sampler::*;
 use crate::normal_inverse_wishart_sampler::*;
 use crate::normal_inverse_wishart::*;
-use crate::cauchy_fourier_features::*;
+use crate::rand_utils::*;
 use crate::schmear::*;
 use rand::prelude::*;
 

@@ -16,7 +16,6 @@ use crate::data_point::*;
 use crate::wishart::*;
 use crate::sherman_morrison::*;
 use crate::inverse_schmear::*;
-use crate::cauchy_fourier_features::*;
 use crate::linalg_utils::*;
 use crate::normal_inverse_wishart_sampler::*;
 

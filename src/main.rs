@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod rand_utils;
 mod paged_model;
 mod term_model;
 mod ellipsoid_sampler;
@@ -41,7 +42,6 @@ mod quadratic_feature_collection;
 mod closest_psd_matrix;
 mod fourier_feature_collection;
 mod func_scatter_tensor;
-mod cauchy_fourier_features;
 mod enum_feature_collection;
 mod model;
 mod inverse_schmear;

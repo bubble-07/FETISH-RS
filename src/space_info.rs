@@ -17,7 +17,6 @@ use crate::vector_space::*;
 use crate::feature_collection::*;
 use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
-use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
 use crate::func_scatter_tensor::*;
 use crate::linalg_utils::*;

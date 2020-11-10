@@ -10,7 +10,7 @@ use crate::linalg_utils::*;
 use rand::prelude::*;
 use crate::params::*;
 use crate::test_utils::*;
-use crate::cauchy_fourier_features::*;
+use crate::rand_utils::*;
 
 #[derive(Clone)]
 pub struct FourierFeatureCollection {

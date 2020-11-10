@@ -6,7 +6,7 @@ use ndarray_linalg::*;
 
 use rand::prelude::*;
 use ndarray_rand::RandomExt;
-use crate::cauchy_fourier_features::*;
+use crate::rand_utils::*;
 use ndarray_rand::rand_distr::StandardNormal;
 use ndarray_rand::rand_distr::ChiSquared;
 

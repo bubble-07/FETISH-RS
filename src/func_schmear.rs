@@ -18,7 +18,6 @@ use crate::test_utils::*;
 use crate::inverse_schmear::*;
 use crate::schmear::*;
 use crate::linalg_utils::*;
-use crate::cauchy_fourier_features::*;
 use crate::func_scatter_tensor::*;
 
 pub struct FuncSchmear {

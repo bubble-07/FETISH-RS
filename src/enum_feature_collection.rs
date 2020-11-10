@@ -10,7 +10,7 @@ use enum_dispatch::*;
 use crate::feature_collection::*;
 use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
-use crate::cauchy_fourier_features::*;
+use crate::rand_utils::*;
 use crate::sketched_linear_feature_collection::*;
 
 #[enum_dispatch(FeatureCollection)]

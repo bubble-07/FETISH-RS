@@ -14,7 +14,6 @@ use crate::pseudoinverse::*;
 use crate::feature_collection::*;
 use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
-use crate::cauchy_fourier_features::*;
 use crate::enum_feature_collection::*;
 use crate::linalg_utils::*;
 use crate::normal_inverse_wishart::*;
