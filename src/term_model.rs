@@ -64,7 +64,7 @@ impl TermModel {
     }
 
     pub fn get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
-        self.model.get_features(in_vec)
+        self.model.space_info.get_features(in_vec)
     }
 
     pub fn eval(&self, in_vec : &Array1<f32>) -> Array1<f32> {
@@ -75,7 +75,7 @@ impl TermModel {
         self.data_updates.contains_key(update_key)
     }
     pub fn update_data(&mut self, update_key : TermReference, data_update : DataUpdate) {
-        let feat_update = data_update.featurize(&self.model);
+        let feat_update = data_update.featurize(&self.model.space_info);
         self.model.data += &feat_update;
         self.data_updates.insert(update_key, feat_update);
     }

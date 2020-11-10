@@ -28,6 +28,7 @@ use crate::schmear::*;
 use crate::func_schmear::*;
 use crate::inverse_schmear::*;
 use crate::func_inverse_schmear::*;
+use crate::data_point::*;
 use rand::prelude::*;
 
 extern crate pretty_env_logger;
@@ -85,6 +86,15 @@ impl SpaceInfo {
 
     pub fn get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
         to_features(&self.feature_collections, in_vec)
+    }
+
+    pub fn get_data(&self, in_data : DataPoint) -> DataPoint {
+        let feat_vec = self.get_features(&in_data.in_vec);
+
+        DataPoint {
+            in_vec : feat_vec,
+            ..in_data
+        }
     }
 
     fn featurize_schmear(&self, x : &Schmear) -> Schmear {

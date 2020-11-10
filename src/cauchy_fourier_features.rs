@@ -54,3 +54,12 @@ pub fn gen_cauchy_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {
 pub fn gen_nsphere_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {
     generate_nsphere_random(rng, dims)
 }
+
+pub fn gen_nball_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {
+    let mut result = gen_nsphere_random(rng, dims);
+    let u : f32 = rng.gen();
+    let exponent = 1.0f32 / (dims as f32);
+    let r = u.powf(exponent);
+    result *= r;
+    result
+}

@@ -88,21 +88,8 @@ impl Model {
         self.data.get_schmear()
     }
 
-    pub fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32> {
-        to_features(&self.space_info.feature_collections, in_vec)
-    }
-
-    fn get_data(&self, in_data : DataPoint) -> DataPoint {
-        let feat_vec = self.get_features(&in_data.in_vec);
-
-        DataPoint {
-            in_vec : feat_vec,
-            ..in_data
-        }
-    }
-
     pub fn eval(&self, in_vec: &Array1<f32>) -> Array1<f32> {
-        let feats : Array1<f32> = self.get_features(in_vec);
+        let feats : Array1<f32> = self.space_info.get_features(in_vec);
 
         self.data.eval(&feats)
     }
@@ -110,13 +97,13 @@ impl Model {
 
 impl ops::AddAssign<DataPoint> for Model {
     fn add_assign(&mut self, other: DataPoint) {
-        self.data += &self.get_data(other);
+        self.data += &self.space_info.get_data(other);
     }
 }
 
 impl ops::SubAssign<DataPoint> for Model {
     fn sub_assign(&mut self, other: DataPoint) {
-        self.data -= &self.get_data(other);
+        self.data -= &self.space_info.get_data(other);
     }
 }
 
