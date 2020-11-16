@@ -10,6 +10,7 @@ use crate::ellipsoid_sampler::*;
 use crate::normal_inverse_wishart_sampler::*;
 use crate::normal_inverse_wishart::*;
 use crate::rand_utils::*;
+use crate::featurized_points::*;
 use crate::schmear::*;
 use rand::prelude::*;
 
@@ -27,6 +28,37 @@ use crate::model::*;
 pub struct PagedModel {
     pub space_info : Rc<SpaceInfo>,
     pub pages : Vec<NormalInverseWishart>
+}
+
+impl PagedModel {
+    pub fn new(space_info : Rc<SpaceInfo>, num_pages : usize) -> PagedModel {
+        let pages = Vec::new();
+
+        for i in 0..num_pages {
+            //TODO: Actually populate pages
+            if (1 == 1) {
+                panic!();
+            }
+        }
+
+        PagedModel {
+            space_info,
+            pages
+        }
+    }
+}
+
+impl ops::AddAssign<FeaturizedPoints> for PagedModel {
+    fn add_assign(&mut self, mut feat_points : FeaturizedPoints) {
+        for (in_vec, feat_vec) in feat_points.points.drain(..) {
+            let data_point = DataPoint {
+                in_vec : feat_vec,
+                out_vec : in_vec,
+                weight : 1.0f32
+            };
+            self.add_assign(data_point);
+        }
+    }
 }
 
 impl ops::AddAssign<DataPoint> for PagedModel {

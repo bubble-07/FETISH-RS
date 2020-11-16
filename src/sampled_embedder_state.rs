@@ -25,7 +25,7 @@ impl SampledEmbedderState {
         let space = self.embedding_spaces.get(&term_ptr.type_id).unwrap();
         space.get_raw_embedding(term_ptr.index)
     }
-    fn get_space_info(&self, type_id : &TypeId) -> Rc<SpaceInfo> {
+    pub fn get_space_info(&self, type_id : &TypeId) -> Rc<SpaceInfo> {
         let result = &self.embedding_spaces.get(type_id).unwrap().space_info;
         Rc::clone(result)
     }

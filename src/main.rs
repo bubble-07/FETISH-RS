@@ -4,6 +4,11 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod bounded_holed_linear_expression;
+mod linear_expression_queue;
+mod featurization_inverse_directory;
+mod featurized_points_directory;
+mod featurized_points;
 mod rand_utils;
 mod paged_model;
 mod term_model;

@@ -7,6 +7,7 @@ use crate::array_utils::*;
 use crate::pseudoinverse::*;
 use crate::linalg_utils::*;
 use crate::inverse_schmear::*;
+use crate::featurized_points::*;
 use crate::space_info::*;
 use crate::params::*;
 use crate::rand_utils::*;
@@ -39,6 +40,10 @@ impl Ellipsoid {
         self.mahalanobis_dist(vec) < 1.0f32
     }
 
+    pub fn dims(&self) -> usize {
+        self.inv_schmear.mean.shape()[0]
+    }
+
     pub fn center(&self) -> &Array1<f32> {
         &self.inv_schmear.mean
     }
@@ -61,15 +66,15 @@ impl Ellipsoid {
     //featurization map is f, and a sampled collection of points in
     //the input space of the featurization map, find an ellipsoid for x
     //in f(x) = y whose image under f is approximately contained in this ellipsoid
-    pub fn approx_backpropagate_through_featurization(&self, space_info : Rc<SpaceInfo>, 
+    pub fn approx_backpropagate_through_featurization(&self, feat_points : &mut FeaturizedPoints,
                                                       mut x_samples : Vec<Array1<f32>>) -> Option<Ellipsoid> {
         let mut min_mahalanobis_dist = f32::INFINITY;
         let mut min_x = x_samples[0].clone();
         for x in x_samples.drain(..) {
-            let y = space_info.get_features(&x);
+            let y = feat_points.get_features(&x);
             let d = self.mahalanobis_dist(&y);
             if (d < 1.0f32) {
-                return self.approx_enclosing_ellipsoid(space_info, &x);
+                return self.approx_enclosing_ellipsoid(feat_points, &x);
             }
             if (d < min_mahalanobis_dist) {
                 min_mahalanobis_dist = d;
@@ -81,6 +86,7 @@ impl Ellipsoid {
         //to minimize the Mahalanobis norm after being mapped through featurization
         //If the minimizer is sufficient for its image to be contained in this ellipsoid,
         //we'll use it, but otherwise, we'll just give up
+        let space_info = feat_points.get_space_info();
 
         let linesearch = MoreThuenteLineSearch::new().c(MORE_THUENTE_A, MORE_THUENTE_B).unwrap();
         let solver = LBFGS::new(linesearch, LBFGS_HISTORY);
@@ -98,7 +104,7 @@ impl Ellipsoid {
             Result::Ok(result) => {
                 if (result.state.cost < 1.0f32) {
                     //Local optimization gave us the goods, so use 'em
-                    self.approx_enclosing_ellipsoid(space_info, &result.state.param)
+                    self.approx_enclosing_ellipsoid(feat_points, &result.state.param)
                 } else {
                     //We tried our best, but it just wasn't good enough
                     Option::None
@@ -114,7 +120,7 @@ impl Ellipsoid {
     //Given a point whose featurization we know is within this ellipsoid,
     //get an ellipsoid about that point in the input space to the featurization map
     //such that the ellipsoid's image under featurization is contained in this ellipsoid
-    fn approx_enclosing_ellipsoid(&self, space_info : Rc<SpaceInfo>, x : &Array1<f32>) -> Option<Ellipsoid> {
+    fn approx_enclosing_ellipsoid(&self, feat_points : &mut FeaturizedPoints, x : &Array1<f32>) -> Option<Ellipsoid> {
         let dim = x.shape()[0];
         let n_samps = dim * ENCLOSING_ELLIPSOID_DIRECTION_MULTIPLIER;
 
@@ -122,13 +128,13 @@ impl Ellipsoid {
 
         for i in 0..n_samps {
             let direction = gen_nsphere_random(&mut rng, dim);
-            let boundary_point = self.find_boundary_point(space_info.clone(), x, &direction);
+            let boundary_point = self.find_boundary_point(feat_points, x, &direction);
         }
         //TODO: Call out to a minimum enclosed ellipsoid routine
         Option::None
     }
 
-    fn find_boundary_point(&self, space_info : Rc<SpaceInfo>, 
+    fn find_boundary_point(&self, feat_points : &mut FeaturizedPoints, 
                                   x_init : &Array1<f32>, direction : &Array1<f32>) -> Array1<f32> {
         let mut scale = ENCLOSING_ELLIPSOID_INITIAL_SCALE;
 
@@ -140,7 +146,7 @@ impl Ellipsoid {
             delta_x *= ENCLOSING_ELLIPSOID_GROWTH_FACTOR;
             
             let x = x_init + &delta_x;
-            let y = space_info.get_features(&x);
+            let y = feat_points.get_features(&x);
             if (self.mahalanobis_dist(&y) >= 1.0f32) {
                 //We have a bracket of the point where the mahalanobis
                 //distance is exactly one, so we must do some root-finding now.
@@ -149,7 +155,7 @@ impl Ellipsoid {
                 let solver = Brent::new(prev_scale, scale, ENCLOSING_ELLIPSOID_BRENT_REL_ERROR);
                 
                 let problem = FeaturizationBoundaryPointSolver {
-                    space_info : space_info,
+                    space_info : feat_points.get_space_info(),
                     ellipsoid : self.clone(),
                     base_point : x_init.clone(),
                     direction : direction.clone()

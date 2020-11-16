@@ -9,6 +9,7 @@ use noisy_float::prelude::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use std::rc::*;
+use crate::space_info::*;
 use crate::data_update::*;
 use crate::data_point::*;
 use crate::interpreter_state::*;
@@ -116,6 +117,11 @@ impl EmbedderState {
 
     pub fn get_model_space(&self, term_ptr : &TermPointer) -> &ModelSpace {
         self.model_spaces.get(&term_ptr.type_id).unwrap()
+    }
+
+    pub fn get_space_info(&self, type_id : &TypeId) -> Rc<SpaceInfo> {
+        let model_space = self.model_spaces.get(type_id).unwrap();
+        model_space.space_info.clone()
     }
 
     pub fn get_mut_embedding(&mut self, term_ptr : TermPointer) -> &mut TermModel {

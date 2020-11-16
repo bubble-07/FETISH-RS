@@ -19,6 +19,11 @@ pub const TRAINING_POINTS_PER_ITER : usize = 5;
 
 pub const HIGHER_ORDER_PENALTY : f32 = 1.2f32;
 
+pub const NUM_INVERSE_PAGES : usize = 10;
+
+pub const NUM_FUNCTION_SAMPLES : usize = 10;
+pub const NUM_ELLIPSOID_SAMPLES : usize = 10;
+
 //Numerical algorithm constants
 pub const PINV_TRUNCATION_THRESH : f32 = 0.0001f32;
 
