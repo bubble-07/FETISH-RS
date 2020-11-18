@@ -4,6 +4,7 @@ extern crate ndarray_linalg;
 use ndarray::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
+use std::ops;
 
 use std::collections::HashMap;
 use crate::featurized_points::*;
@@ -31,4 +32,11 @@ impl FeaturizedPointsDirectory {
     }
 }
 
-
+impl ops::AddAssign<FeaturizedPointsDirectory> for FeaturizedPointsDirectory {
+    fn add_assign(&mut self, mut other : FeaturizedPointsDirectory) {
+        for (type_id, other_feat_points) in other.directory.drain() {
+            let my_feat_points = self.directory.get_mut(&type_id).unwrap();
+            my_feat_points.add_assign(other_feat_points);
+        }
+    }
+}

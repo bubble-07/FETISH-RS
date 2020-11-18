@@ -8,12 +8,14 @@ use crate::holed_linear_expression::*;
 use crate::bounded_holed_linear_expression::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
+use crate::bounded_hole::*;
 use crate::ellipsoid::*;
 use crate::type_id::*;
 use crate::featurized_points_directory::*;
 use std::collections::BinaryHeap;
 use std::cmp::Ordering;
 use crate::params::*;
+use crate::linear_expression::*;
 use crate::featurization_inverse_directory::*;
 use crate::sampled_embedder_state::*;
 
@@ -23,11 +25,7 @@ struct PritoritizedLinearExpression {
 }
 
 impl PritoritizedLinearExpression {
-    pub fn new(expr : HoledLinearExpression, bound : Ellipsoid, dist : f32) -> PritoritizedLinearExpression {
-        let bounded_holed = BoundedHoledLinearExpression {
-            expr : expr,
-            bound : bound
-        };
+    pub fn new(bounded_holed : BoundedHoledLinearExpression, dist : f32) -> PritoritizedLinearExpression {
         PritoritizedLinearExpression {
             expr : bounded_holed,
             dist : dist
@@ -75,89 +73,69 @@ fn get_ellipsoid_cost(type_id : TypeId, embedder_state : &SampledEmbedderState,
 
 impl LinearExpressionQueue {
 
-    /*
-    pub fn find_within_bound(&mut self, type_id : TypeId, bound : &Ellipsoid,
+    pub fn find_within_bound(&mut self, bounded_hole : &BoundedHole,
                                         embedder_state : &SampledEmbedderState,
                                         feat_inverse_directory : &FeaturizationInverseDirectory) 
-                                                                            -> LinearExpression {
-    }*/
+
+                                        -> (LinearExpression, FeaturizedPointsDirectory) {
+        self.queue.clear();
+
+        //First, perform initial population of the queue
+        let (mut feat_points_directory, mut init_bounded_holed_applications) =
+            bounded_hole.get_single_holed_fillers(embedder_state, feat_inverse_directory);
+
+        for init_bounded_holed_application in init_bounded_holed_applications.drain(..) {
+            let bound_expr = init_bounded_holed_application.to_linear_expression();
+            let hole_type = bound_expr.expr.get_hole_type();
+            let bound = &bound_expr.bound;
+            let cost = get_ellipsoid_cost(hole_type, embedder_state, bound);
+
+            let prioritized = PritoritizedLinearExpression::new(bound_expr, cost);
+            self.queue.push(prioritized);
+        }
+
+        //Then, the meat of the search
+        //TODO: Iteration cap, and yielding best runner-ups?
+        while (!self.queue.is_empty()) {
+            let prioritized = self.queue.pop().unwrap();
+            let bound_expr = prioritized.expr;
+
+            let bound_hole = bound_expr.get_bounded_hole();
+
+            let term_fillers = bound_hole.get_term_fillers(embedder_state);
+
+            if (term_fillers.len() > 0) {
+                let cap = term_fillers[0].clone();
+                let result = bound_expr.expr.cap(cap);
+                return (result, feat_points_directory);
+            } else {
+                //No single term fills the hole here, so we need to add neighbors
+                let feat_points_delta = self.add_neighbors(&bound_expr, embedder_state, feat_inverse_directory);
+                feat_points_directory += feat_points_delta;
+            }
+        }
+        error!("Term search failed");
+        panic!();
+    }
 
     pub fn add_neighbors(&mut self, bound_expr : &BoundedHoledLinearExpression, 
                          embedder_state : &SampledEmbedderState,
                          feat_inverse_directory : &FeaturizationInverseDirectory) 
                                                                                  -> FeaturizedPointsDirectory {
-        let mut feat_points_directory = FeaturizedPointsDirectory::new(embedder_state);
+        let bounded_hole = bound_expr.get_bounded_hole();
+        let (feat_points_directory, mut bounded_holed_applications) = 
+            bounded_hole.get_single_holed_fillers(embedder_state, feat_inverse_directory);
 
-        let expr = &bound_expr.expr;
-        let bound = &bound_expr.bound;
-        let ret_type = expr.get_type();
-        let application_type_ids = get_application_type_ids(ret_type);
-        for (func_type, arg_type) in application_type_ids.iter() {
-            let func_embedding_space = embedder_state.embedding_spaces.get(func_type).unwrap();
+        for bounded_holed_application in bounded_holed_applications.drain(..) {
 
-            //First, handle the function hole case, which is irrefutable.
-            //We only do this if the argument type is not a vector
-            if !is_vector_type(*arg_type) {
-                let arg_embedding_space = embedder_state.embedding_spaces.get(arg_type).unwrap();
-                for arg_index in arg_embedding_space.models.keys() {
-                    let arg_embedding = arg_embedding_space.get_embedding(*arg_index);
-                    let arg_vec = arg_embedding.get_compressed();
-                    //Now we featurize the argument vector according to the function type
-                    let feat_points = feat_points_directory.get_space(func_type);
-                    let arg_feat_vec = feat_points.get_features(&arg_vec);
-                    //Derive the ellipsoid on the vectorized transform
-                    let func_ellipsoid = bound.backpropagate_to_vectorized_transform(&arg_feat_vec);
+            let hole_type_id = bounded_holed_application.holed_application.get_hole_type();
 
-                    //Now, package this information up into a new holed expression
-                    let ellipsoid_cost = get_ellipsoid_cost(*func_type, embedder_state, &func_ellipsoid);
-                    let arg_ptr = TermPointer {
-                        type_id : *arg_type,
-                        index : *arg_index
-                    };
-                    let arg_ref = TermReference::FuncRef(arg_ptr);
-                    let holed_app = HoledApplication::FunctionHoled(arg_ref, ret_type);
-                    let extended_expr = expr.extend_with_holed(holed_app);
-
-                    let wrapper = PritoritizedLinearExpression::new(extended_expr, func_ellipsoid, ellipsoid_cost);
-                    self.queue.push(wrapper);
-                }
-            }
+            let extended_linear_expr = bound_expr.extend_with_holed(bounded_holed_application);
+            let hole_bound = &extended_linear_expr.bound;
+            let cost = get_ellipsoid_cost(hole_type_id, embedder_state, hole_bound);
             
-            //Then, handle the argument hole case, which may fail
-            for func_index in func_embedding_space.models.keys() {
-                let func_embedding = func_embedding_space.models.get(func_index).unwrap();
-                //Now, get the bound on the featurized argument
-                let feat_bound = bound.backpropagate_through_transform(func_embedding);
-                
-                //Now, try to propagate the feature-space bound through to the input space
-                let mut feat_points = feat_points_directory.get_space(func_type);
-                let inverse_model = feat_inverse_directory.get(func_type);
-                
-                let mut rng = rand::thread_rng();
-
-                //Get a sampling of inputs for an initial featurized point
-                let sampled_inputs = inverse_model.sample(&mut rng, &feat_bound, 
-                                                          NUM_FUNCTION_SAMPLES, NUM_ELLIPSOID_SAMPLES);
-
-                let maybe_input_bound = feat_bound.approx_backpropagate_through_featurization(&mut feat_points,
-                                                                    sampled_inputs);
-                if let Option::Some(input_bound) = maybe_input_bound {
-                    //We have a concrete bound on what the input needs to be.
-                    //If the input type is a vector type, then we're completely done
-                    //because we can just output the center.
-                    //Otherwise, we need to package this information into a new holed expression
-                    let func_ptr = TermPointer {
-                        type_id : *func_type,
-                        index : *func_index
-                    };
-                    let holed = HoledApplication::ArgumentHoled(func_ptr);
-                    let extended_expr = expr.extend_with_holed(holed);
-                    let ellipsoid_cost = get_ellipsoid_cost(*arg_type, embedder_state, &input_bound);
-
-                    let wrapper = PritoritizedLinearExpression::new(extended_expr, input_bound, ellipsoid_cost);
-                    self.queue.push(wrapper);
-                }
-            }
+            let prioritized = PritoritizedLinearExpression::new(extended_linear_expr, cost);
+            self.queue.push(prioritized);
         }
         feat_points_directory
     }

@@ -10,6 +10,8 @@ mod featurization_inverse_directory;
 mod featurized_points_directory;
 mod featurized_points;
 mod rand_utils;
+mod bounded_holed_application;
+mod bounded_hole;
 mod paged_model;
 mod term_model;
 mod ellipsoid_sampler;

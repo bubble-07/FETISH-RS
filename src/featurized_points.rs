@@ -6,6 +6,7 @@ use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
 
 use std::rc::*;
+use std::ops;
 
 use crate::space_info::*;
 
@@ -31,5 +32,11 @@ impl FeaturizedPoints {
         let pair = (in_vec.clone(), feat_vec);
         self.points.push(pair);
         &self.points[self.points.len() - 1].1
+    }
+}
+
+impl ops::AddAssign<FeaturizedPoints> for FeaturizedPoints {
+    fn add_assign(&mut self, mut other : FeaturizedPoints) {
+        self.points.append(&mut other.points);
     }
 }

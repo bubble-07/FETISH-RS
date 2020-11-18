@@ -2,6 +2,7 @@ use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::term_application::*;
 use crate::type_id::*;
+use crate::holed_linear_expression::*;
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub enum HoledApplication {
@@ -10,6 +11,14 @@ pub enum HoledApplication {
 }
 
 impl HoledApplication {
+    pub fn to_linear_expression(&self) -> HoledLinearExpression {
+        let mut chain = Vec::new();
+        chain.push(self.clone());
+        HoledLinearExpression {
+            chain
+        }
+    }
+
     pub fn cap(&self, cap : TermReference) -> TermApplication {
         match (&self) {
             HoledApplication::FunctionHoled(arg_term, ret_type) => {
