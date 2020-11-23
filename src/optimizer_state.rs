@@ -53,8 +53,8 @@ pub struct OptimizerState {
 }
 
 impl OptimizerStateWithTarget {
-    fn get_current_target_hole(&self) -> BoundedHole {
-        panic!();
+    fn get_current_target_hole(&self, embedder_state : &SampledEmbedderState) -> BoundedHole {
+        self.target.get_closer_than_closest_term_bound(embedder_state)
     }
 
     pub fn step(&mut self) -> TermPointer {
@@ -62,7 +62,7 @@ impl OptimizerStateWithTarget {
 
         let sampled_embedder_state = self.optimizer_state.embedder_state.sample(&mut rng);
         let mut lin_expr_queue = LinearExpressionQueue::new();
-        let target_hole = self.get_current_target_hole();
+        let target_hole = self.get_current_target_hole(&sampled_embedder_state);
 
         let (lin_expr, feat_points_directory) = lin_expr_queue.find_within_bound(&target_hole, 
                                                 &sampled_embedder_state, 

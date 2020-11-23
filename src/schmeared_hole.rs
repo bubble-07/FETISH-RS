@@ -3,6 +3,7 @@ extern crate ndarray_linalg;
 use ndarray::*;
 use ndarray_linalg::*;
 
+use crate::bounded_hole::*;
 use crate::array_utils::*;
 use crate::holed_application::*;
 use crate::bounded_holed_application::*;
@@ -24,6 +25,21 @@ pub struct SchmearedHole {
 }
 
 impl SchmearedHole {
+    pub fn get_closer_than_closest_term_bound(&self, embedder_state : &SampledEmbedderState) -> BoundedHole {
+        let (_, sq_mahalanobis_dist) = self.get_closest_term(embedder_state);
+
+        let mean = self.inv_schmear.mean.clone();
+
+        let scale_fac = 1.0f32 / sq_mahalanobis_dist;
+        let precision = scale_fac * &self.inv_schmear.precision;
+
+        let bound = Ellipsoid::new(mean, precision);
+
+        BoundedHole {
+            type_id : self.type_id,
+            bound : bound
+        }
+    }
     pub fn get_closest_term(&self, embedder_state : &SampledEmbedderState) -> (TermReference, f32) {
         if (is_vector_type(self.type_id)) {
             (TermReference::from(&self.inv_schmear.mean), 0.0f32)
