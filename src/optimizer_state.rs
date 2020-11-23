@@ -8,6 +8,7 @@ use std::collections::HashSet;
 use crate::displayable_with_state::*;
 use rand::prelude::*;
 use std::rc::*;
+use crate::sampled_embedder_state::*;
 use crate::linalg_utils::*;
 use crate::array_utils::*;
 use crate::type_id::*;
@@ -26,6 +27,9 @@ use crate::schmear::*;
 use crate::inverse_schmear::*;
 use crate::embedder_state::*;
 use crate::interpreter_state::*;
+use crate::featurization_inverse_directory::*;
+use crate::bounded_hole::*;
+use crate::linear_expression_queue::*;
 
 use crate::feature_collection::*;
 use crate::quadratic_feature_collection::*;
@@ -45,12 +49,35 @@ pub struct OptimizerStateWithTarget {
 pub struct OptimizerState {
     pub interpreter_state : InterpreterState,
     embedder_state : EmbedderState,
+    feat_inverse_directory : FeaturizationInverseDirectory
 }
 
 impl OptimizerStateWithTarget {
+    fn get_current_target_hole(&self) -> BoundedHole {
+        panic!();
+    }
+
     pub fn step(&mut self) -> TermPointer {
-        //self.evaluate_training_data_step(result.clone());
-        self.bayesian_update_step();
+        let mut rng = rand::thread_rng();
+
+        let sampled_embedder_state = self.optimizer_state.embedder_state.sample(&mut rng);
+        let mut lin_expr_queue = LinearExpressionQueue::new();
+        let target_hole = self.get_current_target_hole();
+
+        let (lin_expr, feat_points_directory) = lin_expr_queue.find_within_bound(&target_hole, 
+                                                &sampled_embedder_state, 
+                                                &self.optimizer_state.feat_inverse_directory);
+
+        //Update the featurization inverse directory
+        self.optimizer_state.feat_inverse_directory += feat_points_directory;
+
+        //Evaluate the expression that we obtained
+        let term_ref = self.optimizer_state.interpreter_state.evaluate_linear_expression(lin_expr);
+        if let TermReference::FuncRef(result) = term_ref {
+            self.evaluate_training_data_step(result.clone());
+            self.bayesian_update_step();
+        }
+        error!("Wrong type for the linear expression");
         panic!();
     }
 
@@ -163,9 +190,12 @@ impl OptimizerState {
     }
 
     fn new() -> OptimizerState {
+        let embedder_state = EmbedderState::new();
+        let feat_inverse_directory = FeaturizationInverseDirectory::new(&embedder_state);
         OptimizerState {
             interpreter_state : InterpreterState::new(),
-            embedder_state : EmbedderState::new()
+            embedder_state,
+            feat_inverse_directory
         }
     }
 }

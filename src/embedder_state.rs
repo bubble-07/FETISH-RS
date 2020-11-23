@@ -1,6 +1,7 @@
 extern crate ndarray;
 extern crate ndarray_linalg;
 
+use rand::prelude::*;
 use ndarray::*;
 use ndarray_linalg::*;
 use crate::sigma_points::*;
@@ -9,6 +10,7 @@ use noisy_float::prelude::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use std::rc::*;
+use crate::sampled_embedder_state::*;
 use crate::space_info::*;
 use crate::data_update::*;
 use crate::data_point::*;
@@ -43,6 +45,17 @@ pub struct EmbedderState {
 }
 
 impl EmbedderState {
+
+    pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbedderState {
+        let mut embedding_spaces = HashMap::new();
+        for (type_id, model_space) in self.model_spaces.iter() {
+            let sampled_embedding_space = model_space.sample(rng); 
+            embedding_spaces.insert(*type_id, sampled_embedding_space);
+        }
+        SampledEmbedderState {
+            embedding_spaces
+        }
+    }
 
     pub fn store_vec(&mut self, vec_type : TypeId, vec : Array1<R32>) {
         self.vector_spaces.get_mut(&vec_type).unwrap().store_vec(vec);

@@ -72,6 +72,12 @@ fn get_ellipsoid_cost(type_id : TypeId, embedder_state : &SampledEmbedderState,
 
 
 impl LinearExpressionQueue {
+    pub fn new() -> LinearExpressionQueue {
+        let queue = BinaryHeap::new();
+        LinearExpressionQueue {
+            queue
+        }
+    }
 
     pub fn find_within_bound(&mut self, bounded_hole : &BoundedHole,
                                         embedder_state : &SampledEmbedderState,
