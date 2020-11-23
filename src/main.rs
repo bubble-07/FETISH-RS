@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod schmeared_hole;
 mod bounded_holed_linear_expression;
 mod linear_expression_queue;
 mod featurization_inverse_directory;

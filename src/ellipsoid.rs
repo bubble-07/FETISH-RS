@@ -37,7 +37,7 @@ impl Ellipsoid {
     }
 
     pub fn contains(&self, vec : &Array1<f32>) -> bool {
-        self.mahalanobis_dist(vec) < 1.0f32
+        self.sq_mahalanobis_dist(vec) < 1.0f32
     }
 
     pub fn dims(&self) -> usize {
@@ -52,8 +52,8 @@ impl Ellipsoid {
         &self.inv_schmear.precision
     }
 
-    pub fn mahalanobis_dist(&self, vec : &Array1<f32>) -> f32 {
-        self.inv_schmear.mahalanobis_dist(vec)
+    pub fn sq_mahalanobis_dist(&self, vec : &Array1<f32>) -> f32 {
+        self.inv_schmear.sq_mahalanobis_dist(vec)
     }
     pub fn transform_compress(&self, mat : &Array2<f32>) -> Ellipsoid {
         let new_inv_schmear = self.inv_schmear.transform_compress(mat);
@@ -72,7 +72,7 @@ impl Ellipsoid {
         let mut min_x = x_samples[0].clone();
         for x in x_samples.drain(..) {
             let y = feat_points.get_features(&x);
-            let d = self.mahalanobis_dist(&y);
+            let d = self.sq_mahalanobis_dist(&y);
             if (d < 1.0f32) {
                 return self.approx_enclosing_ellipsoid(feat_points, &x);
             }
@@ -147,7 +147,7 @@ impl Ellipsoid {
             
             let x = x_init + &delta_x;
             let y = feat_points.get_features(&x);
-            if (self.mahalanobis_dist(&y) >= 1.0f32) {
+            if (self.sq_mahalanobis_dist(&y) >= 1.0f32) {
                 //We have a bracket of the point where the mahalanobis
                 //distance is exactly one, so we must do some root-finding now.
                 let prev_scale = scale / ENCLOSING_ELLIPSOID_GROWTH_FACTOR;

@@ -66,7 +66,7 @@ fn get_ellipsoid_cost(type_id : TypeId, embedder_state : &SampledEmbedderState,
     } else {
         let d = ellipsoid.dims();
         let zeros = Array::zeros([d,]);
-        ellipsoid.mahalanobis_dist(&zeros)
+        ellipsoid.sq_mahalanobis_dist(&zeros)
     }
 }
 

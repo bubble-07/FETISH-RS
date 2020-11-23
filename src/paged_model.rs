@@ -82,7 +82,7 @@ impl ops::AddAssign<DataPoint> for PagedModel {
             let page_schmear = page.get_schmear();
             let out_schmear = page_schmear.apply(&feat_arg_schmear);   
             let out_schmear_inv = out_schmear.inverse();
-            let dist = out_schmear_inv.mahalanobis_dist(&feat_data.out_vec);
+            let dist = out_schmear_inv.sq_mahalanobis_dist(&feat_data.out_vec);
 
             if (dist < best_dist) {
                 best_ind = i;

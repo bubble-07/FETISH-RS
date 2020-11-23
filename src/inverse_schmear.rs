@@ -17,7 +17,7 @@ pub struct InverseSchmear {
 }
 
 impl InverseSchmear {
-    pub fn mahalanobis_dist(&self, vec : &Array1<f32>) -> f32 {
+    pub fn sq_mahalanobis_dist(&self, vec : &Array1<f32>) -> f32 {
         let diff = vec - &self.mean;
         let precision_diff = self.precision.dot(&diff);
         let result : f32 = diff.dot(&precision_diff);

@@ -33,7 +33,7 @@ impl ArgminOp for FeaturizationBoundaryPointSolver {
         x += &self.base_point;
 
         let y = self.space_info.get_features(&x);
-        let d = self.ellipsoid.mahalanobis_dist(&y);
+        let d = self.ellipsoid.sq_mahalanobis_dist(&y);
 
         Ok(d - 1.0f32)
     }

@@ -15,6 +15,7 @@ use crate::type_id::*;
 use crate::application_table::*;
 use crate::type_space::*;
 use crate::params::*;
+use crate::schmeared_hole::*;
 use crate::term::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
@@ -41,8 +42,7 @@ extern crate pretty_env_logger;
 
 pub struct OptimizerStateWithTarget {
     pub optimizer_state : OptimizerState,
-    target_inv_schmear : InverseSchmear,
-    target_type_id : TypeId,
+    target : SchmearedHole,
     data_points : Vec::<(Array1<f32>, Array1<f32>)>
 }
 
@@ -136,10 +136,14 @@ impl OptimizerStateWithTarget {
             precision : normalize_frob(&reduced_target_inv_schmear.precision)
         };
 
+        let target = SchmearedHole {
+            type_id : target_type_id,
+            inv_schmear : normalized_target_inv_schmear
+        };
+
         OptimizerStateWithTarget {
             optimizer_state,
-            target_inv_schmear : normalized_target_inv_schmear,
-            target_type_id,
+            target,
             data_points
         }
     }

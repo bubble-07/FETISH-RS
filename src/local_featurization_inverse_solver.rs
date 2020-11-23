@@ -27,7 +27,7 @@ impl ArgminOp for LocalFeaturizationInverseSolver {
 
     fn apply(&self, p : &Self::Param) -> Result<Self::Output, Error> {
         let featurized = self.space_info.get_features(p);
-        let dist = self.ellipsoid.mahalanobis_dist(&featurized);
+        let dist = self.ellipsoid.sq_mahalanobis_dist(&featurized);
         Ok(dist)
     }
     
