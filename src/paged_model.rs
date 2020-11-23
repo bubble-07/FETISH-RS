@@ -32,13 +32,11 @@ pub struct PagedModel {
 
 impl PagedModel {
     pub fn new(space_info : Rc<SpaceInfo>, num_pages : usize) -> PagedModel {
-        let pages = Vec::new();
+        let mut pages = Vec::new();
 
         for i in 0..num_pages {
-            //TODO: Actually populate pages
-            if (1 == 1) {
-                panic!();
-            }
+            let page = NormalInverseWishart::from_space_info(space_info.clone());
+            pages.push(page);
         }
 
         PagedModel {

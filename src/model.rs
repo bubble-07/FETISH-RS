@@ -120,14 +120,7 @@ impl ops::SubAssign<&NormalInverseWishart> for Model {
 
 impl Model {
     pub fn new(space_info : Rc<SpaceInfo>) -> Model {
-        let mean : Array2<f32> = Array::zeros((space_info.out_dimensions, space_info.feature_dimensions));
-
-        let precision_mult : f32 = (1.0f32 / (PRIOR_SIGMA * PRIOR_SIGMA));
-        let in_precision : Array2<f32> = precision_mult * Array::eye(space_info.feature_dimensions);
-        let out_precision : Array2<f32> = precision_mult * Array::eye(space_info.out_dimensions);
-        let little_v = (space_info.out_dimensions as f32) + 1.0f32;
-
-        let data = NormalInverseWishart::new(mean, in_precision, out_precision, little_v);
+        let data = NormalInverseWishart::from_space_info(space_info.clone());
     
         Model {
             space_info : space_info,

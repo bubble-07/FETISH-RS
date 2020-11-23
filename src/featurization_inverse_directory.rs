@@ -24,9 +24,11 @@ impl FeaturizationInverseDirectory {
     pub fn new(embedder_state : &EmbedderState) -> FeaturizationInverseDirectory {
         let mut directory = HashMap::new();
         for type_id in 0..total_num_types() {
-            let space_info = embedder_state.get_space_info(&type_id);
-            let paged_model = PagedModel::new(space_info, NUM_INVERSE_PAGES);
-            directory.insert(type_id, paged_model);
+            if (!is_vector_type(type_id)) {
+                let space_info = embedder_state.get_space_info(&type_id);
+                let paged_model = PagedModel::new(space_info, NUM_INVERSE_PAGES);
+                directory.insert(type_id, paged_model);
+            }
         }
         FeaturizationInverseDirectory {
             directory

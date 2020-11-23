@@ -5,6 +5,7 @@ use std::ops;
 use ndarray::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
+use crate::params::*;
 use crate::data_update::*;
 use crate::test_utils::*;
 use crate::pseudoinverse::*;
@@ -18,6 +19,8 @@ use crate::sherman_morrison::*;
 use crate::inverse_schmear::*;
 use crate::linalg_utils::*;
 use crate::normal_inverse_wishart_sampler::*;
+use std::rc::*;
+use crate::space_info::*;
 
 use rand::prelude::*;
 use rand_distr::{Cauchy, Distribution};
@@ -110,6 +113,16 @@ impl NormalInverseWishart {
 }
 
 impl NormalInverseWishart {
+    pub fn from_space_info(space_info : Rc<SpaceInfo>) -> NormalInverseWishart {
+        let mean : Array2<f32> = Array::zeros((space_info.out_dimensions, space_info.feature_dimensions));
+
+        let precision_mult : f32 = (1.0f32 / (PRIOR_SIGMA * PRIOR_SIGMA));
+        let in_precision : Array2<f32> = precision_mult * Array::eye(space_info.feature_dimensions);
+        let out_precision : Array2<f32> = precision_mult * Array::eye(space_info.out_dimensions);
+        let little_v = (space_info.out_dimensions as f32) + 1.0f32;
+
+        NormalInverseWishart::new(mean, in_precision, out_precision, little_v)
+    }
     pub fn new(mean : Array2<f32>, precision : Array2<f32>, big_v : Array2<f32>, little_v : f32) -> NormalInverseWishart {
         let precision_u : Array2<f32> = mean.dot(&precision);
         let sigma : Array2<f32> = pseudoinverse_h(&precision);
