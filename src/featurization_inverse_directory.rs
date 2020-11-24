@@ -11,6 +11,8 @@ use crate::featurized_points_directory::*;
 use crate::paged_model::*;
 use crate::params::*;
 use crate::embedder_state::*;
+use crate::space_info::*;
+use std::rc::*;
 
 
 pub struct FeaturizationInverseDirectory {
@@ -25,8 +27,12 @@ impl FeaturizationInverseDirectory {
         let mut directory = HashMap::new();
         for type_id in 0..total_num_types() {
             if (!is_vector_type(type_id)) {
-                let space_info = embedder_state.get_space_info(&type_id);
-                let paged_model = PagedModel::new(space_info, NUM_INVERSE_PAGES);
+                let type_space_info = embedder_state.get_space_info(&type_id);
+                let in_dimensions = type_space_info.in_dimensions;
+                let feature_dimensions = type_space_info.feature_dimensions;
+                let feat_inv_space_info = SpaceInfo::new(feature_dimensions, in_dimensions);
+
+                let paged_model = PagedModel::new(Rc::new(feat_inv_space_info), NUM_INVERSE_PAGES);
                 directory.insert(type_id, paged_model);
             }
         }

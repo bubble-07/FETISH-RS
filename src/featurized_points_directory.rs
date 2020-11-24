@@ -19,9 +19,11 @@ impl FeaturizedPointsDirectory {
     pub fn new(embedder_state : &SampledEmbedderState) -> FeaturizedPointsDirectory {
         let mut directory = HashMap::new();
         for type_id in 0..total_num_types() {
-            let space_info = embedder_state.get_space_info(&type_id);
-            let feat_points = FeaturizedPoints::new(space_info);
-            directory.insert(type_id, feat_points);
+            if (!is_vector_type(type_id)) {
+                let space_info = embedder_state.get_space_info(&type_id);
+                let feat_points = FeaturizedPoints::new(space_info);
+                directory.insert(type_id, feat_points);
+            }
         }
         FeaturizedPointsDirectory {
             directory

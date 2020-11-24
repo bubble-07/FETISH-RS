@@ -128,12 +128,9 @@ impl OptimizerStateWithTarget {
 
         let target_inv_schmear : InverseSchmear = target_model.get_inverse_schmear().flatten();
 
-        let target_space = optimizer_state.embedder_state.model_spaces.get(&target_type_id).unwrap();
-        let reduced_target_inv_schmear = target_space.space_info.compress_inverse_schmear(&target_inv_schmear);
-
         let normalized_target_inv_schmear = InverseSchmear {
-            mean : reduced_target_inv_schmear.mean,
-            precision : normalize_frob(&reduced_target_inv_schmear.precision)
+            mean : target_inv_schmear.mean,
+            precision : normalize_frob(&target_inv_schmear.precision)
         };
 
         let target = SchmearedHole {

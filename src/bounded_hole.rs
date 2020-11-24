@@ -93,9 +93,13 @@ impl BoundedHole {
             
             //Then, handle the argument hole case, which may fail
             for func_index in func_embedding_space.models.keys() {
+                let ret_type_sketcher = &embedder_state.get_space_info(&ret_type).func_sketcher;
+                let ret_expansion_matrix = ret_type_sketcher.get_expansion_matrix();
+
                 let func_embedding = func_embedding_space.models.get(func_index).unwrap();
+                let func_then_expand = ret_expansion_matrix.dot(func_embedding);
                 //Now, get the bound on the featurized argument
-                let feat_bound = self.bound.backpropagate_through_transform(func_embedding);
+                let feat_bound = self.bound.backpropagate_through_transform(&func_then_expand);
                 
                 //Now, try to propagate the feature-space bound through to the input space
                 let mut feat_points = feat_points_directory.get_space(func_type);
@@ -109,7 +113,16 @@ impl BoundedHole {
 
                 let maybe_input_bound = feat_bound.approx_backpropagate_through_featurization(&mut feat_points,
                                                                     sampled_inputs);
-                if let Option::Some(input_bound) = maybe_input_bound {
+                if let Option::Some(compressed_input_bound) = maybe_input_bound {
+                    let input_bound = 
+                        if (is_vector_type(*arg_type)) {
+                            compressed_input_bound
+                        } else {
+                            let arg_type_sketcher = &embedder_state.get_space_info(arg_type).func_sketcher;
+                            let arg_compress = arg_type_sketcher.get_projection_matrix();
+                            compressed_input_bound.backpropagate_through_transform(&arg_compress)
+                        };
+
                     //We have a concrete bound on what the input needs to be.
                     //If the input type is a vector type, then we're completely done
                     //because we can just output the center.
