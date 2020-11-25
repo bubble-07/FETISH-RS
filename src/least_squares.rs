@@ -11,6 +11,7 @@ use crate::test_utils::*;
 use crate::inverse_schmear::*;
 use crate::linalg_utils::*;
 use ndarray_linalg::{LeastSquaresSvd};
+use crate::sqrtm::*;
 
 //Solves Ax = b with minimal norm determined
 //by the passed quadratic form

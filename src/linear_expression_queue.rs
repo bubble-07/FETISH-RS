@@ -18,6 +18,8 @@ use crate::params::*;
 use crate::linear_expression::*;
 use crate::featurization_inverse_directory::*;
 use crate::sampled_embedder_state::*;
+use crate::interpreter_state::*;
+use crate::displayable_with_state::*;
 
 struct PritoritizedLinearExpression {
     expr : BoundedHoledLinearExpression,
@@ -80,6 +82,7 @@ impl LinearExpressionQueue {
     }
 
     pub fn find_within_bound(&mut self, bounded_hole : &BoundedHole,
+                                        interpreter_state : &InterpreterState,
                                         embedder_state : &SampledEmbedderState,
                                         feat_inverse_directory : &FeaturizationInverseDirectory) 
 
@@ -87,9 +90,11 @@ impl LinearExpressionQueue {
         self.queue.clear();
 
         //First, perform initial population of the queue
+        trace!("Finding initial single-holed fillers");
         let (mut feat_points_directory, mut init_bounded_holed_applications) =
-            bounded_hole.get_single_holed_fillers(embedder_state, feat_inverse_directory);
+            bounded_hole.get_single_holed_fillers(interpreter_state, embedder_state, feat_inverse_directory);
 
+        trace!("Inserting initial elements into queue");
         for init_bounded_holed_application in init_bounded_holed_applications.drain(..) {
             let bound_expr = init_bounded_holed_application.to_linear_expression();
             let hole_type = bound_expr.expr.get_hole_type();
@@ -106,6 +111,8 @@ impl LinearExpressionQueue {
             let prioritized = self.queue.pop().unwrap();
             let bound_expr = prioritized.expr;
 
+            trace!("Popped: {}", bound_expr.expr.display(interpreter_state));
+
             let bound_hole = bound_expr.get_bounded_hole();
 
             let term_fillers = bound_hole.get_term_fillers(embedder_state);
@@ -116,7 +123,7 @@ impl LinearExpressionQueue {
                 return (result, feat_points_directory);
             } else {
                 //No single term fills the hole here, so we need to add neighbors
-                let feat_points_delta = self.add_neighbors(&bound_expr, embedder_state, feat_inverse_directory);
+                let feat_points_delta = self.add_neighbors(&bound_expr, interpreter_state, embedder_state, feat_inverse_directory);
                 feat_points_directory += feat_points_delta;
             }
         }
@@ -125,12 +132,13 @@ impl LinearExpressionQueue {
     }
 
     pub fn add_neighbors(&mut self, bound_expr : &BoundedHoledLinearExpression, 
+                         interpreter_state : &InterpreterState,
                          embedder_state : &SampledEmbedderState,
                          feat_inverse_directory : &FeaturizationInverseDirectory) 
                                                                                  -> FeaturizedPointsDirectory {
         let bounded_hole = bound_expr.get_bounded_hole();
         let (feat_points_directory, mut bounded_holed_applications) = 
-            bounded_hole.get_single_holed_fillers(embedder_state, feat_inverse_directory);
+            bounded_hole.get_single_holed_fillers(interpreter_state, embedder_state, feat_inverse_directory);
 
         for bounded_holed_application in bounded_holed_applications.drain(..) {
 

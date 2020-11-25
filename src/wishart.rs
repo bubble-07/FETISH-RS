@@ -14,6 +14,7 @@ use crate::feature_collection::*;
 use crate::params::*;
 use crate::test_utils::*;
 use crate::linalg_utils::*;
+use crate::sqrtm::*;
 
 use ndarray_linalg::cholesky::*;
 

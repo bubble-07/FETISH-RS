@@ -3,6 +3,8 @@ use crate::type_id::*;
 use crate::linear_expression::*;
 use crate::term_reference::*;
 use std::vec::*;
+use crate::interpreter_state::*;
+use crate::displayable_with_state::*;
 
 #[derive(Clone)]
 pub struct HoledLinearExpression {
@@ -28,5 +30,15 @@ impl HoledLinearExpression {
         HoledLinearExpression {
             chain : ret_chain
         }
+    }
+}
+
+impl DisplayableWithState for HoledLinearExpression {
+    fn display(&self, state : &InterpreterState) -> String {
+        let mut result = "-".to_owned();
+        for holed_app in self.chain.iter().rev() {
+            result = holed_app.format_string(state, result);
+        }
+        result
     }
 }

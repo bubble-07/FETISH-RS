@@ -10,6 +10,7 @@ use crate::rand_utils::*;
 use ndarray_rand::rand_distr::StandardNormal;
 use ndarray_rand::rand_distr::ChiSquared;
 
+use crate::sqrtm::*;
 use crate::pseudoinverse::*;
 use crate::params::*;
 use crate::linalg_utils::*;
@@ -24,7 +25,8 @@ pub struct EllipsoidSampler {
 
 impl EllipsoidSampler {
     pub fn new(ellipsoid : &Ellipsoid) -> EllipsoidSampler {
-        let scatter = pseudoinverse_h(ellipsoid.skew());
+        let skew = ellipsoid.skew();
+        let scatter = pseudoinverse_h(skew);
         let scatter_cholesky_factor = sqrtm(&scatter);
         let center = ellipsoid.center().clone();
         EllipsoidSampler {

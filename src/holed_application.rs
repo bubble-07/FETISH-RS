@@ -3,6 +3,8 @@ use crate::term_reference::*;
 use crate::term_application::*;
 use crate::type_id::*;
 use crate::holed_linear_expression::*;
+use crate::interpreter_state::*;
+use crate::displayable_with_state::*;
 
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub enum HoledApplication {
@@ -11,6 +13,27 @@ pub enum HoledApplication {
 }
 
 impl HoledApplication {
+    pub fn format_string(&self, state : &InterpreterState, filler : String) -> String {
+        match (&self) {
+            HoledApplication::FunctionHoled(arg_ref, _) => {
+                let mut result = filler;
+                result += "(";
+
+                let arg_str = arg_ref.display(state);
+
+                result += &arg_str;
+                result += ")";
+                result
+            },
+            HoledApplication::ArgumentHoled(func_ptr) => {
+                let mut result = func_ptr.display(state);
+                result += "(";
+                result += &filler;
+                result += ")";
+                result
+            }
+        }
+    }
     pub fn to_linear_expression(&self) -> HoledLinearExpression {
         let mut chain = Vec::new();
         chain.push(self.clone());

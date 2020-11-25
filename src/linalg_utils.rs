@@ -12,10 +12,6 @@ pub fn sq_vec_dist(one : &Array1<f32>, two : &Array1<f32>) -> f32 {
     diff.dot(&diff)
 }
 
-pub fn sqrtm(in_array: &Array2<f32>) -> Array2<f32> {
-    in_array.ssqrt(UPLO::Lower).unwrap()
-}
-
 pub fn outer(a : &Array1<f32>, b : &Array1<f32>) -> Array2<f32> {
     einsum("a,b->ab", &[a, b]).unwrap()
           .into_dimensionality::<Ix2>().unwrap()

@@ -81,6 +81,8 @@ impl Ellipsoid {
                 min_x = x;
             }
         }
+        trace!("Initial samples were not sufficient, closest had sq dist {}", min_mahalanobis_dist);
+        trace!("Running optimizer");
         //We went through all of our samples and didn't find a suitable point
         //so as a last-ditch effort, we take the best point in our samples and work
         //to minimize the Mahalanobis norm after being mapped through featurization
@@ -104,8 +106,10 @@ impl Ellipsoid {
             Result::Ok(result) => {
                 if (result.state.cost < 1.0f32) {
                     //Local optimization gave us the goods, so use 'em
+                    trace!("Optimization succeeded. Finding enclosing ellipsoid");
                     self.approx_enclosing_ellipsoid(feat_points, &result.state.param)
                 } else {
+                    trace!("Optimizer failed to produce a good enough result. Sq dist: {}", result.state.cost);
                     //We tried our best, but it just wasn't good enough
                     Option::None
                 }

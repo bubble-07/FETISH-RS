@@ -13,6 +13,7 @@ use crate::linalg_utils::*;
 use crate::inverse_schmear::*;
 use crate::linalg_utils::*;
 use crate::space_info::*;
+use crate::sqrtm::*;
 
 pub fn get_sigma_points(in_schmear : &Schmear) -> Vec<Array1<f32>> {
     let mean = &in_schmear.mean;

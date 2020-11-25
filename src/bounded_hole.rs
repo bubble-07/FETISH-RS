@@ -18,6 +18,8 @@ use std::cmp::Ordering;
 use crate::params::*;
 use crate::featurization_inverse_directory::*;
 use crate::sampled_embedder_state::*;
+use crate::interpreter_state::*;
+use crate::displayable_with_state::*;
 
 pub struct BoundedHole {
     pub type_id : TypeId,
@@ -52,6 +54,7 @@ impl BoundedHole {
     }
 
     pub fn get_single_holed_fillers(&self,
+                            interpreter_state : &InterpreterState,
                             embedder_state : &SampledEmbedderState,
                             feat_inverse_directory : &FeaturizationInverseDirectory)
                                                      
@@ -85,14 +88,22 @@ impl BoundedHole {
                     };
                     let arg_ref = TermReference::FuncRef(arg_ptr);
                     let holed_app = HoledApplication::FunctionHoled(arg_ref, ret_type);
-                    let bounded_holed_app = BoundedHoledApplication::new(holed_app, func_ellipsoid);
 
+                    trace!("Adding function-holed: {}", holed_app.format_string(interpreter_state, "-".to_owned()));
+
+                    let bounded_holed_app = BoundedHoledApplication::new(holed_app, func_ellipsoid);
                     bounded_holes.push(bounded_holed_app);
                 }
             }
             
             //Then, handle the argument hole case, which may fail
             for func_index in func_embedding_space.models.keys() {
+                let func_ptr = TermPointer {
+                    type_id : *func_type,
+                    index : *func_index
+                };
+                trace!("Investigating argument-holed case for {}", func_ptr.display(interpreter_state));
+
                 let ret_type_sketcher = &embedder_state.get_space_info(&ret_type).func_sketcher;
                 let ret_expansion_matrix = ret_type_sketcher.get_expansion_matrix();
 
@@ -111,6 +122,7 @@ impl BoundedHole {
                 let sampled_inputs = inverse_model.sample(&mut rng, &feat_bound, 
                                                           NUM_FUNCTION_SAMPLES, NUM_ELLIPSOID_SAMPLES);
 
+                trace!("Attempting backpropagation through featurization");
                 let maybe_input_bound = feat_bound.approx_backpropagate_through_featurization(&mut feat_points,
                                                                     sampled_inputs);
                 if let Option::Some(compressed_input_bound) = maybe_input_bound {
@@ -127,11 +139,7 @@ impl BoundedHole {
                     //If the input type is a vector type, then we're completely done
                     //because we can just output the center.
                     //Otherwise, we need to package this information into a new holed expression
-                    let func_ptr = TermPointer {
-                        type_id : *func_type,
-                        index : *func_index
-                    };
-                    let holed = HoledApplication::ArgumentHoled(func_ptr);
+                    let holed = HoledApplication::ArgumentHoled(func_ptr.clone());
                     let bounded_holed_app = BoundedHoledApplication::new(holed, input_bound);
                     bounded_holes.push(bounded_holed_app);
                 }

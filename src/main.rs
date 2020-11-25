@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod sqrtm;
 mod schmeared_hole;
 mod bounded_holed_linear_expression;
 mod linear_expression_queue;

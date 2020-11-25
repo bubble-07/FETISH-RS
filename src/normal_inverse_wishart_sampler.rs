@@ -15,6 +15,7 @@ use crate::params::*;
 use crate::wishart::*;
 use crate::linalg_utils::*;
 use crate::normal_inverse_wishart::*;
+use crate::sqrtm::*;
 
 use ndarray_linalg::cholesky::*;
 

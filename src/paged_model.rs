@@ -35,7 +35,9 @@ impl PagedModel {
         let mut pages = Vec::new();
 
         for i in 0..num_pages {
-            let page = NormalInverseWishart::from_space_info(space_info.clone());
+            let mut page = NormalInverseWishart::from_space_info(space_info.clone());
+            //Adjust to ensure that sampling from it is well-defined
+            page.little_v += 2.0f32;
             pages.push(page);
         }
 
