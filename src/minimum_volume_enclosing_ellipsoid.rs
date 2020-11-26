@@ -23,6 +23,7 @@ pub fn minimum_volume_enclosing_ellipsoid(points : &Vec<Array1<f32>>) -> Ellipso
             point_array[[i, j]] = points[i][j];
         }
     }
+    Q = Q.t().to_owned();
 
     let mut error = 1.0f32;
 

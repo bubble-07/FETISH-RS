@@ -35,7 +35,7 @@ impl HoledLinearExpression {
 
 impl DisplayableWithState for HoledLinearExpression {
     fn display(&self, state : &InterpreterState) -> String {
-        let mut result = "-".to_owned();
+        let mut result = "_".to_owned();
         for holed_app in self.chain.iter().rev() {
             result = holed_app.format_string(state, result);
         }

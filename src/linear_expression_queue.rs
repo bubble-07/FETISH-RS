@@ -119,9 +119,11 @@ impl LinearExpressionQueue {
 
             if (term_fillers.len() > 0) {
                 let cap = term_fillers[0].clone();
+                trace!("Found a term filler: {}", cap.display(interpreter_state));
                 let result = bound_expr.expr.cap(cap);
                 return (result, feat_points_directory);
             } else {
+                trace!("No term filler found, adding neighbors");
                 //No single term fills the hole here, so we need to add neighbors
                 let feat_points_delta = self.add_neighbors(&bound_expr, interpreter_state, embedder_state, feat_inverse_directory);
                 feat_points_directory += feat_points_delta;

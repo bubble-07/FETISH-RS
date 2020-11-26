@@ -13,6 +13,7 @@ use crate::params::*;
 use crate::rand_utils::*;
 use crate::local_featurization_inverse_solver::*;
 use crate::featurization_boundary_point_solver::*;
+use crate::minimum_volume_enclosing_ellipsoid::*;
 use std::rc::*;
 
 use argmin::prelude::*;
@@ -74,6 +75,7 @@ impl Ellipsoid {
             let y = feat_points.get_features(&x);
             let d = self.sq_mahalanobis_dist(&y);
             if (d < 1.0f32) {
+                trace!("Succeeded with initial samples. Finding enclosing ellipsoid");
                 return self.approx_enclosing_ellipsoid(feat_points, &x);
             }
             if (d < min_mahalanobis_dist) {
@@ -125,6 +127,8 @@ impl Ellipsoid {
     //get an ellipsoid about that point in the input space to the featurization map
     //such that the ellipsoid's image under featurization is contained in this ellipsoid
     fn approx_enclosing_ellipsoid(&self, feat_points : &mut FeaturizedPoints, x : &Array1<f32>) -> Option<Ellipsoid> {
+        let mut boundary_points = Vec::new();
+
         let dim = x.shape()[0];
         let n_samps = dim * ENCLOSING_ELLIPSOID_DIRECTION_MULTIPLIER;
 
@@ -133,9 +137,10 @@ impl Ellipsoid {
         for i in 0..n_samps {
             let direction = gen_nsphere_random(&mut rng, dim);
             let boundary_point = self.find_boundary_point(feat_points, x, &direction);
+            boundary_points.push(boundary_point);
         }
-        //TODO: Call out to a minimum enclosed ellipsoid routine
-        Option::None
+        let result_ellipsoid = minimum_volume_enclosing_ellipsoid(&boundary_points);
+        Option::Some(result_ellipsoid)
     }
 
     fn find_boundary_point(&self, feat_points : &mut FeaturizedPoints, 

@@ -50,6 +50,7 @@ impl PagedModel {
 
 impl ops::AddAssign<FeaturizedPoints> for PagedModel {
     fn add_assign(&mut self, mut feat_points : FeaturizedPoints) {
+        println!("Num of points: {}", feat_points.points.len());
         for (in_vec, feat_vec) in feat_points.points.drain(..) {
             let data_point = DataPoint {
                 in_vec : feat_vec,

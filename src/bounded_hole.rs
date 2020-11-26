@@ -64,6 +64,10 @@ impl BoundedHole {
         let mut feat_points_directory = FeaturizedPointsDirectory::new(embedder_state);
 
         let ret_type = self.type_id;
+
+        let ret_type_sketcher = &embedder_state.get_space_info(&ret_type).func_sketcher;
+        let ret_expansion_matrix = ret_type_sketcher.get_expansion_matrix();
+
         let application_type_ids = get_application_type_ids(ret_type);
         for (func_type, arg_type) in application_type_ids.iter() {
             let func_embedding_space = embedder_state.embedding_spaces.get(func_type).unwrap();
@@ -78,8 +82,11 @@ impl BoundedHole {
                     //Now we featurize the argument vector according to the function type
                     let feat_points = feat_points_directory.get_space(func_type);
                     let arg_feat_vec = feat_points.get_features(&arg_vec);
+
+                    let out_bound = self.bound.backpropagate_through_transform(&ret_expansion_matrix);
+
                     //Derive the ellipsoid on the vectorized transform
-                    let func_ellipsoid = self.bound.backpropagate_to_vectorized_transform(&arg_feat_vec);
+                    let func_ellipsoid = out_bound.backpropagate_to_vectorized_transform(&arg_feat_vec);
 
                     //Now, package this information up into a new holed expression
                     let arg_ptr = TermPointer {
@@ -89,7 +96,7 @@ impl BoundedHole {
                     let arg_ref = TermReference::FuncRef(arg_ptr);
                     let holed_app = HoledApplication::FunctionHoled(arg_ref, ret_type);
 
-                    trace!("Adding function-holed: {}", holed_app.format_string(interpreter_state, "-".to_owned()));
+                    trace!("Adding function-holed: {}", holed_app.format_string(interpreter_state, "_".to_owned()));
 
                     let bounded_holed_app = BoundedHoledApplication::new(holed_app, func_ellipsoid);
                     bounded_holes.push(bounded_holed_app);
@@ -103,9 +110,6 @@ impl BoundedHole {
                     index : *func_index
                 };
                 trace!("Investigating argument-holed case for {}", func_ptr.display(interpreter_state));
-
-                let ret_type_sketcher = &embedder_state.get_space_info(&ret_type).func_sketcher;
-                let ret_expansion_matrix = ret_type_sketcher.get_expansion_matrix();
 
                 let func_embedding = func_embedding_space.models.get(func_index).unwrap();
                 let func_then_expand = ret_expansion_matrix.dot(func_embedding);

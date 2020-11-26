@@ -73,14 +73,21 @@ impl OptimizerStateWithTarget {
                                                 &sampled_embedder_state, 
                                                 &self.optimizer_state.feat_inverse_directory);
 
+        trace!("Updating featurization inverse directory");
         //Update the featurization inverse directory
         self.optimizer_state.feat_inverse_directory += feat_points_directory;
 
+        trace!("Evaluating found term");
+
         //Evaluate the expression that we obtained
         let term_ref = self.optimizer_state.interpreter_state.evaluate_linear_expression(lin_expr);
+        info!("Current best term: {}", term_ref.display(&self.optimizer_state.interpreter_state));
         if let TermReference::FuncRef(result) = term_ref {
+            trace!("Evaluating on training data");
             self.evaluate_training_data_step(result.clone());
+            trace!("Performing bayesian update");
             self.bayesian_update_step();
+            return result.clone();
         }
         error!("Wrong type for the linear expression");
         panic!();
