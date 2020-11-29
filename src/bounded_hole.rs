@@ -127,13 +127,16 @@ impl BoundedHole {
                                                           NUM_FUNCTION_SAMPLES, NUM_ELLIPSOID_SAMPLES);
 
                 trace!("Attempting backpropagation through featurization");
-                let maybe_input_bound = feat_bound.approx_backpropagate_through_featurization(&mut feat_points,
-                                                                    sampled_inputs);
-                if let Option::Some(compressed_input_bound) = maybe_input_bound {
+                let maybe_contained_input = feat_bound.approx_backpropagate_through_featurization_contained_vec(
+                                                        &mut feat_points, sampled_inputs);
+
+                if let Option::Some(contained_input) = maybe_contained_input {
                     let input_bound = 
                         if (is_vector_type(*arg_type)) {
-                            compressed_input_bound
+                            Ellipsoid::from_single_point(contained_input)
                         } else {
+                            let compressed_input_bound = feat_bound.approx_enclosing_ellipsoid(
+                                                                   &mut feat_points, &contained_input);
                             let arg_type_sketcher = &embedder_state.get_space_info(arg_type).func_sketcher;
                             let arg_compress = arg_type_sketcher.get_projection_matrix();
                             compressed_input_bound.backpropagate_through_transform(&arg_compress)

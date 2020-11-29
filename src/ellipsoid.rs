@@ -37,6 +37,12 @@ impl Ellipsoid {
         }
     }
 
+    pub fn from_single_point(center : Array1<f32>) -> Ellipsoid {
+        let d = center.shape()[0];
+        let skew = Array::zeros((d, d));
+        Ellipsoid::new(center, skew)
+    }
+
     pub fn contains(&self, vec : &Array1<f32>) -> bool {
         self.sq_mahalanobis_dist(vec) < 1.0f32
     }
@@ -68,7 +74,15 @@ impl Ellipsoid {
     //the input space of the featurization map, find an ellipsoid for x
     //in f(x) = y whose image under f is approximately contained in this ellipsoid
     pub fn approx_backpropagate_through_featurization(&self, feat_points : &mut FeaturizedPoints,
-                                                      mut x_samples : Vec<Array1<f32>>) -> Option<Ellipsoid> {
+                                                      x_samples : Vec<Array1<f32>>) -> Option<Ellipsoid> {
+        let maybe_contained_vec = self.approx_backpropagate_through_featurization_contained_vec(feat_points, x_samples);
+        match (maybe_contained_vec) {
+            Option::None => Option::None,
+            Option::Some(contained_vec) => Option::Some(self.approx_enclosing_ellipsoid(feat_points, &contained_vec))
+        }
+    }
+    pub fn approx_backpropagate_through_featurization_contained_vec(&self, feat_points : &mut FeaturizedPoints,
+                                                      mut x_samples : Vec<Array1<f32>>) -> Option<Array1<f32>> {
         let mut min_mahalanobis_dist = f32::INFINITY;
         let mut min_x = x_samples[0].clone();
         for x in x_samples.drain(..) {
@@ -76,7 +90,7 @@ impl Ellipsoid {
             let d = self.sq_mahalanobis_dist(&y);
             if (d < 1.0f32) {
                 trace!("Succeeded with initial samples. Finding enclosing ellipsoid");
-                return self.approx_enclosing_ellipsoid(feat_points, &x);
+                return Option::Some(x);
             }
             if (d < min_mahalanobis_dist) {
                 min_mahalanobis_dist = d;
@@ -109,7 +123,7 @@ impl Ellipsoid {
                 if (result.state.cost < 1.0f32) {
                     //Local optimization gave us the goods, so use 'em
                     trace!("Optimization succeeded. Finding enclosing ellipsoid");
-                    self.approx_enclosing_ellipsoid(feat_points, &result.state.param)
+                    Option::Some(result.state.param)
                 } else {
                     trace!("Optimizer failed to produce a good enough result. Sq dist: {}", result.state.cost);
                     //We tried our best, but it just wasn't good enough
@@ -126,7 +140,7 @@ impl Ellipsoid {
     //Given a point whose featurization we know is within this ellipsoid,
     //get an ellipsoid about that point in the input space to the featurization map
     //such that the ellipsoid's image under featurization is contained in this ellipsoid
-    fn approx_enclosing_ellipsoid(&self, feat_points : &mut FeaturizedPoints, x : &Array1<f32>) -> Option<Ellipsoid> {
+    pub fn approx_enclosing_ellipsoid(&self, feat_points : &mut FeaturizedPoints, x : &Array1<f32>) -> Ellipsoid {
         let mut boundary_points = Vec::new();
 
         let dim = x.shape()[0];
@@ -140,7 +154,7 @@ impl Ellipsoid {
             boundary_points.push(boundary_point);
         }
         let result_ellipsoid = minimum_volume_enclosing_ellipsoid(&boundary_points);
-        Option::Some(result_ellipsoid)
+        result_ellipsoid
     }
 
     fn find_boundary_point(&self, feat_points : &mut FeaturizedPoints, 

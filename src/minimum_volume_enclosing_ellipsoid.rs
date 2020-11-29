@@ -12,6 +12,7 @@ use crate::params::*;
 
 //Ported from https://gist.github.com/raluca-san/5d8bd4dcb3278b8e2f6dfa959614f9c8
 pub fn minimum_volume_enclosing_ellipsoid(points : &Vec<Array1<f32>>) -> Ellipsoid {
+    trace!("Finding minimum volume enclosing ellipsoid of {} points", points.len());
     let N = points.len();
     let d = points[0].shape()[0];
 
@@ -54,6 +55,8 @@ pub fn minimum_volume_enclosing_ellipsoid(points : &Vec<Array1<f32>>) -> Ellipso
     let skew_inv = &points_u_inner - &center_outer;
     let mut skew = pseudoinverse_h(&skew_inv);
     skew *= (1.0f32 / (d as f32));
+
+    trace!("Minimum volume enclosing ellipsoid found");
 
     Ellipsoid::new(center, skew)
 }
