@@ -7,6 +7,7 @@ use ndarray_linalg::*;
 use std::ops;
 use std::rc::*;
 
+use crate::data_points::*;
 use crate::sigma_points::*;
 use crate::embedder_state::*;
 use crate::pseudoinverse::*;
@@ -85,6 +86,18 @@ impl SpaceInfo {
 
     pub fn get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
         to_features(&self.feature_collections, in_vec)
+    }
+
+    pub fn get_features_mat(&self, in_mat : &Array2<f32>) -> Array2<f32> {
+        to_features_mat(&self.feature_collections, in_mat)
+    }
+
+    pub fn get_data_points(&self, in_data_points : DataPoints) -> DataPoints {
+        let feat_vecs = self.get_features_mat(&in_data_points.in_vecs);
+        DataPoints {
+            in_vecs : feat_vecs,
+            ..in_data_points
+        }
     }
 
     pub fn get_data(&self, in_data : DataPoint) -> DataPoint {

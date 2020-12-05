@@ -5,6 +5,7 @@
 #![allow(unused_variables)]
 
 mod sqrtm;
+mod data_points;
 mod schmeared_hole;
 mod bounded_holed_linear_expression;
 mod linear_expression_queue;
@@ -14,7 +15,7 @@ mod featurized_points;
 mod rand_utils;
 mod bounded_holed_application;
 mod bounded_hole;
-mod paged_model;
+mod inverse_model;
 mod term_model;
 mod ellipsoid_sampler;
 mod minimum_volume_enclosing_ellipsoid;

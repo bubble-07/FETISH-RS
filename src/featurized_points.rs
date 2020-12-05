@@ -7,6 +7,7 @@ use ndarray_linalg::solveh::*;
 
 use std::rc::*;
 use std::ops;
+use crate::data_points::*;
 
 use crate::space_info::*;
 
@@ -32,6 +33,25 @@ impl FeaturizedPoints {
         let pair = (in_vec.clone(), feat_vec);
         self.points.push(pair);
         &self.points[self.points.len() - 1].1
+    }
+
+    pub fn to_feat_inverse_data_points(&self) -> DataPoints {
+        let num_points = self.points.len();
+        let num_feats = self.space_info.feature_dimensions;
+        let num_in_dims = self.space_info.in_dimensions;
+
+        let mut feat_mat = Array::zeros((num_points, num_feats));
+        let mut in_vec_mat = Array::zeros((num_points, num_in_dims));
+        let mut i : usize = 0;
+        for (in_vec, feat_vec) in &self.points {
+            feat_mat.row_mut(i).assign(feat_vec);
+            in_vec_mat.row_mut(i).assign(in_vec);
+            i += 1; 
+        }
+        DataPoints {
+            in_vecs : feat_mat,
+            out_vecs : in_vec_mat
+        }
     }
 }
 

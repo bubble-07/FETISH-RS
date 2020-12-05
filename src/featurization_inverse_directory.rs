@@ -8,7 +8,7 @@ use std::ops;
 use std::collections::HashMap;
 use crate::type_id::*;
 use crate::featurized_points_directory::*;
-use crate::paged_model::*;
+use crate::inverse_model::*;
 use crate::params::*;
 use crate::embedder_state::*;
 use crate::space_info::*;
@@ -16,11 +16,11 @@ use std::rc::*;
 
 
 pub struct FeaturizationInverseDirectory {
-    directory : HashMap<TypeId, PagedModel>
+    directory : HashMap<TypeId, InverseModel>
 }
 
 impl FeaturizationInverseDirectory {
-    pub fn get(&self, type_id : &TypeId) -> &PagedModel {
+    pub fn get(&self, type_id : &TypeId) -> &InverseModel {
         self.directory.get(type_id).unwrap()
     }
     pub fn new(embedder_state : &EmbedderState) -> FeaturizationInverseDirectory {
@@ -32,7 +32,7 @@ impl FeaturizationInverseDirectory {
                 let feature_dimensions = type_space_info.feature_dimensions;
                 let feat_inv_space_info = SpaceInfo::new(feature_dimensions, in_dimensions);
 
-                let paged_model = PagedModel::new(Rc::new(feat_inv_space_info), NUM_INVERSE_PAGES);
+                let paged_model = InverseModel::new(Rc::new(feat_inv_space_info));
                 directory.insert(type_id, paged_model);
             }
         }

@@ -6,6 +6,7 @@ use ndarray::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
 use crate::params::*;
+use crate::data_points::*;
 use crate::data_update::*;
 use crate::test_utils::*;
 use crate::pseudoinverse::*;
@@ -167,6 +168,40 @@ fn zero_normal_inverse_wishart(t : usize, s : usize) -> NormalInverseWishart {
 }
 
 impl NormalInverseWishart {
+    pub fn update_datapoints(&mut self, data_points : &DataPoints) {
+        let n = data_points.num_points();
+        let X = &data_points.in_vecs;
+        let Y = &data_points.out_vecs;
+
+        let XTX = X.t().dot(X);
+        let YTX = Y.t().dot(X);
+
+        let mut out_precision = self.precision.clone();
+        out_precision += &XTX;
+
+        self.sigma = pseudoinverse_h(&out_precision);
+
+        self.precision_u += &YTX;
+
+        let out_mean = self.precision_u.dot(&self.sigma);
+
+        let mean_diff = &out_mean - &self.mean;
+        let mean_diff_t = mean_diff.t().clone();
+        let mean_product = mean_diff.dot(&self.precision).dot(&mean_diff_t);
+        self.big_v += &mean_product;
+        
+        let XT = X.t().clone();
+        let BNX = out_mean.dot(&XT);
+        let R = &Y.t() - &BNX;
+        let RT = R.t().clone();
+        let RTR = R.dot(&RT);
+        self.big_v += &RTR;
+
+
+        self.mean = out_mean;
+        self.precision = out_precision;
+        self.little_v += (n as f32);
+    }
     fn update(&mut self, data_point : &DataPoint, downdate : bool) {
         let x = &data_point.in_vec;
         let y = &data_point.out_vec;

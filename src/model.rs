@@ -7,6 +7,7 @@ use ndarray_linalg::*;
 use std::ops;
 use std::rc::*;
 
+use crate::data_points::*;
 use crate::space_info::*;
 use crate::data_update::*;
 use crate::data_point::*;
@@ -47,6 +48,16 @@ pub fn to_features(feature_collections : &Vec<EnumFeatureCollection>, in_vec : &
                           .collect::<Vec<_>>();
 
     stack(Axis(0), &comp_views).unwrap()
+}
+
+pub fn to_features_mat(feature_collections : &Vec<EnumFeatureCollection>, in_mat : &Array2<f32>) -> Array2<f32> {
+    let comps = feature_collections.iter()
+                                   .map(|coll| coll.get_features_mat(in_mat))
+                                   .collect::<Vec<_>>();
+    let comp_views = comps.iter()
+                          .map(|comp| ArrayView::from(comp))
+                          .collect::<Vec<_>>();
+    stack(Axis(1), &comp_views).unwrap()
 }
 
 pub fn to_jacobian(feature_collections : &Vec<EnumFeatureCollection>, in_vec : &Array1<f32>) -> Array2<f32> {
@@ -97,6 +108,12 @@ impl Model {
 impl ops::AddAssign<DataPoint> for Model {
     fn add_assign(&mut self, other: DataPoint) {
         self.data += &self.space_info.get_data(other);
+    }
+}
+
+impl ops::AddAssign<DataPoints> for Model {
+    fn add_assign(&mut self, other : DataPoints) {
+        self.data.update_datapoints(&self.space_info.get_data_points(other));
     }
 }
 
