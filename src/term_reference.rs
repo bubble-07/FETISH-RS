@@ -3,7 +3,6 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
-use ndarray_einsum_beta::*;
 
 use crate::array_utils::*;
 use crate::type_id::*;

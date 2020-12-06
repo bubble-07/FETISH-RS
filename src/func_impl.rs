@@ -12,7 +12,6 @@ use crate::test_utils::*;
 
 use ndarray::*;
 use ndarray_linalg::*;
-use ndarray_einsum_beta::*;
 use noisy_float::prelude::*;
 
 use std::rc::*;
