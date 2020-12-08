@@ -151,13 +151,15 @@ mod tests {
     use super::*;
 
     fn clone_model(model : &Model) -> Model {
-        let mut result = Model::new(model.feature_collections.clone(), model.in_dimensions, model.out_dimensions);
+        let space_info = model.space_info.clone();
+        let mut result = Model::new(space_info);
         result.data = model.data.clone();
         result
     }
     
     fn clone_and_perturb_model(model : &Model, epsilon : f32) -> Model {
-        let mut result = Model::new(model.feature_collections.clone(), model.in_dimensions, model.out_dimensions);
+        let space_info = model.space_info.clone();
+        let mut result = Model::new(space_info);
         result.data = model.data.clone();
         
         let mean = &model.data.mean;
