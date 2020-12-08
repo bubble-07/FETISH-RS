@@ -242,7 +242,7 @@ impl Ellipsoid {
         let u_M = u_M_full.into_shape((d,)).unwrap();
 
         let x_x_t = outer(x, x);
-        let s_M = kron(&x_x_t, s_y);
+        let s_M = kron(s_y, &x_x_t);
 
         let new_inv_schmear = InverseSchmear {
             mean : u_M,
@@ -257,6 +257,28 @@ impl Ellipsoid {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_backpropagate_to_vectorized_transform_containment() {
+        let num_samps = 20;
+        let in_dim = 3;
+        let out_dim = 2;
+        let mut rng = rand::thread_rng();
+        for _ in 0..num_samps {
+            let out_ellipsoid = random_ellipsoid(out_dim);
+            let x = random_vector(in_dim);
+            let flat_mat_ellipsoid = out_ellipsoid.backpropagate_to_vectorized_transform(&x);
+            let flat_mat_sampler = EllipsoidSampler::new(&flat_mat_ellipsoid);
+            let flat_mat = flat_mat_sampler.sample(&mut rng);
+            let mat = flat_mat.into_shape((out_dim, in_dim)).unwrap();
+            let y = mat.dot(&x);
+            if (!out_ellipsoid.contains(&y)) {
+                let d = out_ellipsoid.sq_mahalanobis_dist(&y);
+                println!("d: {}", d);
+                panic!();
+            }
+        }
+    }
 
     #[test]
     fn test_backpropagate_through_transform_containment() {
