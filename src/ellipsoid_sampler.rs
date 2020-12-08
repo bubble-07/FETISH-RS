@@ -15,6 +15,7 @@ use crate::pseudoinverse::*;
 use crate::params::*;
 use crate::linalg_utils::*;
 use crate::ellipsoid::*;
+use crate::test_utils::*;
 
 use ndarray_linalg::cholesky::*;
 
@@ -39,5 +40,24 @@ impl EllipsoidSampler {
         let mut skewed_vec = self.scatter_cholesky_factor.dot(&unit_ball_vec);
         skewed_vec += &self.center;
         skewed_vec
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ellipsoid_sampling_containment() {
+        let num_samps = 20;
+        let dim = 5;
+        let ellipsoid = random_ellipsoid(dim);
+        let ellipsoid_sampler = EllipsoidSampler::new(&ellipsoid);
+        let mut rng = rand::thread_rng();
+        for _ in 0..num_samps {
+            let x = ellipsoid_sampler.sample(&mut rng);
+            if (!ellipsoid.contains(&x)) {
+                panic!();
+            }
+        }
     }
 }

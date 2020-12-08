@@ -3,12 +3,14 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
+use crate::ellipsoid_sampler::*;
 use crate::array_utils::*;
 use crate::pseudoinverse::*;
 use crate::linalg_utils::*;
 use crate::inverse_schmear::*;
 use crate::featurized_points::*;
 use crate::space_info::*;
+use crate::test_utils::*;
 use crate::params::*;
 use crate::rand_utils::*;
 use crate::local_featurization_inverse_solver::*;
@@ -210,16 +212,16 @@ impl Ellipsoid {
     //If this is y, and mat is M, propagate an ellipse to x in Mx = y
     pub fn backpropagate_through_transform(&self, mat : &Array2<f32>) -> Ellipsoid {
         let u_y = &self.inv_schmear.mean;
-        let s_y = &self.inv_schmear.precision;
+        let p_y = &self.inv_schmear.precision;
 
         let mat_inv = pseudoinverse_h(mat);
-        
+
+        let p_x = mat.t().dot(p_y).dot(mat);
         let u_x = mat_inv.dot(u_y);
-        let s_x = mat.t().dot(s_y).dot(mat);
 
         let new_inv_schmear = InverseSchmear {
             mean : u_x,
-            precision : s_x
+            precision : p_x
         };
         Ellipsoid {
             inv_schmear : new_inv_schmear
@@ -248,6 +250,37 @@ impl Ellipsoid {
         };
         Ellipsoid {
             inv_schmear : new_inv_schmear
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_backpropagate_through_transform_containment() {
+        let num_samps = 20;
+        let in_dim = 3;
+        let out_dim = 2;
+        let out_ellipsoid = random_ellipsoid(out_dim);
+        let mat = random_matrix(out_dim, in_dim);
+        let in_ellipsoid = out_ellipsoid.backpropagate_through_transform(&mat);
+        
+        let in_ellipsoid_sampler = EllipsoidSampler::new(&in_ellipsoid);
+        let mut rng = rand::thread_rng();
+        for _ in 0..num_samps {
+            let x = in_ellipsoid_sampler.sample(&mut rng);
+            let y = mat.dot(&x);
+            if (!out_ellipsoid.contains(&y)) {
+                println!("u_x: {}", in_ellipsoid.center());
+                println!("u_y: {}", out_ellipsoid.center());
+                println!("x: {}, y: {}", &x, &y);
+                println!("M: {}", &mat);
+                let d = out_ellipsoid.sq_mahalanobis_dist(&y);
+                println!("d: {}", d);
+                panic!();
+            }
         }
     }
 }

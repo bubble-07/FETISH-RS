@@ -2,6 +2,7 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
+use crate::ellipsoid::*;
 use crate::data_point::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
@@ -211,6 +212,12 @@ pub fn random_psd_matrix(t : usize) -> Array2<f32> {
     let matrix = matrix_sqrt.t().dot(&matrix_sqrt);
     matrix
 }
+pub fn random_ellipsoid(t : usize) -> Ellipsoid {
+    let skew = random_psd_matrix(t);
+    let center = random_vector(t);
+    Ellipsoid::new(center, skew)
+}
+
 pub fn random_schmear(t : usize) -> Schmear {
     let covariance = random_psd_matrix(t);
     let mean = random_vector(t);
