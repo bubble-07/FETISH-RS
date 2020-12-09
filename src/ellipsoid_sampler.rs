@@ -35,6 +35,13 @@ impl EllipsoidSampler {
             scatter_cholesky_factor
         }
     }
+    pub fn sample_boundary(&self, rng : &mut ThreadRng) -> Array1<f32> {
+        let unit_ball_vec = gen_nsphere_random(rng, self.center.shape()[0]);
+        let mut skewed_vec = self.scatter_cholesky_factor.dot(&unit_ball_vec);
+        skewed_vec += &self.center;
+        skewed_vec
+    }
+
     pub fn sample(&self, rng : &mut ThreadRng) -> Array1<f32> {
         let unit_ball_vec = gen_nball_random(rng, self.center.shape()[0]);
         let mut skewed_vec = self.scatter_cholesky_factor.dot(&unit_ball_vec);

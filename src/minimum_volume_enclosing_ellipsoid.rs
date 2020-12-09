@@ -3,10 +3,12 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
+use crate::test_utils::*;
 use crate::pseudoinverse::*;
 use crate::linalg_utils::*;
 use crate::array_utils::*;
 use crate::ellipsoid::*;
+use crate::ellipsoid_sampler::*;
 use crate::pseudoinverse::*;
 use crate::params::*;
 
@@ -59,4 +61,48 @@ pub fn minimum_volume_enclosing_ellipsoid(points : &Vec<Array1<f32>>) -> Ellipso
     trace!("Minimum volume enclosing ellipsoid found");
 
     Ellipsoid::new(center, skew)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ellipsoid_reconstruction() {
+        let num_samps = 50;
+        let dim = 2;
+        let mut rng = rand::thread_rng();
+        let mut points = Vec::new();
+        let ellipsoid = random_ellipsoid(dim);
+        let ellipsoid_sampler = EllipsoidSampler::new(&ellipsoid);
+        for _ in 0..num_samps {
+            let boundary_vec = ellipsoid_sampler.sample_boundary(&mut rng);
+            points.push(boundary_vec);
+            let contained_vec = ellipsoid_sampler.sample(&mut rng);
+            points.push(contained_vec);
+        }
+        let reconstructed = minimum_volume_enclosing_ellipsoid(&points);
+        assert_equal_matrices_to_within(ellipsoid.skew(), reconstructed.skew(), 0.2f32);
+        assert_equal_vectors_to_within(ellipsoid.center(), reconstructed.center(), 0.1f32);
+    }
+
+    #[test]
+    fn test_unit_ellipsoid_from_coordinate_axes() {
+        let dim = 3;
+        let mut points = Vec::new();
+        for i in 0..dim {
+            let mut pos = Array::zeros((dim,));
+            pos[[i,]] = 1.0f32;
+            points.push(pos);
+            let mut neg = Array::zeros((dim,));
+            neg[[i,]] = -1.0f32;
+            points.push(neg);
+        }
+        let eye = Array::eye(dim);
+        let zero = Array::zeros((dim,));
+
+        let ellipsoid = minimum_volume_enclosing_ellipsoid(&points);
+        assert_equal_matrices(ellipsoid.skew(), &eye);
+        assert_equal_vectors(ellipsoid.center(), &zero);
+    }
 }
