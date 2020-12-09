@@ -176,6 +176,33 @@ mod tests {
     }
 
     #[test]
+    fn data_updates_bulk_matches_incremental() {
+        let t = 2;
+        let s = 3;
+
+        let mut bulk_updated = random_model(s, t);
+        let mut incremental_updated = bulk_updated.clone();
+
+        let mut data_point = random_data_point(s, t);
+        data_point.weight = 1.0f32;
+
+        let mut in_vecs = Array::zeros((1, s));
+        in_vecs.row_mut(0).assign(&data_point.in_vec);
+        let mut out_vecs = Array::zeros((1, t));
+        out_vecs.row_mut(0).assign(&data_point.out_vec);
+        let data_points = DataPoints {
+            in_vecs,
+            out_vecs
+        };
+
+        incremental_updated += data_point;
+
+        bulk_updated += data_points;
+
+        assert_equal_distributions_to_within(&incremental_updated.data, &bulk_updated.data, 1.0f32);
+    }
+
+    #[test]
     fn data_updates_undo_cleanly() {
         let t = 5;
         let s = 4;
