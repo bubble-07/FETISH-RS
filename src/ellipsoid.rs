@@ -210,6 +210,7 @@ impl Ellipsoid {
     }
 
     //If this is y, and mat is M, propagate an ellipse to x in Mx = y
+    //Note that this will only work in general where dim(y) <= dim(x)
     pub fn backpropagate_through_transform(&self, mat : &Array2<f32>) -> Ellipsoid {
         let u_y = &self.inv_schmear.mean;
         let p_y = &self.inv_schmear.precision;

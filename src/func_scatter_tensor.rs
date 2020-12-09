@@ -8,7 +8,6 @@ use crate::linalg_utils::*;
 use crate::linear_sketch::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
-use crate::closest_psd_matrix::*;
 use crate::test_utils::*;
 use crate::schmear::*;
 use crate::inverse_schmear::*;

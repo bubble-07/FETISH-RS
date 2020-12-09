@@ -49,7 +49,6 @@ mod sketched_linear_feature_collection;
 mod embedder_state;
 mod count_sketch;
 mod quadratic_feature_collection;
-mod closest_psd_matrix;
 mod fourier_feature_collection;
 mod func_scatter_tensor;
 mod enum_feature_collection;
