@@ -4,6 +4,8 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod chi_squared_inverse_cdf_solver;
+mod chi_squared_inverse_cdf;
 mod sqrtm;
 mod data_points;
 mod schmeared_hole;
@@ -89,6 +91,7 @@ use crate::inverse_schmear::*;
 use crate::model::*;
 use rand::prelude::*;
 use crate::optimizer_state::*;
+use crate::chi_squared_inverse_cdf::*;
 
 fn f(x : f32) -> f32 {
     2.0 * x + 1.0
@@ -96,6 +99,8 @@ fn f(x : f32) -> f32 {
 
 fn main() {
     pretty_env_logger::init();
+
+    init_chi_squared_inverse_cdf_table();
 
     let num_iters = 40;
     let num_samples = 100;

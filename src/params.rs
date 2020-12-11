@@ -43,6 +43,10 @@ pub const MORE_THUENTE_B : f32 = 0.9;
 
 pub const ENCLOSING_ELLIPSOID_TOLERANCE : f32 = 0.001;
 
+pub const HEURISTIC_ELLIPSE_CI : f32 = 0.95;
+pub const HEURISTIC_ELLIPSE_MAX_DIMENSION : usize = 5000;
+pub const HEURISTIC_ELLIPSE_BRENT_REL_ERROR : f64 = 0.0001;
+
 pub fn log_tapered_linear(k : usize, x : usize) -> usize {
     if (x < k) {
         x

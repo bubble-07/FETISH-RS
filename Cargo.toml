@@ -25,6 +25,7 @@ pretty_env_logger="0.4.0"
 #blas-src = { version = "0.2.0", default-features = false, features = ["openblas"] }
 #openblas-src = { version = "0.6.0", default-features = false, features = ["cblas"] }
 argmin={version = "0.3.1", features = ["ndarrayl"] }
+statrs="0.13.0"
 
 [profile.release]
 debug = true
