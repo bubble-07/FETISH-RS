@@ -39,7 +39,6 @@ impl InverseModel {
 
 impl ops::AddAssign<FeaturizedPoints> for InverseModel {
     fn add_assign(&mut self, feat_points : FeaturizedPoints) {
-        println!("Num of points: {}", feat_points.points.len());
         let data_points = feat_points.to_feat_inverse_data_points();
         self.model.add_assign(data_points);
     }

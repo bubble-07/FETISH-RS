@@ -40,7 +40,7 @@ type ModelKey = usize;
 
 pub struct ModelSpace {
     pub space_info : Rc<SpaceInfo>,
-    models : HashMap<ModelKey, TermModel>
+    pub models : HashMap<ModelKey, TermModel>
 }
 
 impl ModelSpace {

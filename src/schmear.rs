@@ -16,7 +16,22 @@ pub struct Schmear {
     pub covariance : Array2<f32>
 }
 
+const LN_TWO_PI : f32 = 1.83787706641f32;
+
 impl Schmear {
+    pub fn joint_probability_integral(&self, other : &Schmear) -> f32 {
+        let tot_covariance = &self.covariance + &other.covariance;
+        let tot_covariance_inv = pseudoinverse_h(&tot_covariance);
+        let mean_diff = &other.mean - &self.mean;
+        let sq_mahalanobis_dist = mean_diff.dot(&tot_covariance_inv).dot(&mean_diff);
+
+        let maybe_tot_covariance_sln_det = tot_covariance.sln_deth();
+        let (_, tot_covariance_ln_det) = maybe_tot_covariance_sln_det.unwrap(); 
+         
+        let total_exponent = -0.5f32 * (LN_TWO_PI + tot_covariance_ln_det + sq_mahalanobis_dist);
+        let result = total_exponent.exp();
+        result
+    }
     pub fn from_vector(vec : &Array1<R32>) -> Schmear {
         let n = vec.len();
         let mean = from_noisy(vec);

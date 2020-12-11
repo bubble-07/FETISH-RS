@@ -70,6 +70,7 @@ impl OptimizerStateWithTarget {
         trace!("Optimizing for current target");
         let (lin_expr, feat_points_directory) = lin_expr_queue.find_within_bound(&target_hole, 
                                                 &self.optimizer_state.interpreter_state,
+                                                &self.optimizer_state.embedder_state,
                                                 &sampled_embedder_state, 
                                                 &self.optimizer_state.feat_inverse_directory);
 

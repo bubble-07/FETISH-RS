@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod sum_of_joint_probabilities_heuristic;
 mod chi_squared_inverse_cdf_solver;
 mod chi_squared_inverse_cdf;
 mod sqrtm;
