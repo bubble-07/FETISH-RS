@@ -127,7 +127,7 @@ impl SpaceInfo {
         info!("And feature dims {}", total_feat_dims);
 
         let embedding_dim = total_feat_dims * out_dimensions;
-        let sketched_embedding_dim = get_reduced_output_dimension(embedding_dim);
+        let sketched_embedding_dim = get_reduced_dimension(embedding_dim);
         let alpha = sketch_alpha(embedding_dim);
 
         let output_sketch = LinearSketch::new(embedding_dim, sketched_embedding_dim, alpha);

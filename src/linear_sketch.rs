@@ -12,6 +12,7 @@ use crate::inverse_schmear::*;
 use crate::params::*;
 use crate::pseudoinverse::*;
 use crate::test_utils::*;
+use ndarray_linalg::qr::QRSquare;
 
 #[derive(Clone)]
 pub struct LinearSketch {
@@ -20,6 +21,22 @@ pub struct LinearSketch {
 }
 
 impl LinearSketch {
+    pub fn new_orthonormal(in_dimensions : usize, out_dimensions : usize) -> LinearSketch {
+        let max_dim = in_dimensions.max(out_dimensions);
+        let orthonorm_mat = Array::random((max_dim, max_dim), StandardNormal);
+        let (Q, _) = orthonorm_mat.qr_square().unwrap();
+        let mut projection_mat = Array::zeros((out_dimensions, in_dimensions));
+        for i in 0..out_dimensions {
+            let row = Q.row(i);
+            projection_mat.row_mut(i).assign(&row);
+        }
+        let projection_mat_pinv = pseudoinverse(&projection_mat);
+        LinearSketch {
+            projection_mat,
+            projection_mat_pinv
+        }
+    }
+
     pub fn new(in_dimensions : usize, out_dimensions : usize, alpha : f32) -> LinearSketch {
         let mut projection_mat = Array::random((out_dimensions, in_dimensions), StandardNormal);
         let mut projection_mat_pinv = pseudoinverse(&projection_mat);

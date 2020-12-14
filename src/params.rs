@@ -12,8 +12,7 @@ pub const PRIOR_SIGMA : f32 = 1.0f32;
 
 pub const DIM : usize = 2;
 
-pub const IN_TAPER_START : usize = 4;
-pub const OUT_TAPER_START : usize = 4;
+pub const DIM_TAPER_START : usize = 4;
 
 pub const TRAINING_POINTS_PER_ITER : usize = 5;
 
@@ -59,23 +58,19 @@ pub fn log_tapered_linear(k : usize, x : usize) -> usize {
     }
 }
 
-pub fn get_reduced_input_dimension(x : usize) -> usize {
-    log_tapered_linear(IN_TAPER_START, x)
-}
-
-pub fn get_reduced_output_dimension(x : usize) -> usize {
-    log_tapered_linear(OUT_TAPER_START, x)
+pub fn get_reduced_dimension(full_dim : usize) -> usize {
+    log_tapered_linear(DIM_TAPER_START, full_dim)
 }
 
 pub fn num_fourier_features(in_dimension : usize) -> usize {
-    FOURIER_COVERAGE_MULTIPLIER * get_reduced_input_dimension(in_dimension)
+    FOURIER_COVERAGE_MULTIPLIER * get_reduced_dimension(in_dimension)
 }
  
 pub fn num_quadratic_features(in_dimension : usize) -> usize {
     let demanded_dims : usize = QUAD_PADDING_MULTIPLIER * in_dimension * in_dimension;
-    get_reduced_input_dimension(demanded_dims)
+    get_reduced_dimension(demanded_dims)
 }
 
 pub fn num_sketched_linear_features(in_dimension : usize) -> usize {
-    get_reduced_input_dimension(in_dimension)
+    get_reduced_dimension(in_dimension)
 }
