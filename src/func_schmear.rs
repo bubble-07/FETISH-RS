@@ -25,6 +25,23 @@ pub struct FuncSchmear {
 }
 
 impl FuncSchmear {
+    //Flattens and then compresses this func schmear by the given
+    //projection mat
+    pub fn compress(&self, mat : &Array2<f32>) -> Schmear {
+        let t = self.mean.shape()[0];
+        let s = self.mean.shape()[1];
+
+        let mean_flat = self.mean.clone().into_shape((t * s,)).unwrap();
+        let mean_transformed = mat.dot(&mean_flat);
+
+        let covariance_transformed  = self.covariance.compress(mat);
+
+        Schmear {
+            mean : mean_transformed,
+            covariance : covariance_transformed
+        }
+    }
+
     pub fn flatten(&self) -> Schmear {
         let t = self.mean.shape()[0];
         let s = self.mean.shape()[1];

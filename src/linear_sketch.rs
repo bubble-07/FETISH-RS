@@ -21,7 +21,7 @@ pub struct LinearSketch {
 }
 
 impl LinearSketch {
-    pub fn new_orthonormal(in_dimensions : usize, out_dimensions : usize) -> LinearSketch {
+    pub fn gen_orthonormal_projection(in_dimensions : usize, out_dimensions : usize) -> Array2<f32> {
         let max_dim = in_dimensions.max(out_dimensions);
         let orthonorm_mat = Array::random((max_dim, max_dim), StandardNormal);
         let (Q, _) = orthonorm_mat.qr_square().unwrap();
@@ -30,6 +30,11 @@ impl LinearSketch {
             let row = Q.row(i);
             projection_mat.row_mut(i).assign(&row);
         }
+        projection_mat
+    }
+
+    pub fn new_orthonormal(in_dimensions : usize, out_dimensions : usize) -> LinearSketch {
+        let projection_mat = Self::gen_orthonormal_projection(in_dimensions, out_dimensions);
         let projection_mat_pinv = pseudoinverse(&projection_mat);
         LinearSketch {
             projection_mat,
@@ -73,12 +78,12 @@ impl LinearSketch {
     pub fn expand_covariance(&self, covariance : &Array2<f32>) -> Array2<f32> {
         self.projection_mat_pinv.dot(covariance).dot(&self.projection_mat_pinv.t())
     }
-    pub fn get_projection_matrix(&self) -> Array2<f32> {
-        self.projection_mat.clone()
+    pub fn get_projection_matrix(&self) -> &Array2<f32> {
+        &self.projection_mat
     }
 
-    pub fn get_expansion_matrix(&self) -> Array2<f32> {
-        self.projection_mat_pinv.clone()
+    pub fn get_expansion_matrix(&self) -> &Array2<f32> {
+        &self.projection_mat_pinv
     }
     pub fn get_output_dimension(&self) -> usize {
         self.projection_mat.shape()[0]

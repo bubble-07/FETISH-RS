@@ -17,7 +17,7 @@ pub fn sum_of_joint_probabilities_heuristic(model_space : &ModelSpace, ellipsoid
     let full_dim = ellipsoid.dims();
     let reduced_dim = get_reduced_dimension(full_dim);
     let chi_squared_value = chi_squared_inverse_cdf_for_heuristic_ci(reduced_dim);
-    let sketch = LinearSketch::new_orthonormal(full_dim, reduced_dim);
+    let projection_mat = LinearSketch::gen_orthonormal_projection(full_dim, reduced_dim);
 
     let ellipsoid_center = ellipsoid.center();
     let ellipsoid_skew = ellipsoid.skew();
@@ -30,13 +30,12 @@ pub fn sum_of_joint_probabilities_heuristic(model_space : &ModelSpace, ellipsoid
         covariance : scaled_ellipsoid_skew_inv
     };
 
-    let ellipsoid_schmear = sketch.compress_schmear(&full_ellipsoid_schmear);
+    let ellipsoid_schmear = full_ellipsoid_schmear.transform_compress(&projection_mat);
 
     let mut tot = 0.0f32;
     for (model_key, model) in &model_space.models {
         let full_model_schmear = model.get_schmear();
-        let full_model_schmear_flat = full_model_schmear.flatten();
-        let model_schmear = sketch.compress_schmear(&full_model_schmear_flat);
+        let model_schmear = full_model_schmear.compress(&projection_mat);
         let joint_probability_integral = ellipsoid_schmear.joint_probability_integral(&model_schmear);
         tot += joint_probability_integral;
     }

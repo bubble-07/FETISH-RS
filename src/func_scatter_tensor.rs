@@ -57,6 +57,14 @@ impl FuncScatterTensor {
         result.into_owned()
     }
 
+    //Flattens and compresses by the given Lx(n*m) projection matrix to yield a LxL covariance
+    //matrix
+    pub fn compress(&self, mat : &Array2<f32>) -> Array2<f32> {
+        let left_transformed = self.flatten_and_multiply(mat);
+        let result = left_transformed.dot(&mat.t());
+        result
+    }
+
     pub fn flatten(&self) -> Array2<f32> {
         let result = kron(&self.out_scatter, &self.in_scatter);
         result

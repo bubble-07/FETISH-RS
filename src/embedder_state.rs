@@ -147,12 +147,6 @@ impl EmbedderState {
         space.add_model(term_ptr.index)
     }
 
-    fn get_schmear_from_ref(&self, term_ref : &TermReference) -> Schmear {
-        match term_ref {
-            TermReference::FuncRef(func_ptr) => self.get_schmear_from_ptr(func_ptr).flatten(),
-            TermReference::VecRef(vec) => Schmear::from_vector(&vec)
-        }
-    }
     fn get_schmear_from_ptr(&self, term_ptr : &TermPointer) -> FuncSchmear {
         let embedding : &TermModel = self.get_embedding(term_ptr);
         embedding.get_schmear()
@@ -166,8 +160,9 @@ impl EmbedderState {
     fn get_compressed_schmear_from_ptr(&self, term_ptr : &TermPointer) -> Schmear {
         let type_id = &term_ptr.type_id;
         let model_space = self.model_spaces.get(type_id).unwrap();
-        let full_schmear = self.get_schmear_from_ptr(term_ptr).flatten();
-        let result = model_space.space_info.compress_schmear(&full_schmear);
+        let func_schmear = self.get_schmear_from_ptr(term_ptr);
+        let projection_mat = model_space.space_info.func_sketcher.get_projection_matrix();
+        let result = func_schmear.compress(&projection_mat);
         result
     }
 
