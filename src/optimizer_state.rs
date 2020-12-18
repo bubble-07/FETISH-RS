@@ -70,7 +70,6 @@ impl OptimizerStateWithTarget {
         trace!("Optimizing for current target");
         let (lin_expr, feat_points_directory) = lin_expr_queue.find_within_bound(&target_hole, 
                                                 &self.optimizer_state.interpreter_state,
-                                                &self.optimizer_state.embedder_state,
                                                 &sampled_embedder_state, 
                                                 &self.optimizer_state.feat_inverse_directory);
 
@@ -146,9 +145,13 @@ impl OptimizerStateWithTarget {
             precision : normalize_frob(&target_inv_schmear.precision)
         };
 
+        let sketch_mat = target_space.space_info.func_sketcher.get_projection_matrix();
+        let compressed_target_inv_schmear = normalized_target_inv_schmear.transform_compress(sketch_mat);
+
         let target = SchmearedHole {
             type_id : target_type_id,
-            inv_schmear : normalized_target_inv_schmear
+            full_inv_schmear : normalized_target_inv_schmear,
+            compressed_inv_schmear : compressed_target_inv_schmear
         };
 
         OptimizerStateWithTarget {

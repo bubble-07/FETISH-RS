@@ -23,6 +23,12 @@ pub fn to_noisy(vec : &Array1<f32>) -> Array1<R32> {
     result
 }
 
+pub fn flatten_matrix(mat : &Array2<f32>) -> Array1<f32> {
+    let full_dim = mat.shape()[0] * mat.shape()[1];
+    let reshaped = mat.clone().into_shape((full_dim,)).unwrap();
+    reshaped
+}
+
 pub fn max_index_and_value(vec : &ArrayView1<f32>) -> (usize, f32) {
     let mut max_index = 0; 
     let mut max_value = vec[[0,]];

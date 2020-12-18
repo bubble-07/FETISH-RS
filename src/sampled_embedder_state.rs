@@ -11,6 +11,7 @@ use crate::sampled_term_embedding::*;
 use crate::term_reference::*;
 use crate::array_utils::*;
 use crate::holed_application::*;
+use crate::sampled_model_embedding::*;
 
 pub struct SampledEmbedderState {
     pub embedding_spaces : HashMap::<TypeId, SampledEmbeddingSpace>
@@ -21,9 +22,9 @@ impl SampledEmbedderState {
         let space = self.embedding_spaces.get(&term_ptr.type_id).unwrap();
         space.has_embedding(term_ptr.index)
     }
-    pub fn get_raw_embedding(&self, term_ptr : &TermPointer) -> &Array2<f32> {
+    pub fn get_model_embedding(&self, term_ptr : &TermPointer) -> &SampledModelEmbedding {
         let space = self.embedding_spaces.get(&term_ptr.type_id).unwrap();
-        space.get_raw_embedding(term_ptr.index)
+        space.get_embedding(term_ptr.index)
     }
     pub fn get_space_info(&self, type_id : &TypeId) -> Rc<SpaceInfo> {
         let result = &self.embedding_spaces.get(type_id).unwrap().space_info;
@@ -40,18 +41,18 @@ impl SampledEmbedderState {
         }
     }
 
-    pub fn get_embedding(&self, term_ref : &TermReference) -> SampledTermEmbedding {
+    pub fn get_term_embedding(&self, term_ref : &TermReference) -> SampledTermEmbedding {
         match (term_ref) {
             TermReference::VecRef(vec) => SampledTermEmbedding::VectorEmbedding(from_noisy(vec)),
             TermReference::FuncRef(term_ptr) => {
                 let space = self.embedding_spaces.get(&term_ptr.type_id).unwrap();
-                space.get_embedding(term_ptr.index)
+                space.get_term_embedding(term_ptr.index)
             }
         }
     }
 
     pub fn evaluate_linear_expression(&self, linear_expr : &LinearExpression) -> SampledTermEmbedding {
-        let mut current_embedding = self.get_embedding(&linear_expr.cap);
+        let mut current_embedding = self.get_term_embedding(&linear_expr.cap);
         //Now process through all of the holed applications in order
         for holed_application in linear_expr.chain.chain.iter().rev() {
             let ret_type = holed_application.get_type();
@@ -60,7 +61,7 @@ impl SampledEmbedderState {
                     match (current_embedding) {
                         SampledTermEmbedding::VectorEmbedding(vec) => { panic!(); },
                         SampledTermEmbedding::FunctionEmbedding(space_info, func_mat) => {
-                            let arg_embedding = self.get_embedding(arg_ref);
+                            let arg_embedding = self.get_term_embedding(arg_ref);
                             let compressed_arg = arg_embedding.get_compressed();
                             let result = space_info.apply(&func_mat, &compressed_arg);
                             result
@@ -68,7 +69,8 @@ impl SampledEmbedderState {
                     }
                 },
                 HoledApplication::ArgumentHoled(func_ptr) => {
-                    let raw_func_embedding = self.get_raw_embedding(func_ptr);
+                    let model_embedding = self.get_model_embedding(func_ptr);
+                    let raw_func_embedding = &model_embedding.sampled_mat;
                     let space_info = self.get_space_info(&func_ptr.type_id);
                     let compressed_arg = current_embedding.get_compressed();
                     let result = space_info.apply(raw_func_embedding, &compressed_arg);

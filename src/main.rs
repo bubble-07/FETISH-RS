@@ -4,6 +4,8 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod func_ellipsoid;
+mod sampled_model_embedding;
 mod sum_of_joint_probabilities_heuristic;
 mod chi_squared_inverse_cdf_solver;
 mod chi_squared_inverse_cdf;

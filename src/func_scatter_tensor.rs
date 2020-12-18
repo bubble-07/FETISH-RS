@@ -30,6 +30,12 @@ impl FuncScatterTensor {
         result
     }
 
+    pub fn inverse(&self) -> FuncScatterTensor {
+        let in_scatter = pseudoinverse_h(&self.in_scatter);
+        let out_scatter = pseudoinverse_h(&self.out_scatter);
+        FuncScatterTensor::from_in_and_out_scatter(in_scatter, out_scatter)
+    }
+
     //Supposing that out (A), in (B) scatters are nxn and mxm, respectively,
     //and given a Lx(n*m) matrix C, compute C * kron(A, B)
     //This has better asymptotic efficiency than the naive method

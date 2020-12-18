@@ -7,15 +7,25 @@ use crate::array_utils::*;
 use ndarray_linalg::*;
 use ndarray_linalg::solveh::*;
 use noisy_float::prelude::*;
+use crate::func_schmear::*;
 
 use crate::inverse_schmear::*;
 use crate::func_scatter_tensor::*;
 
+#[derive(Clone)]
 pub struct FuncInverseSchmear {
     pub mean : Array2<f32>,
     pub precision : FuncScatterTensor
 }
 impl FuncInverseSchmear {
+    pub fn inverse(&self) -> FuncSchmear {
+        let mean = self.mean.clone();
+        let covariance = self.precision.inverse();
+        FuncSchmear {
+            mean,
+            covariance
+        }
+    }
     pub fn flatten(&self) -> InverseSchmear {
         let t = self.mean.shape()[0];
         let s = self.mean.shape()[1];

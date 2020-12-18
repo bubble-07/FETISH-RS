@@ -11,8 +11,10 @@ use crate::inverse_schmear::*;
 use crate::featurized_points::*;
 use crate::space_info::*;
 use crate::test_utils::*;
+use crate::func_scatter_tensor::*;
 use crate::params::*;
 use crate::rand_utils::*;
+use crate::func_ellipsoid::*;
 use crate::local_featurization_inverse_solver::*;
 use crate::featurization_boundary_point_solver::*;
 use crate::minimum_volume_enclosing_ellipsoid::*;
@@ -230,28 +232,20 @@ impl Ellipsoid {
     }
 
     //If this is y, and we're given x, propagate to an ellipse on Vec(M) in Mx = y
-    pub fn backpropagate_to_vectorized_transform(&self, x : &Array1<f32>) -> Ellipsoid {
+    pub fn backpropagate_to_vectorized_transform(&self, x : &Array1<f32>) -> FuncEllipsoid {
         let u_y = &self.inv_schmear.mean;
         let s_y = &self.inv_schmear.precision;
 
-        let s = x.shape()[0];
-        let t = u_y.shape()[0];
-        let d = s * t;
-
         let mut u_M_full = outer(u_y, x);
         u_M_full *= 1.0f32 / (x.dot(x));
-        let u_M = u_M_full.into_shape((d,)).unwrap();
 
         let x_x_t = outer(x, x);
+        
         let s_M = kron(s_y, &x_x_t);
+        let s_M = FuncScatterTensor::from_in_and_out_scatter(x_x_t, s_y.clone());
 
-        let new_inv_schmear = InverseSchmear {
-            mean : u_M,
-            precision : s_M
-        };
-        Ellipsoid {
-            inv_schmear : new_inv_schmear
-        }
+        let result = FuncEllipsoid::new(u_M_full, s_M);
+        result
     }
 }
 
@@ -268,7 +262,8 @@ mod tests {
         for _ in 0..num_samps {
             let out_ellipsoid = random_ellipsoid(out_dim);
             let x = random_vector(in_dim);
-            let flat_mat_ellipsoid = out_ellipsoid.backpropagate_to_vectorized_transform(&x);
+            let mat_ellipsoid = out_ellipsoid.backpropagate_to_vectorized_transform(&x);
+            let flat_mat_ellipsoid = mat_ellipsoid.flatten();
             let flat_mat_sampler = EllipsoidSampler::new(&flat_mat_ellipsoid);
             let flat_mat = flat_mat_sampler.sample(&mut rng);
             let mat = flat_mat.into_shape((out_dim, in_dim)).unwrap();

@@ -7,6 +7,7 @@ use ndarray_linalg::*;
 use std::ops;
 use std::rc::*;
 
+use crate::sampled_model_embedding::*;
 use crate::sigma_points::*;
 use crate::embedder_state::*;
 use crate::pseudoinverse::*;
@@ -61,7 +62,7 @@ impl ModelSpace {
     pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbeddingSpace {
         let mut result = SampledEmbeddingSpace::new(Rc::clone(&self.space_info));
         for (key, model) in self.models.iter() {
-            let sample = model.sample(rng);
+            let sample = SampledModelEmbedding::new(&model.model, rng);
             result.models.insert(*key, sample);
         }
         result

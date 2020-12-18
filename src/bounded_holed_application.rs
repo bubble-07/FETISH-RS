@@ -1,14 +1,15 @@
 use crate::ellipsoid::*;
 use crate::holed_application::*;
 use crate::bounded_holed_linear_expression::*;
+use crate::bounded_hole::*;
 
 pub struct BoundedHoledApplication {
     pub holed_application : HoledApplication,
-    pub bound : Ellipsoid
+    pub bound : BoundedHole
 }
 
 impl BoundedHoledApplication {
-    pub fn new(holed_application : HoledApplication, bound : Ellipsoid) -> BoundedHoledApplication {
+    pub fn new(holed_application : HoledApplication, bound : BoundedHole) -> BoundedHoledApplication {
         BoundedHoledApplication {
             holed_application,
             bound

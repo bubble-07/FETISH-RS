@@ -5,17 +5,12 @@ use crate::bounded_holed_application::*;
 
 pub struct BoundedHoledLinearExpression {
     pub expr : HoledLinearExpression,
-    pub bound : Ellipsoid
+    pub bound : BoundedHole
 }
 
 impl BoundedHoledLinearExpression {
-    pub fn get_bounded_hole(&self) -> BoundedHole {
-        let bound = self.bound.clone();
-        let type_id = self.expr.get_hole_type();
-        BoundedHole {
-            type_id,
-            bound
-        }
+    pub fn get_bounded_hole(&self) -> &BoundedHole {
+        &self.bound 
     }
     pub fn extend_with_holed(&self, filler : BoundedHoledApplication) -> BoundedHoledLinearExpression {
         let bound = filler.bound;

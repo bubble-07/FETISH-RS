@@ -63,14 +63,13 @@ pub struct LinearExpressionQueue {
 }
 
 
-fn get_ellipsoid_cost(type_id : TypeId, embedder_state : &EmbedderState,
-                                        sampled_embedder_state : &SampledEmbedderState, 
-                                        ellipsoid : &Ellipsoid) -> f32 {
-    if (is_vector_type(type_id)) {
+fn get_ellipsoid_cost(bound : &BoundedHole,
+                      embedder_state : &SampledEmbedderState) -> f32 {
+    if (is_vector_type(bound.type_id)) {
         f32::NEG_INFINITY
     } else {
-        let model_space = embedder_state.model_spaces.get(&type_id).unwrap();
-        let neg_result = sum_of_joint_probabilities_heuristic(model_space, ellipsoid);
+        let embedding_space = embedder_state.embedding_spaces.get(&bound.type_id).unwrap();
+        let neg_result = sum_of_joint_probabilities_heuristic(embedding_space, bound);
         -neg_result
     }
 }
@@ -86,8 +85,7 @@ impl LinearExpressionQueue {
 
     pub fn find_within_bound(&mut self, bounded_hole : &BoundedHole,
                                         interpreter_state : &InterpreterState,
-                                        embedder_state : &EmbedderState,
-                                        sampled_embedder_state : &SampledEmbedderState,
+                                        embedder_state : &SampledEmbedderState,
                                         feat_inverse_directory : &FeaturizationInverseDirectory) 
 
                                         -> (LinearExpression, FeaturizedPointsDirectory) {
@@ -96,14 +94,14 @@ impl LinearExpressionQueue {
         //First, perform initial population of the queue
         trace!("Finding initial single-holed fillers");
         let (mut feat_points_directory, mut init_bounded_holed_applications) =
-            bounded_hole.get_single_holed_fillers(interpreter_state, sampled_embedder_state, feat_inverse_directory);
+            bounded_hole.get_single_holed_fillers(interpreter_state, embedder_state, feat_inverse_directory);
 
         trace!("Inserting initial elements into queue");
         for init_bounded_holed_application in init_bounded_holed_applications.drain(..) {
             let bound_expr = init_bounded_holed_application.to_linear_expression();
             let hole_type = bound_expr.expr.get_hole_type();
             let bound = &bound_expr.bound;
-            let cost = get_ellipsoid_cost(hole_type, embedder_state, sampled_embedder_state, bound);
+            let cost = get_ellipsoid_cost(bound, embedder_state);
 
             let prioritized = PritoritizedLinearExpression::new(bound_expr, cost);
             self.queue.push(prioritized);
@@ -119,7 +117,7 @@ impl LinearExpressionQueue {
 
             let bound_hole = bound_expr.get_bounded_hole();
 
-            let term_fillers = bound_hole.get_term_fillers(sampled_embedder_state);
+            let term_fillers = bound_hole.get_term_fillers(embedder_state);
 
             if (term_fillers.len() > 0) {
                 let cap = term_fillers[0].clone();
@@ -129,7 +127,7 @@ impl LinearExpressionQueue {
             } else {
                 trace!("No term filler found, adding neighbors");
                 //No single term fills the hole here, so we need to add neighbors
-                let feat_points_delta = self.add_neighbors(&bound_expr, interpreter_state, embedder_state, sampled_embedder_state, feat_inverse_directory);
+                let feat_points_delta = self.add_neighbors(&bound_expr, interpreter_state, embedder_state, feat_inverse_directory);
                 feat_points_directory += feat_points_delta;
             }
         }
@@ -139,13 +137,12 @@ impl LinearExpressionQueue {
 
     pub fn add_neighbors(&mut self, bound_expr : &BoundedHoledLinearExpression, 
                          interpreter_state : &InterpreterState,
-                         embedder_state : &EmbedderState,
-                         sampled_embedder_state : &SampledEmbedderState,
+                         embedder_state : &SampledEmbedderState,
                          feat_inverse_directory : &FeaturizationInverseDirectory) 
                                                                                  -> FeaturizedPointsDirectory {
         let bounded_hole = bound_expr.get_bounded_hole();
         let (feat_points_directory, mut bounded_holed_applications) = 
-            bounded_hole.get_single_holed_fillers(interpreter_state, sampled_embedder_state, feat_inverse_directory);
+            bounded_hole.get_single_holed_fillers(interpreter_state, embedder_state, feat_inverse_directory);
 
         for bounded_holed_application in bounded_holed_applications.drain(..) {
 
@@ -153,7 +150,7 @@ impl LinearExpressionQueue {
 
             let extended_linear_expr = bound_expr.extend_with_holed(bounded_holed_application);
             let hole_bound = &extended_linear_expr.bound;
-            let cost = get_ellipsoid_cost(hole_type_id, embedder_state, sampled_embedder_state, hole_bound);
+            let cost = get_ellipsoid_cost(hole_bound, embedder_state);
             
             let prioritized = PritoritizedLinearExpression::new(extended_linear_expr, cost);
             self.queue.push(prioritized);
