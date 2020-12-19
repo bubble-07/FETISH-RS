@@ -42,7 +42,6 @@ impl SchmearedHole {
 
         BoundedHole {
             type_id : self.type_id,
-            full_bound : full_bound,
             compressed_bound : compressed_bound
         }
     }

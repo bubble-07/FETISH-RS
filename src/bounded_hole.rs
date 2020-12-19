@@ -24,17 +24,14 @@ use crate::displayable_with_state::*;
 #[derive(Clone)]
 pub struct BoundedHole {
     pub type_id : TypeId,
-    pub full_bound : Ellipsoid,
     pub compressed_bound : Ellipsoid
 }
 
 impl BoundedHole {
     pub fn from_single_point(type_id : TypeId, center : Array1<f32>) -> BoundedHole {
-        let full_bound = Ellipsoid::from_single_point(center.clone());
         let compressed_bound = Ellipsoid::from_single_point(center);
         BoundedHole {
             type_id,
-            full_bound,
             compressed_bound
         }
     }
@@ -45,8 +42,8 @@ impl BoundedHole {
             let embedding_space = embedder_state.embedding_spaces.get(&self.type_id).unwrap();
             for term_id in embedding_space.models.keys() {
                 let embedding = embedding_space.get_embedding(*term_id);
-                let embedding_vec = &embedding.sampled_vec;
-                if self.full_bound.contains(embedding_vec) {
+                let embedding_vec = &embedding.sampled_compressed_vec;
+                if self.compressed_bound.contains(embedding_vec) {
                     let term_ptr = TermPointer {
                         type_id : self.type_id,
                         index : *term_id
@@ -57,7 +54,7 @@ impl BoundedHole {
             }
         } else {
             //In the vector case, the full and compressed bounds are identical
-            let center = self.full_bound.center();
+            let center = self.compressed_bound.center();
             let noisy = to_noisy(center);
             let term_ref = TermReference::VecRef(noisy);
             result.push(term_ref);
@@ -99,10 +96,8 @@ impl BoundedHole {
                     let func_type_sketcher = &embedder_state.get_space_info(func_type).func_sketcher;
                     let func_compress = func_type_sketcher.get_projection_matrix();
                     let compressed_func_ellipsoid = func_ellipsoid.compress(func_compress);
-                    let full_func_ellipsoid = func_ellipsoid.flatten();
                     let func_bound = BoundedHole {
                         type_id : *func_type,
-                        full_bound : full_func_ellipsoid,
                         compressed_bound : compressed_func_ellipsoid
                     };
 
@@ -155,12 +150,8 @@ impl BoundedHole {
                         } else {
                             let compressed_input_bound = feat_bound.approx_enclosing_ellipsoid(
                                                                    &mut feat_points, &contained_input);
-                            let arg_type_sketcher = &embedder_state.get_space_info(arg_type).func_sketcher;
-                            let arg_compress = arg_type_sketcher.get_projection_matrix();
-                            let full_input_bound = compressed_input_bound.backpropagate_through_transform(&arg_compress);
                             BoundedHole {
                                 type_id : *arg_type,
-                                full_bound : full_input_bound,
                                 compressed_bound : compressed_input_bound
                             }
                         };
