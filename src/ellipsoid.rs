@@ -241,7 +241,6 @@ impl Ellipsoid {
 
         let x_x_t = outer(x, x);
         
-        let s_M = kron(s_y, &x_x_t);
         let s_M = FuncScatterTensor::from_in_and_out_scatter(x_x_t, s_y.clone());
 
         let result = FuncEllipsoid::new(u_M_full, s_M);
