@@ -208,9 +208,13 @@ pub fn random_diag_matrix(t : usize) -> Array2<f32> {
     result
 }
 pub fn random_psd_matrix(t : usize) -> Array2<f32> {
-    let matrix_sqrt = random_matrix(t, t);
-    let matrix = matrix_sqrt.t().dot(&matrix_sqrt);
-    matrix
+    let mut result = Array::zeros((t, t));
+    for i in 0..t {
+        let matrix_sqrt = random_matrix(t, t);
+        let matrix = matrix_sqrt.t().dot(&matrix_sqrt);
+        result += &matrix;
+    }
+    result
 }
 pub fn random_ellipsoid(t : usize) -> Ellipsoid {
     let skew = random_psd_matrix(t);

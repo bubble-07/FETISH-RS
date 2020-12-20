@@ -91,7 +91,7 @@ mod tests {
 
     #[test]
     fn wishart_has_right_mean() {
-        let num_samps = 200;
+        let num_samps = 800;
         let dim = 4;
         let degrees_of_freedom = 9;
 
