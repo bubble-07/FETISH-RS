@@ -120,6 +120,7 @@ impl Ellipsoid {
 
         let maybe_result = Executor::new(local_feat_inverse_solver, solver, min_x)
                                     .max_iters(NUM_OPT_ITERS)
+                                    .add_observer(ArgminSlogLogger::term(), ObserverMode::Every(20))
                                     .run();
 
         match (maybe_result) {
