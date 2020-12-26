@@ -3,6 +3,7 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
+use ndarray_linalg::trace::*;
 
 use std::collections::HashSet;
 use crate::displayable_with_state::*;
@@ -52,6 +53,26 @@ pub struct OptimizerState {
     feat_inverse_directory : FeaturizationInverseDirectory
 }
 
+impl OptimizerState {
+    fn dump_model_traces(&self) {
+        for (type_id, model_space) in self.embedder_state.model_spaces.iter() {
+            let resolved_type = get_type(*type_id);
+            info!("{}:", resolved_type);
+            for (term_index, model) in model_space.models.iter() {
+                let term_pointer = TermPointer {
+                    type_id : *type_id,
+                    index : *term_index
+                };
+                let term_string = term_pointer.display(&self.interpreter_state);
+                let distr = &model.model.data;
+                let trace = distr.sigma.trace().unwrap();
+                info!("{} : {}", term_string, trace);
+            }
+            info!("\n");
+        }
+    }
+}
+
 impl OptimizerStateWithTarget {
     fn get_current_target_hole(&self, embedder_state : &SampledEmbedderState) -> BoundedHole {
         self.target.get_closer_than_closest_term_bound(embedder_state)
@@ -87,6 +108,7 @@ impl OptimizerStateWithTarget {
             self.evaluate_training_data_step(result.clone());
             trace!("Performing bayesian update");
             self.bayesian_update_step();
+            self.optimizer_state.dump_model_traces();
             return result.clone();
         }
         error!("Wrong type for the linear expression");

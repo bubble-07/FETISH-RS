@@ -144,25 +144,34 @@ impl BoundedHole {
                                                         &mut feat_points, sampled_inputs);
 
                 if let Option::Some(contained_input) = maybe_contained_input {
-                    let input_bound = 
+                    let maybe_input_bound = 
                         if (is_vector_type(*arg_type)) {
-                            BoundedHole::from_single_point(*arg_type, contained_input)
+                            Option::Some(BoundedHole::from_single_point(*arg_type, contained_input))
                         } else {
-                            let compressed_input_bound = feat_bound.approx_enclosing_ellipsoid(
+                            let maybe_compressed_input_bound = feat_bound.approx_enclosing_ellipsoid(
                                                                    &mut feat_points, &contained_input);
-                            BoundedHole {
-                                type_id : *arg_type,
-                                compressed_bound : compressed_input_bound
+                            if let Option::Some(compressed_input_bound) = maybe_compressed_input_bound {
+                               Option::Some(BoundedHole {
+                                    type_id : *arg_type,
+                                    compressed_bound : compressed_input_bound
+                                })
+                            } else {
+                                Option::None
                             }
                         };
 
-                    //We have a concrete bound on what the input needs to be.
-                    //If the input type is a vector type, then we're completely done
-                    //because we can just output the center.
-                    //Otherwise, we need to package this information into a new holed expression
-                    let holed = HoledApplication::ArgumentHoled(func_ptr.clone());
-                    let bounded_holed_app = BoundedHoledApplication::new(holed, input_bound);
-                    bounded_holes.push(bounded_holed_app);
+                    if let Option::Some(input_bound) = maybe_input_bound {
+                        //We have a concrete bound on what the input needs to be.
+                        //If the input type is a vector type, then we're completely done
+                        //because we can just output the center.
+                        //Otherwise, we need to package this information into a new holed expression
+                        let holed = HoledApplication::ArgumentHoled(func_ptr.clone());
+                        let bounded_holed_app = BoundedHoledApplication::new(holed, input_bound);
+                        bounded_holes.push(bounded_holed_app);
+                    } else {
+                        warn!("Failed to find enclosing ellipsoid");
+                    }
+
                 }
             }
         }

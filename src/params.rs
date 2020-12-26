@@ -41,6 +41,7 @@ pub const MORE_THUENTE_A : f32 = 1e-4;
 pub const MORE_THUENTE_B : f32 = 0.9;
 
 pub const ENCLOSING_ELLIPSOID_TOLERANCE : f32 = 0.001;
+pub const ENCLOSING_ELLIPSOID_MAX_ITERS : usize = 1000;
 
 pub const HEURISTIC_ELLIPSE_CI : f32 = 0.95;
 pub const HEURISTIC_ELLIPSE_MAX_DIMENSION : usize = 5000;

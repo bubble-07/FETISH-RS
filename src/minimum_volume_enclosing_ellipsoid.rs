@@ -13,7 +13,7 @@ use crate::pseudoinverse::*;
 use crate::params::*;
 
 //Ported from https://gist.github.com/raluca-san/5d8bd4dcb3278b8e2f6dfa959614f9c8
-pub fn minimum_volume_enclosing_ellipsoid(points : &Vec<Array1<f32>>) -> Ellipsoid {
+pub fn minimum_volume_enclosing_ellipsoid(points : &Vec<Array1<f32>>) -> Option<Ellipsoid> {
     trace!("Finding minimum volume enclosing ellipsoid of {} points", points.len());
     let N = points.len();
     let d = points[0].shape()[0];
@@ -32,6 +32,7 @@ pub fn minimum_volume_enclosing_ellipsoid(points : &Vec<Array1<f32>>) -> Ellipso
 
     let mut u = Array::ones((N,));
     u *= (1.0f32 / (N as f32));
+    let mut i : usize = 0;
 
     while (error > ENCLOSING_ELLIPSOID_TOLERANCE) {
         let Q_t_row_scaled = scale_rows(&Q.t().to_owned(), &u);
@@ -47,6 +48,11 @@ pub fn minimum_volume_enclosing_ellipsoid(points : &Vec<Array1<f32>>) -> Ellipso
         new_u[[max_M_diag_index,]] += step_size;
         error = sq_vec_dist(&new_u, &u).sqrt();
         u = new_u;
+
+        i += 1;
+        if (i > ENCLOSING_ELLIPSOID_MAX_ITERS) {
+            return Option::None
+        }
     }
     let center = u.dot(&point_array);
 
@@ -60,7 +66,7 @@ pub fn minimum_volume_enclosing_ellipsoid(points : &Vec<Array1<f32>>) -> Ellipso
 
     trace!("Minimum volume enclosing ellipsoid found");
 
-    Ellipsoid::new(center, skew)
+    Option::Some(Ellipsoid::new(center, skew))
 }
 
 #[cfg(test)]
@@ -81,7 +87,7 @@ mod tests {
             let contained_vec = ellipsoid_sampler.sample(&mut rng);
             points.push(contained_vec);
         }
-        let reconstructed = minimum_volume_enclosing_ellipsoid(&points);
+        let reconstructed = minimum_volume_enclosing_ellipsoid(&points).unwrap();
         assert_equal_matrices_to_within(ellipsoid.skew(), reconstructed.skew(), 0.2f32);
         assert_equal_vectors_to_within(ellipsoid.center(), reconstructed.center(), 0.1f32);
     }
@@ -101,7 +107,7 @@ mod tests {
         let eye = Array::eye(dim);
         let zero = Array::zeros((dim,));
 
-        let ellipsoid = minimum_volume_enclosing_ellipsoid(&points);
+        let ellipsoid = minimum_volume_enclosing_ellipsoid(&points).unwrap();
         assert_equal_matrices(ellipsoid.skew(), &eye);
         assert_equal_vectors(ellipsoid.center(), &zero);
     }

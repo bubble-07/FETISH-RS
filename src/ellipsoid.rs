@@ -82,7 +82,7 @@ impl Ellipsoid {
         let maybe_contained_vec = self.approx_backpropagate_through_featurization_contained_vec(feat_points, x_samples);
         match (maybe_contained_vec) {
             Option::None => Option::None,
-            Option::Some(contained_vec) => Option::Some(self.approx_enclosing_ellipsoid(feat_points, &contained_vec))
+            Option::Some(contained_vec) => self.approx_enclosing_ellipsoid(feat_points, &contained_vec)
         }
     }
     pub fn approx_backpropagate_through_featurization_contained_vec(&self, feat_points : &mut FeaturizedPoints,
@@ -144,7 +144,7 @@ impl Ellipsoid {
     //Given a point whose featurization we know is within this ellipsoid,
     //get an ellipsoid about that point in the input space to the featurization map
     //such that the ellipsoid's image under featurization is contained in this ellipsoid
-    pub fn approx_enclosing_ellipsoid(&self, feat_points : &mut FeaturizedPoints, x : &Array1<f32>) -> Ellipsoid {
+    pub fn approx_enclosing_ellipsoid(&self, feat_points : &mut FeaturizedPoints, x : &Array1<f32>) -> Option<Ellipsoid> {
         let mut boundary_points = Vec::new();
 
         let dim = x.shape()[0];
