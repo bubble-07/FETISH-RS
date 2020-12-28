@@ -113,10 +113,7 @@ impl Ellipsoid {
         let linesearch = MoreThuenteLineSearch::new().c(MORE_THUENTE_A, MORE_THUENTE_B).unwrap();
         let solver = LBFGS::new(linesearch, LBFGS_HISTORY);
 
-        let local_feat_inverse_solver = LocalFeaturizationInverseSolver {
-            space_info : Rc::clone(&space_info),
-            ellipsoid : self.clone()
-        };
+        let local_feat_inverse_solver = LocalFeaturizationInverseSolver::new(&space_info, &self, &min_x);
 
         let maybe_result = Executor::new(local_feat_inverse_solver, solver, min_x)
                                     .max_iters(NUM_OPT_ITERS)
@@ -125,12 +122,14 @@ impl Ellipsoid {
 
         match (maybe_result) {
             Result::Ok(result) => {
-                if (result.state.cost < 1.0f32) {
+                let y = feat_points.get_features(&result.state.param);
+                let d = self.sq_mahalanobis_dist(&y);
+                if (d < 1.0f32) {
                     //Local optimization gave us the goods, so use 'em
                     trace!("Optimization succeeded. Finding enclosing ellipsoid");
                     Option::Some(result.state.param)
                 } else {
-                    trace!("Optimizer failed to produce a good enough result. Sq dist: {}", result.state.cost);
+                    trace!("Optimizer failed to produce a good enough result. Sq dist: {}", d);
                     //We tried our best, but it just wasn't good enough
                     Option::None
                 }
