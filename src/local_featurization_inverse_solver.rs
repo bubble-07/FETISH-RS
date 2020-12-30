@@ -11,6 +11,7 @@ use crate::space_info::*;
 use std::rc::*;
 use crate::ellipsoid::*;
 use ndarray_linalg::trace::Trace;
+use anyhow::*;
 
 use argmin::prelude::*;
 
@@ -60,7 +61,11 @@ impl ArgminOp for LocalFeaturizationInverseSolver {
     fn apply(&self, p : &Self::Param) -> Result<Self::Output, Error> {
         let featurized = self.space_info.get_features(p);
         let dist = self.ellipsoid.sq_mahalanobis_dist(&featurized);
-        Ok(dist)
+        if (dist.is_finite()) {
+            Result::Ok(dist)
+        } else {
+            Err(anyhow!("Non-finite distance for vector: {}", p))
+        }
     }
     
     fn gradient(&self, p : &Self::Param) -> Result<Self::Param, Error> {
@@ -69,7 +74,11 @@ impl ArgminOp for LocalFeaturizationInverseSolver {
         let diff = y - self.ellipsoid.center();
         let p_y = self.ellipsoid.skew();
         let result = J.t().dot(p_y).dot(&diff);
-        Ok(result)
+        if (all_finite(&result)) {
+            Result::Ok(result)
+        } else {
+            Err(anyhow!("Non-finite gradient {} for vector {}", result, p))
+        }
     }
 }
 

@@ -23,6 +23,16 @@ pub fn to_noisy(vec : &Array1<f32>) -> Array1<R32> {
     result
 }
 
+pub fn all_finite(vec : &Array1<f32>) -> bool {
+    let n = vec.shape()[0];
+    for i in 0..n {
+        if (!vec[[i,]].is_finite()) {
+            return false;
+        }
+    }
+    true
+}
+
 pub fn flatten_matrix(mat : &Array2<f32>) -> Array1<f32> {
     let full_dim = mat.shape()[0] * mat.shape()[1];
     let reshaped = mat.clone().into_shape((full_dim,)).unwrap();
