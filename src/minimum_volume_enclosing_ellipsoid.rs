@@ -11,9 +11,28 @@ use crate::ellipsoid::*;
 use crate::ellipsoid_sampler::*;
 use crate::pseudoinverse::*;
 use crate::params::*;
+use crate::sigma_points::*;
+use crate::affine_transform::*;
+
+pub fn minimum_volume_enclosing_ellipsoid(points : &Vec<Array1<f32>>) -> Option<Ellipsoid> {
+    let point_schmear = sigma_points_to_schmear(points);
+    let standardizing_transform = AffineTransform::schmear_standardizing_transform(&point_schmear);
+
+    let mut standardized_points = Vec::new();
+    for point in points.iter() {
+        let standardized_point = standardizing_transform.apply(point);
+        standardized_points.push(standardized_point);
+    }
+
+    let standard_ellipsoid = minimum_volume_enclosing_ellipsoid_core(&standardized_points)?;
+
+    let reverting_transform = standardizing_transform.inverse();
+
+    Option::Some(reverting_transform.transform_ellipsoid(&standard_ellipsoid))
+}
 
 //Ported from https://gist.github.com/raluca-san/5d8bd4dcb3278b8e2f6dfa959614f9c8
-pub fn minimum_volume_enclosing_ellipsoid(points : &Vec<Array1<f32>>) -> Option<Ellipsoid> {
+fn minimum_volume_enclosing_ellipsoid_core(points : &Vec<Array1<f32>>) -> Option<Ellipsoid> {
     trace!("Finding minimum volume enclosing ellipsoid of {} points", points.len());
     let N = points.len();
     let d = points[0].shape()[0];
@@ -51,6 +70,7 @@ pub fn minimum_volume_enclosing_ellipsoid(points : &Vec<Array1<f32>>) -> Option<
 
         i += 1;
         if (i > ENCLOSING_ELLIPSOID_MAX_ITERS) {
+            warn!("Finding enclosing ellipsoid failed. Points: {}", point_array);
             return Option::None
         }
     }

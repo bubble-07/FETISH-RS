@@ -36,7 +36,7 @@ pub fn get_sigma_points(in_schmear : &Schmear) -> Vec<Array1<f32>> {
     result
 }
 
-fn sigma_points_to_schmear(in_points : Vec<Array1<f32>>) -> Schmear {
+pub fn sigma_points_to_schmear(in_points : &Vec<Array1<f32>>) -> Schmear {
     let d = in_points[0].shape()[0];
     let n = in_points.len();
     let mut mean = Array::zeros((d,));
@@ -68,6 +68,6 @@ pub fn unscented_transform_schmear(in_schmear : &Schmear, space_info : &SpaceInf
         out_sigma_points.push(out_sigma_point);
     }
     
-    let result = sigma_points_to_schmear(out_sigma_points);
+    let result = sigma_points_to_schmear(&out_sigma_points);
     result
 }
