@@ -163,21 +163,18 @@ impl Ellipsoid {
 
     fn find_boundary_point(&self, feat_points : &mut FeaturizedPoints, 
                                   x_init : &Array1<f32>, direction : &Array1<f32>) -> Array1<f32> {
+        let mut prev_scale = 0.0f32;
         let mut scale = ENCLOSING_ELLIPSOID_INITIAL_SCALE;
 
         let mut delta_x = direction.clone();
         delta_x *= ENCLOSING_ELLIPSOID_INITIAL_SCALE;
 
         while (scale < ENCLOSING_ELLIPSOID_MAXIMAL_SCALE) {
-            scale *= ENCLOSING_ELLIPSOID_GROWTH_FACTOR;
-            delta_x *= ENCLOSING_ELLIPSOID_GROWTH_FACTOR;
-            
             let x = x_init + &delta_x;
             let y = feat_points.get_features(&x);
             if (self.sq_mahalanobis_dist(&y) >= 1.0f32) {
                 //We have a bracket of the point where the mahalanobis
                 //distance is exactly one, so we must do some root-finding now.
-                let prev_scale = scale / ENCLOSING_ELLIPSOID_GROWTH_FACTOR;
                 let init_param = scale;
                 let solver = Brent::new(prev_scale, scale, ENCLOSING_ELLIPSOID_BRENT_REL_ERROR);
                 
@@ -206,6 +203,9 @@ impl Ellipsoid {
                     }
                 }
             }
+            prev_scale = scale;
+            scale *= ENCLOSING_ELLIPSOID_GROWTH_FACTOR;
+            delta_x *= ENCLOSING_ELLIPSOID_GROWTH_FACTOR;
         }
         error!("Infinite domains are not handled yet");
         panic!();
