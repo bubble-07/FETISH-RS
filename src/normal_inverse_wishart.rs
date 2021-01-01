@@ -20,6 +20,7 @@ use crate::sherman_morrison::*;
 use crate::inverse_schmear::*;
 use crate::linalg_utils::*;
 use crate::normal_inverse_wishart_sampler::*;
+use crate::schmear_sampler::*;
 use std::rc::*;
 use crate::space_info::*;
 
@@ -65,6 +66,18 @@ impl NormalInverseWishart {
 
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
         let sampler = NormalInverseWishartSampler::new(&self);
+        sampler.sample(rng)
+    }
+
+    //Samples an input according to the input covariance matrix
+    pub fn sample_input(&self, rng : &mut ThreadRng) -> Array1<f32> {
+        let mean = Array::zeros((self.s,));
+        let covariance = self.sigma.clone();
+        let schmear = Schmear {
+            mean,
+            covariance
+        };
+        let sampler = SchmearSampler::new(&schmear);
         sampler.sample(rng)
     }
 

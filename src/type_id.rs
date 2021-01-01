@@ -3,6 +3,7 @@ use lazy_static::*;
 use topological_sort::*;
 use crate::params::*;
 use std::fmt;
+use rand::prelude::*;
 
 extern crate pretty_env_logger;
 
@@ -117,6 +118,21 @@ struct GlobalTypeInfo {
 
 pub fn total_num_types() -> usize {
     GLOBAL_TYPE_INFO.info_vec.len()
+}
+
+pub fn get_random_type_id(rng : &mut ThreadRng) -> TypeId {
+    let i : usize = rng.gen();
+    let id = i % total_num_types();
+    id as TypeId
+}
+
+pub fn get_random_func_type_id(rng : &mut ThreadRng) -> TypeId {
+    loop {
+        let type_id = get_random_type_id(rng);
+        if (!is_vector_type(type_id)) {
+            return type_id;
+        }
+    }
 }
 
 impl GlobalTypeInfo {

@@ -35,6 +35,11 @@ impl InterpreterState {
         result
     }
 
+    pub fn get_random_term_ptr(&self, type_id : TypeId) -> TermPointer {
+        let type_space = self.type_spaces.get(&type_id).unwrap();
+        type_space.draw_random_ptr().unwrap()
+    }
+
     pub fn get(&self, term_ptr : &TermPointer) -> &PartiallyAppliedTerm {
         self.type_spaces.get(&term_ptr.type_id).unwrap().get(term_ptr.index)
     }
@@ -120,7 +125,7 @@ impl InterpreterState {
         }
     }
     
-    fn ensure_every_term_has_an_application(&mut self) {
+    pub fn ensure_every_term_has_an_application(&mut self) {
         let mut topo_sort = TopologicalSort::<TypeId>::new();
         for i in 0..total_num_types() {
             let type_id = i as TypeId;

@@ -45,7 +45,17 @@ impl ops::AddAssign<FeaturizedPoints> for InverseModel {
 }
 
 impl InverseModel {
-    pub fn sample(&self, rng : &mut ThreadRng, ellipsoid : &Ellipsoid, 
+    pub fn sample_single_inverse_point(&self, rng : &mut ThreadRng, in_vec : &Array1<f32>) -> Array1<f32> {
+        let model_sampler = NormalInverseWishartSampler::new(&self.model.data);
+        let func_sample = model_sampler.sample(rng);
+
+        let feat_vec = self.model.space_info.get_features(in_vec);
+
+        let result = func_sample.dot(&feat_vec);
+        result
+    }
+
+    pub fn sample_ellipsoid_inverse(&self, rng : &mut ThreadRng, ellipsoid : &Ellipsoid, 
                   num_function_samples : usize, num_ellipsoid_samples : usize) -> Vec<Array1<f32>> {
         let ellipsoid_sampler = EllipsoidSampler::new(ellipsoid);
         let mut feat_samples = Vec::new();

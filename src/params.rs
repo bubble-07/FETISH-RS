@@ -37,6 +37,8 @@ pub const ENCLOSING_ELLIPSOID_BRENT_MAX_ITERS : u64 = 100;
 
 pub const QUEUE_TERMS_PER_ITER : usize = 100;
 
+pub const EXPLORATION_TERMS_PER_ITER : usize = 10;
+
 pub const NUM_OPT_ITERS : u64 = 1000;
 pub const LBFGS_HISTORY : usize = 6;
 pub const MORE_THUENTE_A : f32 = 1e-4;

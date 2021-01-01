@@ -115,6 +115,9 @@ impl OptimizerStateWithTarget {
             },
             Option::None => Option::None
         };
+        trace!("Performing exploration step");
+        self.optimizer_state.exploration_step();
+
         trace!("Performing bayesian update");
         self.bayesian_update_step();
         self.optimizer_state.dump_model_traces();
@@ -192,6 +195,47 @@ impl OptimizerStateWithTarget {
 }
 
 impl OptimizerState {
+    pub fn exploration_step(&mut self) {
+        let mut rng = rand::thread_rng();
+        for i in 0..EXPLORATION_TERMS_PER_ITER { 
+            let func_type_id = get_random_func_type_id(&mut rng);
+            let func_type = get_type(func_type_id); 
+            if let Type::FuncType(arg_type_id, ret_type_id) = func_type {
+                let model_space = self.embedder_state.model_spaces.get(&func_type_id).unwrap();
+                let model_key = model_space.get_random_model_key(&mut rng);
+                let func_ptr = TermPointer {
+                    type_id : func_type_id,
+                    index : model_key
+                };
+                if (is_vector_type(arg_type_id)) {
+                    let model = model_space.get_model(model_key);
+                    let data = &model.model.data;
+                    let feat_vec = data.sample_input(&mut rng);
+                    let feat_inverse_model = self.feat_inverse_directory.get(&func_type_id);
+                    let in_vec = feat_inverse_model.sample_single_inverse_point(&mut rng, &feat_vec);
+                    let arg_ref = TermReference::VecRef(to_noisy(&in_vec));
+                    
+                    let term_app = TermApplication {
+                        func_ptr,
+                        arg_ref
+                    };
+                    self.interpreter_state.evaluate(&term_app);
+                } else {
+                    let arg_ptr = self.interpreter_state.get_random_term_ptr(arg_type_id);
+                    let arg_ref = TermReference::FuncRef(arg_ptr);
+
+                    let term_app = TermApplication {
+                        func_ptr,
+                        arg_ref
+                    };
+                    self.interpreter_state.evaluate(&term_app);
+                }
+            }
+        }
+        //Clean up to make sure everything is still valid
+        self.interpreter_state.ensure_every_term_has_an_application();
+    }
+
     pub fn init_step(&mut self) {
         self.embedder_state.init_embeddings(&mut self.interpreter_state);
         self.bayesian_update_step();

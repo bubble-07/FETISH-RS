@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod schmear_sampler;
 mod affine_transform;
 mod func_ellipsoid;
 mod sampled_model_embedding;

@@ -7,6 +7,7 @@ use ndarray_linalg::*;
 use std::ops;
 use std::rc::*;
 
+use rand::prelude::*;
 use crate::sampled_model_embedding::*;
 use crate::sigma_points::*;
 use crate::embedder_state::*;
@@ -48,6 +49,20 @@ impl ModelSpace {
     pub fn new(in_dimensions : usize, out_dimensions : usize) -> ModelSpace {
         let space_info = SpaceInfo::new(in_dimensions, out_dimensions);
         ModelSpace::from_space_info(space_info)
+    }
+
+    pub fn get_random_model_key(&self, rng : &mut ThreadRng) -> ModelKey {
+        let num_entries = self.models.len();
+        let rand_usize : usize = rng.gen();
+        let entry_index = rand_usize % num_entries;
+        let mut i = 0;
+        for model_key in self.models.keys() {
+            if (i == entry_index) {
+                return *model_key;
+            }
+            i += 1;
+        }
+        panic!();
     }
 
     fn from_space_info(space_info : SpaceInfo) -> ModelSpace {

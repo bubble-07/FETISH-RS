@@ -136,7 +136,7 @@ impl BoundedHole {
                 let mut rng = rand::thread_rng();
 
                 //Get a sampling of inputs for an initial featurized point
-                let sampled_inputs = inverse_model.sample(&mut rng, &feat_bound, 
+                let sampled_inputs = inverse_model.sample_ellipsoid_inverse(&mut rng, &feat_bound, 
                                                           NUM_FUNCTION_SAMPLES, NUM_ELLIPSOID_SAMPLES);
 
                 trace!("Attempting backpropagation through featurization");
