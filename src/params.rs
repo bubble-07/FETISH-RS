@@ -35,6 +35,8 @@ pub const ENCLOSING_ELLIPSOID_GROWTH_FACTOR : f32 = 2.0f32;
 pub const ENCLOSING_ELLIPSOID_BRENT_REL_ERROR : f32 = 0.0001f32;
 pub const ENCLOSING_ELLIPSOID_BRENT_MAX_ITERS : u64 = 100;
 
+pub const QUEUE_TERMS_PER_ITER : usize = 100;
+
 pub const NUM_OPT_ITERS : u64 = 1000;
 pub const LBFGS_HISTORY : usize = 6;
 pub const MORE_THUENTE_A : f32 = 1e-4;

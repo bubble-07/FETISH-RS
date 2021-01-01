@@ -137,9 +137,13 @@ fn main() {
     info!("Running optimizer");
     for i in 0..num_iters {
         info!("Iter: {}", i);
-        let term_ptr : TermPointer = optimizer_state.step();
-        let term_str : String = term_ptr.display(&optimizer_state.optimizer_state.interpreter_state);
-        info!("{}", term_str);
+        let maybe_term_ptr = optimizer_state.step();
+        if let Option::Some(term_ptr) = maybe_term_ptr {
+            let term_str : String = term_ptr.display(&optimizer_state.optimizer_state.interpreter_state);
+            info!("{}", term_str);
+        } else {
+            info!("No term from optimizer");
+        }
     }
 }
 

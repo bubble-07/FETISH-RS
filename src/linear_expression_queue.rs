@@ -88,7 +88,7 @@ impl LinearExpressionQueue {
                                         embedder_state : &SampledEmbedderState,
                                         feat_inverse_directory : &FeaturizationInverseDirectory) 
 
-                                        -> (LinearExpression, FeaturizedPointsDirectory) {
+                                        -> (Option<LinearExpression>, FeaturizedPointsDirectory) {
         self.queue.clear();
 
         //First, perform initial population of the queue
@@ -108,8 +108,8 @@ impl LinearExpressionQueue {
         }
 
         //Then, the meat of the search
-        //TODO: Iteration cap, and yielding best runner-ups?
-        while (!self.queue.is_empty()) {
+        let mut iter = 0; 
+        while (!self.queue.is_empty() && iter < QUEUE_TERMS_PER_ITER) {
             let prioritized = self.queue.pop().unwrap();
             let bound_expr = prioritized.expr;
 
@@ -123,16 +123,17 @@ impl LinearExpressionQueue {
                 let cap = term_fillers[0].clone();
                 trace!("Found a term filler: {}", cap.display(interpreter_state));
                 let result = bound_expr.expr.cap(cap);
-                return (result, feat_points_directory);
+                return (Option::Some(result), feat_points_directory);
             } else {
                 trace!("No term filler found, adding neighbors");
                 //No single term fills the hole here, so we need to add neighbors
                 let feat_points_delta = self.add_neighbors(&bound_expr, interpreter_state, embedder_state, feat_inverse_directory);
                 feat_points_directory += feat_points_delta;
             }
+            iter += 1;
         }
-        error!("Term search failed");
-        panic!();
+        trace!("No term found by optimization in the current iteration");
+        (Option::None, feat_points_directory)
     }
 
     pub fn add_neighbors(&mut self, bound_expr : &BoundedHoledLinearExpression, 

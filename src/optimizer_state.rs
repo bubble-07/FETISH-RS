@@ -78,7 +78,7 @@ impl OptimizerStateWithTarget {
         self.target.get_closer_than_closest_term_bound(embedder_state)
     }
 
-    pub fn step(&mut self) -> TermPointer {
+    pub fn step(&mut self) -> Option<TermPointer> {
         let mut rng = rand::thread_rng();
 
         trace!("Sampling embedder state");
@@ -89,7 +89,7 @@ impl OptimizerStateWithTarget {
         let target_hole = self.get_current_target_hole(&sampled_embedder_state);
 
         trace!("Optimizing for current target");
-        let (lin_expr, feat_points_directory) = lin_expr_queue.find_within_bound(&target_hole, 
+        let (maybe_lin_expr, feat_points_directory) = lin_expr_queue.find_within_bound(&target_hole, 
                                                 &self.optimizer_state.interpreter_state,
                                                 &sampled_embedder_state, 
                                                 &self.optimizer_state.feat_inverse_directory);
@@ -98,21 +98,28 @@ impl OptimizerStateWithTarget {
         //Update the featurization inverse directory
         self.optimizer_state.feat_inverse_directory += feat_points_directory;
 
-        trace!("Evaluating found term");
+        let ret = match (maybe_lin_expr) {
+            Option::Some(lin_expr) => {
+                trace!("Evaluating found term");
+                //Evaluate the expression that we obtained
+                let term_ref = self.optimizer_state.interpreter_state.evaluate_linear_expression(lin_expr);
+                info!("Current best term: {}", term_ref.display(&self.optimizer_state.interpreter_state));
+                if let TermReference::FuncRef(result) = term_ref {
+                    trace!("Evaluating on training data");
+                    self.evaluate_training_data_step(result.clone());
+                    Option::Some(result.clone())
+                } else {
+                    error!("Wrong type for evaluated expression");
+                    Option::None
+                }
+            },
+            Option::None => Option::None
+        };
+        trace!("Performing bayesian update");
+        self.bayesian_update_step();
+        self.optimizer_state.dump_model_traces();
 
-        //Evaluate the expression that we obtained
-        let term_ref = self.optimizer_state.interpreter_state.evaluate_linear_expression(lin_expr);
-        info!("Current best term: {}", term_ref.display(&self.optimizer_state.interpreter_state));
-        if let TermReference::FuncRef(result) = term_ref {
-            trace!("Evaluating on training data");
-            self.evaluate_training_data_step(result.clone());
-            trace!("Performing bayesian update");
-            self.bayesian_update_step();
-            self.optimizer_state.dump_model_traces();
-            return result.clone();
-        }
-        error!("Wrong type for the linear expression");
-        panic!();
+        ret
     }
 
     pub fn evaluate_training_data_step(&mut self, term_ptr : TermPointer) {
