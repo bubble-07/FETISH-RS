@@ -4,38 +4,17 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod schmeared_hole;
 mod schmear_sampler;
-mod affine_transform;
-mod func_ellipsoid;
 mod sampled_model_embedding;
-mod sum_of_joint_probabilities_heuristic;
-mod chi_squared_inverse_cdf_solver;
-mod chi_squared_inverse_cdf;
 mod sqrtm;
 mod data_points;
-mod schmeared_hole;
-mod bounded_holed_linear_expression;
-mod linear_expression_queue;
-mod featurization_inverse_directory;
-mod featurized_points_directory;
-mod featurized_points;
 mod rand_utils;
-mod bounded_holed_application;
-mod bounded_hole;
-mod inverse_model;
 mod term_model;
-mod ellipsoid_sampler;
-mod minimum_volume_enclosing_ellipsoid;
-mod featurization_boundary_point_solver;
-mod local_featurization_inverse_solver;
 mod sampled_term_embedding;
-mod ellipsoid;
 mod sampled_embedder_state;
 mod sampled_embedding_space;
 mod space_info;
-mod holed_application;
-mod holed_linear_expression;
-mod linear_expression;
 mod data_update;
 mod sigma_points;
 mod sherman_morrison;
@@ -96,7 +75,6 @@ use crate::inverse_schmear::*;
 use crate::model::*;
 use rand::prelude::*;
 use crate::optimizer_state::*;
-use crate::chi_squared_inverse_cdf::*;
 
 fn f(x : f32) -> f32 {
     2.0 * x + 1.0
@@ -104,8 +82,6 @@ fn f(x : f32) -> f32 {
 
 fn main() {
     pretty_env_logger::init();
-
-    init_chi_squared_inverse_cdf_table();
 
     let num_iters = 40;
     let num_samples = 100;

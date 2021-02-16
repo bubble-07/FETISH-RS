@@ -15,7 +15,6 @@ use crate::sqrtm::*;
 use crate::pseudoinverse::*;
 use crate::params::*;
 use crate::linalg_utils::*;
-use crate::ellipsoid::*;
 use crate::test_utils::*;
 
 use ndarray_linalg::cholesky::*;

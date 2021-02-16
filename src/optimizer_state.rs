@@ -16,7 +16,6 @@ use crate::type_id::*;
 use crate::application_table::*;
 use crate::type_space::*;
 use crate::params::*;
-use crate::schmeared_hole::*;
 use crate::term::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
@@ -29,9 +28,7 @@ use crate::schmear::*;
 use crate::inverse_schmear::*;
 use crate::embedder_state::*;
 use crate::interpreter_state::*;
-use crate::featurization_inverse_directory::*;
-use crate::bounded_hole::*;
-use crate::linear_expression_queue::*;
+use crate::schmeared_hole::*;
 
 use crate::feature_collection::*;
 use crate::quadratic_feature_collection::*;
@@ -49,8 +46,7 @@ pub struct OptimizerStateWithTarget {
 
 pub struct OptimizerState {
     pub interpreter_state : InterpreterState,
-    embedder_state : EmbedderState,
-    feat_inverse_directory : FeaturizationInverseDirectory
+    embedder_state : EmbedderState
 }
 
 impl OptimizerState {
@@ -74,55 +70,20 @@ impl OptimizerState {
 }
 
 impl OptimizerStateWithTarget {
-    fn get_current_target_hole(&self, embedder_state : &SampledEmbedderState) -> BoundedHole {
-        self.target.get_closer_than_closest_term_bound(embedder_state)
-    }
 
     pub fn step(&mut self) -> Option<TermPointer> {
         let mut rng = rand::thread_rng();
 
         trace!("Sampling embedder state");
         let sampled_embedder_state = self.optimizer_state.embedder_state.sample(&mut rng);
-        let mut lin_expr_queue = LinearExpressionQueue::new();
-
-        trace!("Finding current target");
-        let target_hole = self.get_current_target_hole(&sampled_embedder_state);
 
         trace!("Optimizing for current target");
-        let (maybe_lin_expr, feat_points_directory) = lin_expr_queue.find_within_bound(&target_hole, 
-                                                &self.optimizer_state.interpreter_state,
-                                                &sampled_embedder_state, 
-                                                &self.optimizer_state.feat_inverse_directory);
-
-        trace!("Updating featurization inverse directory");
-        //Update the featurization inverse directory
-        self.optimizer_state.feat_inverse_directory += feat_points_directory;
-
-        let ret = match (maybe_lin_expr) {
-            Option::Some(lin_expr) => {
-                trace!("Evaluating found term");
-                //Evaluate the expression that we obtained
-                let term_ref = self.optimizer_state.interpreter_state.evaluate_linear_expression(lin_expr);
-                info!("Current best term: {}", term_ref.display(&self.optimizer_state.interpreter_state));
-                if let TermReference::FuncRef(result) = term_ref {
-                    trace!("Evaluating on training data");
-                    self.evaluate_training_data_step(result.clone());
-                    Option::Some(result.clone())
-                } else {
-                    error!("Wrong type for evaluated expression");
-                    Option::None
-                }
-            },
-            Option::None => Option::None
-        };
-        trace!("Performing exploration step");
-        self.optimizer_state.exploration_step();
 
         trace!("Performing bayesian update");
         self.bayesian_update_step();
         self.optimizer_state.dump_model_traces();
 
-        ret
+        panic!();
     }
 
     pub fn evaluate_training_data_step(&mut self, term_ptr : TermPointer) {
@@ -195,47 +156,6 @@ impl OptimizerStateWithTarget {
 }
 
 impl OptimizerState {
-    pub fn exploration_step(&mut self) {
-        let mut rng = rand::thread_rng();
-        for i in 0..EXPLORATION_TERMS_PER_ITER { 
-            let func_type_id = get_random_func_type_id(&mut rng);
-            let func_type = get_type(func_type_id); 
-            if let Type::FuncType(arg_type_id, ret_type_id) = func_type {
-                let model_space = self.embedder_state.model_spaces.get(&func_type_id).unwrap();
-                let model_key = model_space.get_random_model_key(&mut rng);
-                let func_ptr = TermPointer {
-                    type_id : func_type_id,
-                    index : model_key
-                };
-                if (is_vector_type(arg_type_id)) {
-                    let model = model_space.get_model(model_key);
-                    let data = &model.model.data;
-                    let feat_vec = data.sample_input(&mut rng);
-                    let feat_inverse_model = self.feat_inverse_directory.get(&func_type_id);
-                    let in_vec = feat_inverse_model.sample_single_inverse_point(&mut rng, &feat_vec);
-                    let arg_ref = TermReference::VecRef(to_noisy(&in_vec));
-                    
-                    let term_app = TermApplication {
-                        func_ptr,
-                        arg_ref
-                    };
-                    self.interpreter_state.evaluate(&term_app);
-                } else {
-                    let arg_ptr = self.interpreter_state.get_random_term_ptr(arg_type_id);
-                    let arg_ref = TermReference::FuncRef(arg_ptr);
-
-                    let term_app = TermApplication {
-                        func_ptr,
-                        arg_ref
-                    };
-                    self.interpreter_state.evaluate(&term_app);
-                }
-            }
-        }
-        //Clean up to make sure everything is still valid
-        self.interpreter_state.ensure_every_term_has_an_application();
-    }
-
     pub fn init_step(&mut self) {
         self.embedder_state.init_embeddings(&mut self.interpreter_state);
         self.bayesian_update_step();
@@ -281,11 +201,9 @@ impl OptimizerState {
 
     fn new() -> OptimizerState {
         let embedder_state = EmbedderState::new();
-        let feat_inverse_directory = FeaturizationInverseDirectory::new(&embedder_state);
         OptimizerState {
             interpreter_state : InterpreterState::new(),
-            embedder_state,
-            feat_inverse_directory
+            embedder_state
         }
     }
 }

@@ -6,11 +6,9 @@ use std::rc::*;
 use crate::space_info::*;
 use crate::term_pointer::*;
 use crate::type_id::*;
-use crate::linear_expression::*;
 use crate::sampled_term_embedding::*;
 use crate::term_reference::*;
 use crate::array_utils::*;
-use crate::holed_application::*;
 use crate::sampled_model_embedding::*;
 
 pub struct SampledEmbedderState {
@@ -49,36 +47,5 @@ impl SampledEmbedderState {
                 space.get_term_embedding(term_ptr.index)
             }
         }
-    }
-
-    pub fn evaluate_linear_expression(&self, linear_expr : &LinearExpression) -> SampledTermEmbedding {
-        let mut current_embedding = self.get_term_embedding(&linear_expr.cap);
-        //Now process through all of the holed applications in order
-        for holed_application in linear_expr.chain.chain.iter().rev() {
-            let ret_type = holed_application.get_type();
-            let compressed_result = match (holed_application) {
-                HoledApplication::FunctionHoled(arg_ref, ret_type) => {
-                    match (current_embedding) {
-                        SampledTermEmbedding::VectorEmbedding(vec) => { panic!(); },
-                        SampledTermEmbedding::FunctionEmbedding(space_info, func_mat) => {
-                            let arg_embedding = self.get_term_embedding(arg_ref);
-                            let compressed_arg = arg_embedding.get_compressed();
-                            let result = space_info.apply(&func_mat, &compressed_arg);
-                            result
-                        }
-                    }
-                },
-                HoledApplication::ArgumentHoled(func_ptr) => {
-                    let model_embedding = self.get_model_embedding(func_ptr);
-                    let raw_func_embedding = &model_embedding.sampled_mat;
-                    let space_info = self.get_space_info(&func_ptr.type_id);
-                    let compressed_arg = current_embedding.get_compressed();
-                    let result = space_info.apply(raw_func_embedding, &compressed_arg);
-                    result
-                }
-            };
-            current_embedding = self.inflate_embedding(ret_type, compressed_result);
-        }
-        current_embedding
     }
 }
