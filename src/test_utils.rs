@@ -2,12 +2,13 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
+use crate::function_space_info::*;
+use crate::feature_space_info::*;
 use crate::data_point::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
 use crate::inverse_schmear::*;
 use crate::params::*;
-use crate::space_info::*;
 use std::rc::*;
 use rand::prelude::*;
 use ndarray_linalg::*;
@@ -79,14 +80,21 @@ pub fn random_model_app(in_dimensions : usize, middle_dimensions : usize, out_di
     (func_model, arg_model)
 }
 
-pub fn random_space_info(in_dimensions : usize, out_dimensions : usize) -> SpaceInfo {
-    SpaceInfo::new(in_dimensions, out_dimensions) 
+pub fn random_func_space_info(in_dimensions : usize, out_dimensions : usize) -> FunctionSpaceInfo {
+    let in_feat_info = FeatureSpaceInfo::build_uncompressed_feature_space(in_dimensions);
+    let out_feat_info = FeatureSpaceInfo::build_uncompressed_feature_space(out_dimensions);
+    let func_feat_info = FeatureSpaceInfo::build_function_feature_space(&in_feat_info, &out_feat_info);
+    FunctionSpaceInfo { 
+        in_feat_info : Rc::new(in_feat_info),
+        out_feat_info : Rc::new(out_feat_info),
+        func_feat_info : Rc::new(func_feat_info)
+    }
 }
 
 pub fn random_model(in_dimensions : usize, out_dimensions : usize) -> Model {
-    let space_info = random_space_info(in_dimensions, out_dimensions);
-    let mut result = Model::new(Rc::new(space_info));
-    result.data = random_normal_inverse_wishart(result.space_info.feature_dimensions, out_dimensions);
+    let space_info = random_func_space_info(in_dimensions, out_dimensions);
+    let mut result = Model::new(space_info);
+    result.data = random_normal_inverse_wishart(result.func_space_info.get_feature_dimensions(), out_dimensions);
     result 
 }
 

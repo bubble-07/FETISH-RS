@@ -22,7 +22,7 @@ use crate::linalg_utils::*;
 use crate::normal_inverse_wishart_sampler::*;
 use crate::schmear_sampler::*;
 use std::rc::*;
-use crate::space_info::*;
+use crate::function_space_info::*;
 
 use rand::prelude::*;
 use rand_distr::{Cauchy, Distribution};
@@ -127,13 +127,16 @@ impl NormalInverseWishart {
 }
 
 impl NormalInverseWishart {
-    pub fn from_space_info(space_info : Rc<SpaceInfo>) -> NormalInverseWishart {
-        let mean : Array2<f32> = Array::zeros((space_info.out_dimensions, space_info.feature_dimensions));
+    pub fn from_space_info(func_space_info : &FunctionSpaceInfo) -> NormalInverseWishart {
+        let feat_dims = func_space_info.get_feature_dimensions();
+        let out_dims = func_space_info.get_output_dimensions();
+
+        let mean : Array2<f32> = Array::zeros((out_dims, feat_dims));
 
         let precision_mult : f32 = (1.0f32 / (PRIOR_SIGMA * PRIOR_SIGMA));
-        let in_precision : Array2<f32> = precision_mult * Array::eye(space_info.feature_dimensions);
-        let out_precision : Array2<f32> = precision_mult * Array::eye(space_info.out_dimensions);
-        let little_v = (space_info.out_dimensions as f32) + 1.0f32;
+        let in_precision : Array2<f32> = precision_mult * Array::eye(feat_dims);
+        let out_precision : Array2<f32> = precision_mult * Array::eye(out_dims);
+        let little_v = (out_dims as f32) + 1.0f32;
 
         NormalInverseWishart::new(mean, in_precision, out_precision, little_v)
     }

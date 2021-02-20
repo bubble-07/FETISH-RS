@@ -8,7 +8,7 @@ use crate::data_point::*;
 use crate::schmear::*;
 use crate::sigma_points::*;
 use crate::model::*;
-use crate::space_info::*;
+use crate::function_space_info::*;
 use std::rc::*;
 
 #[derive(Clone)]
@@ -18,8 +18,8 @@ pub struct DataUpdate {
 }
 
 impl DataUpdate {
-    pub fn featurize(&self, space_info : &Rc<SpaceInfo>) -> DataUpdate {
-        let feat_vec = space_info.get_features(&self.in_vec);
+    pub fn featurize(&self, func_space_info : &FunctionSpaceInfo) -> DataUpdate {
+        let feat_vec = func_space_info.in_feat_info.get_features(&self.in_vec);
         let out_sigma_points = self.out_sigma_points.clone();
         let result = DataUpdate {
             in_vec : feat_vec,

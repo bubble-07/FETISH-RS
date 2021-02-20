@@ -27,11 +27,11 @@ use crate::linear_sketch::*;
 use crate::term_model::*;
 use crate::params::*;
 use crate::schmear::*;
-use crate::space_info::*;
 use crate::func_schmear::*;
 use crate::inverse_schmear::*;
 use crate::func_inverse_schmear::*;
 use rand::prelude::*;
+use crate::function_space_info::*;
 use crate::sampled_embedding_space::*;
 
 extern crate pretty_env_logger;
@@ -41,16 +41,11 @@ use std::collections::HashMap;
 type ModelKey = usize;
 
 pub struct ModelSpace {
-    pub space_info : Rc<SpaceInfo>,
+    pub func_space_info : FunctionSpaceInfo,
     pub models : HashMap<ModelKey, TermModel>
 }
 
 impl ModelSpace {
-    pub fn new(in_dimensions : usize, out_dimensions : usize) -> ModelSpace {
-        let space_info = SpaceInfo::new(in_dimensions, out_dimensions);
-        ModelSpace::from_space_info(space_info)
-    }
-
     pub fn get_random_model_key(&self, rng : &mut ThreadRng) -> ModelKey {
         let num_entries = self.models.len();
         let rand_usize : usize = rng.gen();
@@ -65,17 +60,8 @@ impl ModelSpace {
         panic!();
     }
 
-    fn from_space_info(space_info : SpaceInfo) -> ModelSpace {
-        let model_space = ModelSpace {
-            models : HashMap::new(),
-            space_info : Rc::new(space_info)
-        };
-        model_space
-
-    }
-
     pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbeddingSpace {
-        let mut result = SampledEmbeddingSpace::new(Rc::clone(&self.space_info));
+        let mut result = SampledEmbeddingSpace::new(self.func_space_info.clone());
         for (key, model) in self.models.iter() {
             let sample = SampledModelEmbedding::new(&model.model, rng);
             result.models.insert(*key, sample);
@@ -85,14 +71,13 @@ impl ModelSpace {
 
     pub fn schmear_to_prior(&self, embedder_state : &EmbedderState, 
                         func_ptr : &TermPointer, in_schmear : &Schmear) -> NormalInverseWishart {
-        let s : usize = self.space_info.feature_dimensions;
-        let t : usize = self.space_info.out_dimensions;
+        let s = self.func_space_info.get_feature_dimensions();
+        let t = self.func_space_info.get_output_dimensions();
 
-        let mean_flat = self.space_info.func_sketcher.expand(&in_schmear.mean);
-        let mean = mean_flat.into_shape((t, s)).unwrap();
+        let mean = self.func_space_info.inflate_compressed_vector(&in_schmear.mean);
 
         //The (t * s) x (t * s) big sigma
-        let big_sigma = self.space_info.func_sketcher.expand_covariance(&in_schmear.covariance);
+        let big_sigma = self.func_space_info.func_feat_info.expand_covariance(&in_schmear.covariance);
         //t x s x t x s
         let big_sigma_tensor = big_sigma.into_shape((t, s, t, s)).unwrap();
         let big_sigma_tensor_reordered = big_sigma_tensor.permuted_axes([0, 2, 1, 3]);
@@ -119,7 +104,7 @@ impl ModelSpace {
         NormalInverseWishart::new(mean, in_precision, big_v, little_v)
     }
     pub fn add_model(&mut self, model_key : ModelKey) {
-        let model = TermModel::new(Rc::clone(&self.space_info));
+        let model = TermModel::new(self.func_space_info.clone());
         self.models.insert(model_key, model);
     }
     
@@ -131,5 +116,12 @@ impl ModelSpace {
     }
     pub fn has_model(&self, model_key : ModelKey) -> bool {
         self.models.contains_key(&model_key)
+    }
+
+    pub fn new(func_space_info : FunctionSpaceInfo) -> ModelSpace {
+        ModelSpace {
+            models : HashMap::new(),
+            func_space_info
+        }
     }
 }

@@ -1,13 +1,13 @@
 use ndarray::*;
 use ndarray_linalg::*;
 use std::rc::*;
-use crate::space_info::*;
+use crate::function_space_info::*;
 use crate::array_utils::*;
 
 #[derive(Clone)]
 pub enum SampledTermEmbedding {
     VectorEmbedding(Array1<f32>),
-    FunctionEmbedding(Rc<SpaceInfo>, Array2<f32>)
+    FunctionEmbedding(FunctionSpaceInfo, Array2<f32>)
 }
 
 impl SampledTermEmbedding {

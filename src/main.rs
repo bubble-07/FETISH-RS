@@ -4,6 +4,8 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod feature_space_info;
+mod function_space_info;
 mod schmeared_hole;
 mod schmear_sampler;
 mod sampled_model_embedding;
@@ -14,7 +16,6 @@ mod term_model;
 mod sampled_term_embedding;
 mod sampled_embedder_state;
 mod sampled_embedding_space;
-mod space_info;
 mod data_update;
 mod sigma_points;
 mod sherman_morrison;

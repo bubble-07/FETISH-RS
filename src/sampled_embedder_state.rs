@@ -3,7 +3,7 @@ use ndarray_linalg::*;
 use crate::sampled_embedding_space::*;
 use std::collections::HashMap;
 use std::rc::*;
-use crate::space_info::*;
+use crate::function_space_info::*;
 use crate::term_pointer::*;
 use crate::type_id::*;
 use crate::sampled_term_embedding::*;
@@ -24,9 +24,9 @@ impl SampledEmbedderState {
         let space = self.embedding_spaces.get(&term_ptr.type_id).unwrap();
         space.get_embedding(term_ptr.index)
     }
-    pub fn get_space_info(&self, type_id : &TypeId) -> Rc<SpaceInfo> {
-        let result = &self.embedding_spaces.get(type_id).unwrap().space_info;
-        Rc::clone(result)
+    pub fn get_space_info(&self, type_id : &TypeId) -> &FunctionSpaceInfo {
+        let result = &self.embedding_spaces.get(type_id).unwrap().func_space_info;
+        result
     }
 
     fn inflate_embedding(&self, type_id : TypeId, compressed_embedding : Array1<f32>) -> SampledTermEmbedding {
@@ -35,7 +35,7 @@ impl SampledEmbedderState {
         } else {
             let space_info = self.get_space_info(&type_id);
             let inflated = space_info.inflate_compressed_vector(&compressed_embedding);
-            SampledTermEmbedding::FunctionEmbedding(space_info, inflated)
+            SampledTermEmbedding::FunctionEmbedding(space_info.clone(), inflated)
         }
     }
 

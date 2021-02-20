@@ -116,11 +116,11 @@ impl OptimizerStateWithTarget {
         let optimizer_state = OptimizerState::new();
         
         let target_space = optimizer_state.embedder_state.model_spaces.get(&target_type_id).unwrap();
-        let space_info = target_space.space_info.clone();
+        let func_space_info = target_space.func_space_info.clone();
 
         info!("Readying target");
         
-        let mut target_model : Model = Model::new(space_info);
+        let mut target_model : Model = Model::new(func_space_info);
 
         for (in_vec, out_vec) in data_points.iter() {
             let data_point = DataPoint {
@@ -138,8 +138,8 @@ impl OptimizerStateWithTarget {
             precision : normalize_frob(&target_inv_schmear.precision)
         };
 
-        let sketch_mat = target_space.space_info.func_sketcher.get_projection_matrix();
-        let compressed_target_inv_schmear = normalized_target_inv_schmear.transform_compress(sketch_mat);
+        let sketch_mat = target_space.func_space_info.func_feat_info.get_projection_matrix();
+        let compressed_target_inv_schmear = normalized_target_inv_schmear.transform_compress(&sketch_mat);
 
         let target = SchmearedHole {
             type_id : target_type_id,

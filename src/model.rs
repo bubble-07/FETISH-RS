@@ -8,7 +8,7 @@ use std::ops;
 use std::rc::*;
 
 use crate::data_points::*;
-use crate::space_info::*;
+use crate::function_space_info::*;
 use crate::data_update::*;
 use crate::data_point::*;
 use crate::pseudoinverse::*;
@@ -35,7 +35,7 @@ use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct Model {
-    pub space_info : Rc<SpaceInfo>,
+    pub func_space_info : FunctionSpaceInfo,
     pub data : NormalInverseWishart,
 }
 
@@ -99,27 +99,26 @@ impl Model {
     }
 
     pub fn eval(&self, in_vec: &Array1<f32>) -> Array1<f32> {
-        let feats : Array1<f32> = self.space_info.get_features(in_vec);
-
+        let feats = self.func_space_info.in_feat_info.get_features(in_vec);
         self.data.eval(&feats)
     }
 }
 
 impl ops::AddAssign<DataPoint> for Model {
     fn add_assign(&mut self, other: DataPoint) {
-        self.data += &self.space_info.get_data(other);
+        self.data += &self.func_space_info.get_data(other);
     }
 }
 
 impl ops::AddAssign<DataPoints> for Model {
     fn add_assign(&mut self, other : DataPoints) {
-        self.data.update_datapoints(&self.space_info.get_data_points(other));
+        self.data.update_datapoints(&self.func_space_info.get_data_points(other));
     }
 }
 
 impl ops::SubAssign<DataPoint> for Model {
     fn sub_assign(&mut self, other: DataPoint) {
-        self.data -= &self.space_info.get_data(other);
+        self.data -= &self.func_space_info.get_data(other);
     }
 }
 
@@ -136,11 +135,11 @@ impl ops::SubAssign<&NormalInverseWishart> for Model {
 }
 
 impl Model {
-    pub fn new(space_info : Rc<SpaceInfo>) -> Model {
-        let data = NormalInverseWishart::from_space_info(space_info.clone());
+    pub fn new(func_space_info : FunctionSpaceInfo) -> Model {
+        let data = NormalInverseWishart::from_space_info(&func_space_info);
     
         Model {
-            space_info : space_info,
+            func_space_info,
             data : data
         }
     }
@@ -151,15 +150,15 @@ mod tests {
     use super::*;
 
     fn clone_model(model : &Model) -> Model {
-        let space_info = model.space_info.clone();
-        let mut result = Model::new(space_info);
+        let func_space_info = model.func_space_info.clone();
+        let mut result = Model::new(func_space_info);
         result.data = model.data.clone();
         result
     }
     
     fn clone_and_perturb_model(model : &Model, epsilon : f32) -> Model {
-        let space_info = model.space_info.clone();
-        let mut result = Model::new(space_info);
+        let func_space_info = model.func_space_info.clone();
+        let mut result = Model::new(func_space_info);
         result.data = model.data.clone();
         
         let mean = &model.data.mean;

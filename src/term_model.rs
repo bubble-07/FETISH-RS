@@ -7,7 +7,7 @@ use ndarray_linalg::*;
 use std::ops;
 use std::rc::*;
 
-use crate::space_info::*;
+use crate::function_space_info::*;
 use crate::data_update::*;
 use crate::data_point::*;
 use crate::pseudoinverse::*;
@@ -64,7 +64,7 @@ impl TermModel {
     }
 
     pub fn get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
-        self.model.space_info.get_features(in_vec)
+        self.model.func_space_info.in_feat_info.get_features(in_vec)
     }
 
     pub fn eval(&self, in_vec : &Array1<f32>) -> Array1<f32> {
@@ -75,7 +75,7 @@ impl TermModel {
         self.data_updates.contains_key(update_key)
     }
     pub fn update_data(&mut self, update_key : TermReference, data_update : DataUpdate) {
-        let feat_update = data_update.featurize(&self.model.space_info);
+        let feat_update = data_update.featurize(&self.model.func_space_info);
         self.model.data += &feat_update;
         self.data_updates.insert(update_key, feat_update);
     }
@@ -95,10 +95,10 @@ impl TermModel {
         self.model -= &distr;
     }
 
-    pub fn new(space_info : Rc<SpaceInfo>) -> TermModel {
+    pub fn new(func_space_info : FunctionSpaceInfo) -> TermModel {
         let prior_updates : HashMap::<TermApplication, NormalInverseWishart> = HashMap::new();
         let data_updates : HashMap::<TermReference, DataUpdate> = HashMap::new();
-        let model = Model::new(space_info);
+        let model = Model::new(func_space_info);
         TermModel {
             model : model,
             prior_updates : prior_updates,

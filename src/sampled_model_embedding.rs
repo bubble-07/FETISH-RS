@@ -1,6 +1,6 @@
 use ndarray::*;
 use ndarray_linalg::*;
-use crate::space_info::*;
+use crate::function_space_info::*;
 use std::rc::*;
 use std::collections::HashMap;
 use rand::prelude::*;
@@ -29,10 +29,10 @@ impl SampledModelEmbedding {
         let func_inv_schmear = model.get_inverse_schmear();
         let sampled_vec = flatten_matrix(&sampled_mat);
 
-        let space_info = &model.space_info;
-        let projection_mat = space_info.func_sketcher.get_projection_matrix();
+        let func_space_info = &model.func_space_info;
+        let projection_mat = func_space_info.func_feat_info.get_projection_matrix();
 
-        let compressed_schmear = func_schmear.compress(projection_mat);
+        let compressed_schmear = func_schmear.compress(&projection_mat);
         let compressed_inv_schmear = compressed_schmear.inverse();
         let sampled_compressed_vec = projection_mat.dot(&sampled_vec);
 
