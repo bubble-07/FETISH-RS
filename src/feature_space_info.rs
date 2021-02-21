@@ -90,6 +90,11 @@ impl FeatureSpaceInfo {
         to_jacobian(&self.feature_collections, in_vec)
     }
 
+    pub fn get_features_from_base(&self, in_vec : &Array1<f32>) -> Array1<f32> {
+        let sketched = self.sketch(in_vec);
+        self.get_features(&sketched)
+    }
+
     pub fn get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
         to_features(&self.feature_collections, in_vec)
     }

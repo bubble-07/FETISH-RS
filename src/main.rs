@@ -4,6 +4,9 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod typed_vector;
+mod value_field_state;
+mod value_field;
 mod feature_space_info;
 mod function_space_info;
 mod schmeared_hole;

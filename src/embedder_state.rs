@@ -42,7 +42,8 @@ extern crate pretty_env_logger;
 
 pub struct EmbedderState {
     pub model_spaces : HashMap::<TypeId, ModelSpace>,
-    pub vector_spaces : HashMap::<TypeId, VectorSpace>
+    pub vector_spaces : HashMap::<TypeId, VectorSpace>,
+    pub feature_spaces : HashMap::<TypeId, Rc<FeatureSpaceInfo>>
 }
 
 impl EmbedderState {
@@ -60,6 +61,10 @@ impl EmbedderState {
 
     pub fn store_vec(&mut self, vec_type : TypeId, vec : Array1<R32>) {
         self.vector_spaces.get_mut(&vec_type).unwrap().store_vec(vec);
+    }
+
+    pub fn get_feature_space(&mut self, type_id : TypeId) -> &Rc<FeatureSpaceInfo> {
+        self.feature_spaces.get(&type_id).unwrap()
     }
 
     pub fn new() -> EmbedderState {
@@ -115,7 +120,8 @@ impl EmbedderState {
 
         EmbedderState {
             model_spaces,
-            vector_spaces
+            vector_spaces,
+            feature_spaces
         }
     }
 

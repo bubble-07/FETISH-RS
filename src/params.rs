@@ -16,6 +16,10 @@ pub const DIM_TAPER_START : usize = 4;
 
 pub const TRAINING_POINTS_PER_ITER : usize = 5;
 
+//Optimization algorithm constants
+pub const GAMMA : f32 = 0.5f32;
+pub const LAMBDA : f32 = 1.0f32;
+
 //Numerical algorithm constants
 pub const PINV_TRUNCATION_THRESH : f32 = 0.0001f32;
 
