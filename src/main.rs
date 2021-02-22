@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod value_field_maximum_solver;
 mod typed_vector;
 mod value_field_state;
 mod value_field;
