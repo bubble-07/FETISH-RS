@@ -37,27 +37,7 @@ pub fn get_sigma_points(in_schmear : &Schmear) -> Vec<Array1<f32>> {
 }
 
 pub fn sigma_points_to_schmear(in_points : &Vec<Array1<f32>>) -> Schmear {
-    let d = in_points[0].shape()[0];
-    let n = in_points.len();
-    let mut mean = Array::zeros((d,));
-    let mean_scale_fac = 1.0f32 / (n as f32);
-    let covariance_scale_fac = 1.0f32 / ((n - 1) as f32);
-
-    for in_point in in_points.iter() {
-        mean += &(mean_scale_fac * in_point);
-    }
-
-    let mut covariance = Array::zeros((d,d));
-    for in_point in in_points.iter() {
-        let diff = in_point - &mean;
-        covariance += &(covariance_scale_fac * &outer(&diff, &diff));
-    }
-
-    let result = Schmear {
-        mean : mean,
-        covariance : covariance
-    };
-    result
+    Schmear::from_sample_vectors(in_points)
 }
 
 pub fn unscented_transform_schmear(in_schmear : &Schmear, feat_space_info : &FeatureSpaceInfo) -> Schmear {

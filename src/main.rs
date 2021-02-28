@@ -4,6 +4,8 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod function_optimum_space;
+mod function_optimum_state;
 mod value_field_maximum_solver;
 mod typed_vector;
 mod value_field_state;

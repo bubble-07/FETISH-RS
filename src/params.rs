@@ -20,7 +20,15 @@ pub const TRAINING_POINTS_PER_ITER : usize = 5;
 pub const GAMMA : f32 = 0.95f32;
 pub const LAMBDA : f32 = 1.0f32;
 
+pub const RANDOM_VECTORS_PER_ITER : usize = 5;
+
+//closer to 0.0 -> less myopic, 1.0 -> more myopic 
+//(exponential moving average, for statistics on optimal arguments to vector-valued funcs)
+pub const LERP_FACTOR : f32 = 0.25f32;
+
 //Numerical algorithm constants
+pub const NUM_STEEPEST_DESCENT_STEPS_PER_ITER : usize = 10;
+
 pub const PINV_TRUNCATION_THRESH : f32 = 0.0001f32;
 
 pub const FUNC_SCATTER_TENSOR_ZEROING_THRESH : f32 = 1e-15f32;

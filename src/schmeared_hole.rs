@@ -11,6 +11,7 @@ use crate::params::*;
 use crate::sampled_embedder_state::*;
 use crate::inverse_schmear::*;
 
+#[derive(Clone)]
 pub struct SchmearedHole {
     pub type_id : TypeId,
     pub full_inv_schmear : InverseSchmear,

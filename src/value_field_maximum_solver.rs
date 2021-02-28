@@ -42,14 +42,20 @@ pub struct ValueFieldMaximumSolver {
     pub target_compressed_inv_schmear : Option<InverseSchmear>
 }
 
-impl ArgminOp for ValueFieldMaximumSolver {
-    type Param = Array1<f32>;
-    type Output = f32;
-    type Hessian = ();
-    type Jacobian = ();
-    type Float = f32;
-
-    fn apply(&self, x_compressed : &Self::Param) -> Result<Self::Output, Error> {
+impl ValueFieldMaximumSolver {
+    pub fn get_compressed_vector_with_max_value<'a>(&self, compressed_vecs : &'a Vec<Array1<f32>>) -> &'a Array1<f32> { 
+        let mut max_value = f32::NEG_INFINITY;
+        let mut result = &compressed_vecs[0];
+        for compressed_vec in compressed_vecs {
+            let value = self.get_value(compressed_vec);
+            if (value > max_value) {
+                max_value = value;
+                result = compressed_vec;
+            }
+        }
+        result
+    }
+    pub fn get_value(&self, x_compressed : &Array1<f32>) -> f32 {
         let y_compressed = self.func_space_info.apply(&self.func_mat, x_compressed);
         
         let sq_mahalanobis = match (&self.target_compressed_inv_schmear) {
@@ -60,10 +66,9 @@ impl ArgminOp for ValueFieldMaximumSolver {
         let y_feats = self.func_space_info.out_feat_info.get_features(&y_compressed);
         let value_field_eval = self.value_field_coefs.dot(&y_feats);
 
-        Ok(-(value_field_eval + -sq_mahalanobis))
+        value_field_eval - sq_mahalanobis
     }
-
-    fn gradient(&self, x_compressed : &Self::Param) -> Result<Self::Param, Error> {
+    pub fn get_value_gradient(&self, x_compressed : &Array1<f32>) -> Array1<f32> {
         let y_compressed = self.func_space_info.apply(&self.func_mat, x_compressed);
 
         let func_jacobian = self.func_space_info.jacobian(&self.func_mat, x_compressed);
@@ -82,8 +87,26 @@ impl ArgminOp for ValueFieldMaximumSolver {
             }
         };
         let mut result = value_field_grad;
-        result *= -1.0f32;
-        result += &sq_mahalanobis_grad;
-        Ok(result)
+        result -= &sq_mahalanobis_grad;
+        result
+    }
+}
+
+impl ArgminOp for ValueFieldMaximumSolver {
+    type Param = Array1<f32>;
+    type Output = f32;
+    type Hessian = ();
+    type Jacobian = ();
+    type Float = f32;
+
+    fn apply(&self, x_compressed : &Self::Param) -> Result<Self::Output, Error> {
+        let neg_result = self.get_value(x_compressed);
+        Ok(-neg_result)
+    }
+
+    fn gradient(&self, x_compressed : &Self::Param) -> Result<Self::Param, Error> {
+        let mut neg_result = self.get_value_gradient(x_compressed);
+        neg_result *= -1.0f32;
+        Ok(neg_result)
     }
 }

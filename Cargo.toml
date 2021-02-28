@@ -13,7 +13,7 @@ rustfft="3.0.1"
 rand="0.7.3"
 ndarray-rand="0.11.0"
 rand_distr="0.2.2"
-enum_dispatch="0.3.0"
+enum_dispatch="0.3.5"
 plotlib="0.5.1"
 lapack-src = {version = "0.6", default-features = false, features = ["openblas"]}
 noisy_float="0.1.12"
@@ -22,8 +22,6 @@ multimap="0.8.1"
 topological-sort="0.1.0"
 log="0.4.11"
 pretty_env_logger="0.4.0"
-#blas-src = { version = "0.2.0", default-features = false, features = ["openblas"] }
-#openblas-src = { version = "0.6.0", default-features = false, features = ["cblas"] }
 argmin={version = "0.3.1", features = ["ndarrayl"] }
 statrs="0.13.0"
 anyhow="1.0.37"

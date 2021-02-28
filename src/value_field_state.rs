@@ -44,6 +44,13 @@ pub struct ValueFieldState {
 }
 
 impl ValueFieldState {
+    pub fn get_target_for_type(&self, type_id : TypeId) -> Option<SchmearedHole> {
+        if (type_id == self.target.type_id) {
+            Option::Some(self.target.clone())
+        } else {
+            Option::None
+        }
+    }
     //Assumes that we're dealing with base type vectors
     pub fn apply_constraint(&mut self, func_vec : &TypedVector, arg_vec : &TypedVector, ret_vec : &TypedVector) {
         let func_feat_info = &self.get_value_field(func_vec.type_id).feat_space_info;
