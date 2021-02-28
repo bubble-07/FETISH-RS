@@ -174,6 +174,22 @@ pub fn get_type_id(kind : &Type) -> TypeId {
 pub fn get_type(id : TypeId) -> Type {
     GLOBAL_TYPE_INFO.get_type(id)
 }
+pub fn get_arg_type_id(func_type_id : TypeId) -> TypeId {
+    let func_type = get_type(func_type_id);
+    if let Type::FuncType(arg_type_id, _) = func_type {
+        arg_type_id
+    } else {
+        panic!();
+    }
+}
+pub fn get_ret_type_id(func_type_id : TypeId) -> TypeId {
+    let func_type = get_type(func_type_id);
+    if let Type::FuncType(_, ret_type_id) = func_type {
+        ret_type_id
+    } else {
+        panic!();
+    }
+}
 
 pub type TypeId = usize;
 

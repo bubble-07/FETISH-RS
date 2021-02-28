@@ -3,11 +3,13 @@ use ndarray::*;
 use crate::params::*;
 use crate::schmeared_hole::*;
 use crate::sigma_points::*;
+use crate::constraint_collection::*;
 use crate::array_utils::*;
 use noisy_float::prelude::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use std::rc::*;
+use crate::vector_application_result::*;
 use crate::feature_space_info::*;
 use crate::sampled_embedder_state::*;
 use crate::function_space_info::*;
@@ -51,6 +53,20 @@ impl ValueFieldState {
             Option::None
         }
     }
+
+    pub fn apply_constraints(&mut self, constraint_collection : &ConstraintCollection) {
+        for vec_app_result in &constraint_collection.constraints {
+            self.apply_constraint_from_application_result(vec_app_result);
+        }
+    }
+
+    pub fn apply_constraint_from_application_result(&mut self, vec_app_result : &VectorApplicationResult) {
+        let func_vec = vec_app_result.get_func_vec();
+        let arg_vec = vec_app_result.get_arg_vec();
+        let ret_vec = vec_app_result.get_ret_vec();
+        self.apply_constraint(&func_vec, &arg_vec, &ret_vec);
+    }
+
     //Assumes that we're dealing with base type vectors
     pub fn apply_constraint(&mut self, func_vec : &TypedVector, arg_vec : &TypedVector, ret_vec : &TypedVector) {
         let func_feat_info = &self.get_value_field(func_vec.type_id).feat_space_info;
