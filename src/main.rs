@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod interpreter_and_embedder_state;
 mod constraint_collection;
 mod vector_application_result;
 mod function_optimum_space;
@@ -117,7 +118,7 @@ fn main() {
     }
 
     info!("Creating optimizer");
-    let mut optimizer_state = OptimizerStateWithTarget::new(data_points);
+    let mut optimizer_state = OptimizerState::new(data_points);
     info!("Initializing optimizer");
     optimizer_state.init_step();
     info!("Running optimizer");
@@ -125,7 +126,7 @@ fn main() {
         info!("Iter: {}", i);
         let maybe_term_ptr = optimizer_state.step();
         if let Option::Some(term_ptr) = maybe_term_ptr {
-            let term_str : String = term_ptr.display(&optimizer_state.optimizer_state.interpreter_state);
+            let term_str : String = term_ptr.display(&optimizer_state.interpreter_and_embedder_state.interpreter_state);
             info!("{}", term_str);
         } else {
             info!("No term from optimizer");
