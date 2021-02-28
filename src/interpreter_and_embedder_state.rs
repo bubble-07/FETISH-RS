@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use crate::displayable_with_state::*;
 use rand::prelude::*;
 use std::rc::*;
+use crate::vector_application_result::*;
 use crate::constraint_collection::*;
 use crate::sampled_embedder_state::*;
 use crate::linalg_utils::*;
@@ -88,6 +89,33 @@ impl InterpreterAndEmbedderState {
             }
         }
         info!("Emprirical loss of {} on training set subsample of size {}", sq_loss, TRAINING_POINTS_PER_ITER);
+    }
+    pub fn get_new_constraints(&self, sampled_embedder_state : &SampledEmbedderState) -> ConstraintCollection {
+        let mut constraints = Vec::new();
+        for term_app_result in &self.interpreter_state.new_term_app_results {
+            let func_ptr = &term_app_result.term_app.func_ptr;
+            let func_type_id = func_ptr.type_id;
+            let arg_ref = &term_app_result.term_app.arg_ref;
+            let result_ref = &term_app_result.result_ref;
+
+            let func_vec = sampled_embedder_state.get_model_embedding(func_ptr).sampled_vec.clone();
+            let arg_vec = sampled_embedder_state.get_term_embedding(arg_ref).get_flattened();
+            let ret_vec = sampled_embedder_state.get_term_embedding(result_ref).get_flattened();
+
+            let vector_application_result = VectorApplicationResult {
+                func_type_id,
+                func_vec,
+                arg_vec,
+                ret_vec
+            };
+            constraints.push(vector_application_result);
+        }
+        ConstraintCollection {
+            constraints
+        }
+    }
+    pub fn get_new_term_app_results(&self) -> &Vec<TermApplicationResult> {
+        &self.interpreter_state.new_term_app_results
     }
     pub fn bayesian_update_step(&mut self) {
         self.embedder_state.init_embeddings(&mut self.interpreter_state);
