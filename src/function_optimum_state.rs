@@ -11,7 +11,42 @@ use crate::term_reference::*;
 use crate::array_utils::*;
 use crate::sampled_model_embedding::*;
 use crate::function_optimum_space::*;
+use crate::term_application::*;
+use crate::value_field_state::*;
+use crate::sampled_embedder_state::*;
 
 pub struct FunctionOptimumState {
     pub function_spaces : HashMap::<TypeId, FunctionOptimumSpace>
+}
+
+impl FunctionOptimumState {
+    pub fn update(&mut self, sampled_embedder_state : &SampledEmbedderState, 
+                             value_field_state : &ValueFieldState) -> (TermApplication, f32) {
+
+        let mut best_term_app = Option::None;
+        let mut best_value = f32::NEG_INFINITY;
+
+        for (func_type_id, function_space) in self.function_spaces.iter_mut() {
+            let sampled_embeddings = sampled_embedder_state.embedding_spaces.get(func_type_id).unwrap();
+
+            let (func_index, value) = function_space.update(sampled_embeddings, value_field_state);
+
+            if (value > best_value) {
+                let func_ptr = TermPointer {
+                    index : func_index,
+                    type_id : *func_type_id
+                };
+                let arg_vec = function_space.get_optimal_vector(func_index);
+                let arg_ref = TermReference::from(arg_vec);
+                let term_app = TermApplication {
+                    func_ptr,
+                    arg_ref
+                };
+
+                best_value = value;
+                best_term_app = Option::Some(term_app);
+            }
+        }
+        (best_term_app.unwrap(), best_value)
+    }
 }

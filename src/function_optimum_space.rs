@@ -29,7 +29,14 @@ pub struct FunctionOptimumSpace {
 }
 
 impl FunctionOptimumSpace {
-    pub fn update(&mut self, sampled_embeddings : &SampledEmbeddingSpace, value_field_state : &ValueFieldState) {
+    pub fn get_optimal_vector(&self, model_key : ModelKey) -> &Array1<f32> {
+        self.optimal_input_vectors.get(&model_key).unwrap()
+    }
+    pub fn update(&mut self, sampled_embeddings : &SampledEmbeddingSpace, 
+                             value_field_state : &ValueFieldState) -> (usize, f32) {
+        let mut best_index = 0;
+        let mut best_value = f32::NEG_INFINITY;
+
         let mut rng = rand::thread_rng();
         let maybe_target_schmear = value_field_state.get_target_for_type(self.ret_type);
         let target_compressed_inv_schmear = match (maybe_target_schmear) {
@@ -72,6 +79,10 @@ impl FunctionOptimumSpace {
 
             let final_vector = match (maybe_result) {
                 Ok(result) => {
+                    if (-result.state.cost > best_value) {
+                        best_value = -result.state.cost;
+                        best_index = *model_key;
+                    }
                     result.state.param
                 },
                 Err(e) => {
@@ -86,6 +97,7 @@ impl FunctionOptimumSpace {
         let empirical_optimal_input_schmear = Schmear::from_sample_vectors(&optimized_vectors);
         self.optimal_input_schmear.update_lerp(empirical_optimal_input_schmear, LERP_FACTOR);
         self.optimal_input_schmear_sampler = SchmearSampler::new(&self.optimal_input_schmear);
+        (best_index, best_value)
     }
     fn add_vector(&mut self, model_key : ModelKey) {
         let mut rng = rand::thread_rng();
