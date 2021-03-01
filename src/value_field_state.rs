@@ -46,6 +46,20 @@ pub struct ValueFieldState {
 }
 
 impl ValueFieldState {
+    //Deals in compressed vectors
+    pub fn get_value_for_vector(&self, feature_space_info : &FeatureSpaceInfo, typed_vector : &TypedVector) -> f32 {
+        let compressed_vec = &typed_vector.vec;
+        let feat_vec = feature_space_info.get_features(compressed_vec);
+        let type_id = typed_vector.type_id;
+        let value_field = self.get_value_field(type_id);
+        let additional_value = value_field.get_dot_product(&feat_vec);
+        if (type_id == self.target.type_id) {
+            let schmear_sq_dist = self.target.compressed_inv_schmear.sq_mahalanobis_dist(&compressed_vec);
+            additional_value - schmear_sq_dist
+        } else {
+            additional_value
+        }
+    }
     pub fn get_target_for_type(&self, type_id : TypeId) -> Option<SchmearedHole> {
         if (type_id == self.target.type_id) {
             Option::Some(self.target.clone())
