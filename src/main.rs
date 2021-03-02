@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod function_space_directory;
 mod interpreter_and_embedder_state;
 mod constraint_collection;
 mod vector_application_result;

@@ -9,6 +9,7 @@ use crate::function_space_info::*;
 use crate::value_field_maximum_solver::*;
 use crate::schmear::*;
 use crate::schmear_sampler::*;
+use crate::function_space_directory::*;
 use crate::type_id::*;
 use crate::sampled_embedder_state::*;
 use crate::sampled_embedding_space::*;
@@ -29,6 +30,27 @@ pub struct FunctionOptimumSpace {
 }
 
 impl FunctionOptimumSpace {
+    pub fn new(ret_type : TypeId, func_space_info : FunctionSpaceInfo) -> FunctionOptimumSpace {
+        let n = func_space_info.in_feat_info.base_dimensions;
+        let mean = Array::zeros((n,));
+        let mut covariance = Array::eye(n);
+        covariance *= INITIAL_FUNCTION_OPTIMUM_VARIANCE;
+        let optimal_input_schmear = Schmear {
+            mean,
+            covariance
+        };
+        let optimal_input_schmear_sampler = SchmearSampler::new(&optimal_input_schmear);
+
+        let optimal_input_vectors = HashMap::new();
+
+        FunctionOptimumSpace {
+            ret_type,
+            func_space_info,
+            optimal_input_schmear,
+            optimal_input_schmear_sampler,
+            optimal_input_vectors
+        }
+    }
     pub fn get_optimal_vector(&self, model_key : ModelKey) -> &Array1<f32> {
         self.optimal_input_vectors.get(&model_key).unwrap()
     }

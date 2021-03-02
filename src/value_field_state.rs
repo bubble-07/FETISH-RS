@@ -39,6 +39,7 @@ use crate::normal_inverse_wishart::*;
 use crate::embedder_state::*;
 use crate::value_field::*;
 use crate::typed_vector::*;
+use crate::function_space_directory::*;
 
 pub struct ValueFieldState {
     pub value_fields : HashMap<TypeId, ValueField>,
@@ -46,6 +47,19 @@ pub struct ValueFieldState {
 }
 
 impl ValueFieldState {
+    pub fn new(target : SchmearedHole, func_space_directory : &FunctionSpaceDirectory) -> ValueFieldState {
+        let mut value_fields = HashMap::new();
+        for func_type_id in func_space_directory.directory.keys() {
+            let func_space_info = func_space_directory.directory.get(func_type_id).unwrap();
+            let func_feat_info = Rc::clone(&func_space_info.func_feat_info);
+            let value_field = ValueField::new(func_feat_info);
+            value_fields.insert(*func_type_id, value_field);
+        }
+        ValueFieldState {
+            value_fields,
+            target
+        }
+    }
     //Deals in compressed vectors
     pub fn get_value_for_vector(&self, feature_space_info : &FeatureSpaceInfo, typed_vector : &TypedVector) -> f32 {
         let compressed_vec = &typed_vector.vec;

@@ -18,6 +18,7 @@ use crate::data_point::*;
 use crate::interpreter_state::*;
 use crate::displayable_with_state::*;
 use crate::type_id::*;
+use crate::function_space_directory::*;
 use crate::application_table::*;
 use crate::type_space::*;
 use crate::term::*;
@@ -43,7 +44,8 @@ extern crate pretty_env_logger;
 pub struct EmbedderState {
     pub model_spaces : HashMap::<TypeId, ModelSpace>,
     pub vector_spaces : HashMap::<TypeId, VectorSpace>,
-    pub feature_spaces : HashMap::<TypeId, Rc<FeatureSpaceInfo>>
+    pub feature_spaces : HashMap::<TypeId, Rc<FeatureSpaceInfo>>,
+    pub function_space_directory : FunctionSpaceDirectory
 }
 
 impl EmbedderState {
@@ -73,6 +75,7 @@ impl EmbedderState {
         let mut vector_spaces = HashMap::<TypeId, VectorSpace>::new();
 
         let mut feature_spaces = HashMap::<TypeId, Rc<FeatureSpaceInfo>>::new();
+        let mut function_spaces = HashMap::<TypeId, FunctionSpaceInfo>::new();
         
         let mut topo_sort = TopologicalSort::<TypeId>::new();
         for i in 0..total_num_types() {
@@ -106,6 +109,8 @@ impl EmbedderState {
                         func_feat_info : Rc::clone(&func_feat_info_rc)
                     };
 
+                    function_spaces.insert(func_type_id, func_space_info.clone());
+
                     info!("Creating model space with dims {} -> {}", 
                           in_feat_info.base_dimensions, 
                           out_feat_info.base_dimensions);
@@ -118,10 +123,15 @@ impl EmbedderState {
             }
         }
 
+        let function_space_directory = FunctionSpaceDirectory {
+            directory : function_spaces
+        };
+
         EmbedderState {
             model_spaces,
             vector_spaces,
-            feature_spaces
+            feature_spaces,
+            function_space_directory
         }
     }
 

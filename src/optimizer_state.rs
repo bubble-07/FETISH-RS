@@ -37,12 +37,15 @@ use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
 use crate::enum_feature_collection::*;
 use crate::term_application_result::*;
+use crate::value_field_state::*;
+use crate::function_optimum_state::*;
 
 extern crate pretty_env_logger;
 
 pub struct OptimizerState {
     pub interpreter_and_embedder_state : InterpreterAndEmbedderState,
-    target : SchmearedHole,
+    pub value_field_state : ValueFieldState,
+    pub func_opt_state : FunctionOptimumState,
     data_points : Vec::<(Array1<f32>, Array1<f32>)>
 }
 
@@ -91,6 +94,8 @@ impl OptimizerState {
 
         info!("Readying interpreter state");
         let interpreter_and_embedder_state = InterpreterAndEmbedderState::new();
+
+        let func_space_directory = &interpreter_and_embedder_state.embedder_state.function_space_directory;
         
         let target_space = interpreter_and_embedder_state.embedder_state.model_spaces.get(&target_type_id).unwrap();
         let func_space_info = target_space.func_space_info.clone();
@@ -124,9 +129,14 @@ impl OptimizerState {
             compressed_inv_schmear : compressed_target_inv_schmear
         };
 
+        let value_field_state = ValueFieldState::new(target, func_space_directory);
+
+        let func_opt_state = FunctionOptimumState::new(func_space_directory);
+
         OptimizerState {
             interpreter_and_embedder_state,
-            target,
+            value_field_state,
+            func_opt_state,
             data_points
         }
     }

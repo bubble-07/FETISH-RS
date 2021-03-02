@@ -3,6 +3,8 @@ use ndarray::*;
 use crate::sigma_points::*;
 use crate::array_utils::*;
 use noisy_float::prelude::*;
+use ndarray_rand::rand_distr::StandardNormal;
+use ndarray_rand::RandomExt;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use std::rc::*;
@@ -33,6 +35,7 @@ use crate::enum_feature_collection::*;
 use crate::vector_space::*;
 use crate::normal_inverse_wishart::*;
 use crate::embedder_state::*;
+use crate::params::*;
 
 pub struct ValueField {
     pub coefs : Array1<f32>,
@@ -47,5 +50,15 @@ impl ValueField {
 
     pub fn update_coefs(&mut self, delta : &Array1<f32>) {
         self.coefs += delta;
+    }
+
+    pub fn new(feat_space_info : Rc<FeatureSpaceInfo>) -> ValueField {
+        let n = feat_space_info.feature_dimensions; 
+        let mut coefs = Array::random((n,), StandardNormal);
+        coefs *= INITIAL_VALUE_FIELD_VARIANCE;
+        ValueField {
+            coefs,
+            feat_space_info
+        }
     }
 }

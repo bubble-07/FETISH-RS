@@ -14,12 +14,25 @@ use crate::function_optimum_space::*;
 use crate::term_application::*;
 use crate::value_field_state::*;
 use crate::sampled_embedder_state::*;
+use crate::function_space_directory::*;
 
 pub struct FunctionOptimumState {
     pub function_spaces : HashMap::<TypeId, FunctionOptimumSpace>
 }
 
 impl FunctionOptimumState {
+    pub fn new(func_space_directory : &FunctionSpaceDirectory) -> FunctionOptimumState {
+        let mut function_spaces = HashMap::new();
+        for func_type_id in func_space_directory.directory.keys() {
+            let ret_type = get_ret_type_id(*func_type_id);
+            let func_space_info = func_space_directory.directory.get(func_type_id).unwrap();
+            let function_optimum_space = FunctionOptimumSpace::new(ret_type, func_space_info.clone());
+            function_spaces.insert(*func_type_id, function_optimum_space); 
+        }
+        FunctionOptimumState {
+            function_spaces
+        }
+    }
     pub fn update(&mut self, sampled_embedder_state : &SampledEmbedderState, 
                              value_field_state : &ValueFieldState) -> (TermApplication, f32) {
 
