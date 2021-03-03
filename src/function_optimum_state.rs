@@ -24,10 +24,13 @@ impl FunctionOptimumState {
     pub fn new(func_space_directory : &FunctionSpaceDirectory) -> FunctionOptimumState {
         let mut function_spaces = HashMap::new();
         for func_type_id in func_space_directory.directory.keys() {
-            let ret_type = get_ret_type_id(*func_type_id);
-            let func_space_info = func_space_directory.directory.get(func_type_id).unwrap();
-            let function_optimum_space = FunctionOptimumSpace::new(ret_type, func_space_info.clone());
-            function_spaces.insert(*func_type_id, function_optimum_space); 
+            let arg_type = get_arg_type_id(*func_type_id);
+            if (is_vector_type(arg_type)) {
+                let ret_type = get_ret_type_id(*func_type_id);
+                let func_space_info = func_space_directory.directory.get(func_type_id).unwrap();
+                let function_optimum_space = FunctionOptimumSpace::new(ret_type, func_space_info.clone());
+                function_spaces.insert(*func_type_id, function_optimum_space); 
+            }
         }
         FunctionOptimumState {
             function_spaces

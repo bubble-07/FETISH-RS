@@ -64,8 +64,6 @@ impl InterpreterAndEmbedderState {
         }
     }
     pub fn init_step(&mut self) {
-        self.embedder_state.init_embeddings(&mut self.interpreter_state);
-        self.bayesian_update_step();
     }
     pub fn evaluate_training_data_step(&mut self, term_ptr : TermPointer, 
                                                   data_points : &Vec<(Array1<f32>, Array1<f32>)>) {
@@ -118,19 +116,10 @@ impl InterpreterAndEmbedderState {
         &self.interpreter_state.new_term_app_results
     }
     pub fn bayesian_update_step(&mut self) {
-        self.embedder_state.init_embeddings(&mut self.interpreter_state);
-        let mut data_updated_terms : HashSet<TermPointer> = HashSet::new();
-        let mut prior_updated_terms : HashSet<TermPointer> = HashSet::new();
-
-        let mut updated_apps : HashSet::<TermApplicationResult> = HashSet::new();
-        for term_app_result in self.interpreter_state.new_term_app_results.drain(..) {
-            updated_apps.insert(term_app_result); 
-        }
-
-        trace!("Propagating data updates for {} applications", updated_apps.len());
-        self.embedder_state.propagate_data_recursive(&self.interpreter_state, updated_apps, &mut data_updated_terms);
-        trace!("Propagating prior updates for {} applications", data_updated_terms.len());
-        self.embedder_state.propagate_prior_recursive(&self.interpreter_state, data_updated_terms, &mut prior_updated_terms);
+        self.embedder_state.bayesian_update_step(&self.interpreter_state);
+    }
+    pub fn clear_newly_received(&mut self) {
+        self.interpreter_state.clear_newly_received();
     }
 
     pub fn new() -> InterpreterAndEmbedderState {

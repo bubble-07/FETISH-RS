@@ -26,6 +26,11 @@ pub struct InterpreterState {
 
 impl InterpreterState {
 
+    pub fn clear_newly_received(&mut self) {
+        self.new_term_app_results.clear();
+        self.new_terms.clear();
+    }
+
     pub fn store_term(&mut self, type_id : TypeId, term : PartiallyAppliedTerm) -> TermPointer {
         let type_space : &mut TypeSpace = self.type_spaces.get_mut(&type_id).unwrap();
         let result = type_space.add(term);

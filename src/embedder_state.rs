@@ -135,13 +135,30 @@ impl EmbedderState {
         }
     }
 
-    pub fn init_embeddings(&mut self, interpreter_state : &mut InterpreterState) {
+    pub fn init_embeddings(&mut self, interpreter_state : &InterpreterState) {
         trace!("Initializing embeddings for {} new terms", interpreter_state.new_terms.len());
-        for term_ptr in interpreter_state.new_terms.drain(..) {
-            if (!self.has_embedding(&term_ptr)) {
-                self.init_embedding(term_ptr);
+        for term_ptr in interpreter_state.new_terms.iter() {
+            if (!self.has_embedding(term_ptr)) {
+                self.init_embedding(term_ptr.clone());
             }
         }
+    }
+
+    pub fn bayesian_update_step(&mut self, interpreter_state : &InterpreterState) {
+        self.init_embeddings(interpreter_state);
+
+        let mut data_updated_terms : HashSet<TermPointer> = HashSet::new();
+        let mut prior_updated_terms : HashSet<TermPointer> = HashSet::new();
+
+        let mut updated_apps : HashSet::<TermApplicationResult> = HashSet::new();
+        for term_app_result in interpreter_state.new_term_app_results.iter() {
+            updated_apps.insert(term_app_result.clone()); 
+        }
+
+        trace!("Propagating data updates for {} applications", updated_apps.len());
+        self.propagate_data_recursive(interpreter_state, updated_apps, &mut data_updated_terms);
+        trace!("Propagating prior updates for {} applications", data_updated_terms.len());
+        self.propagate_prior_recursive(interpreter_state, data_updated_terms, &mut prior_updated_terms);
     }
 
     pub fn has_embedding(&self, term_ptr : &TermPointer) -> bool {

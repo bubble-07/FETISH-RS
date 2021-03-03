@@ -52,27 +52,60 @@ pub struct OptimizerState {
 impl OptimizerState {
 
     pub fn step(&mut self) -> Option<TermPointer> {
-        let mut rng = rand::thread_rng();
+        trace!("Applying Bayesian update");
+        self.interpreter_and_embedder_state.bayesian_update_step();
 
         trace!("Sampling embedder state");
+        let mut rng = rand::thread_rng();
         let sampled_embedder_state = self.interpreter_and_embedder_state.embedder_state.sample(&mut rng);
 
-        trace!("Optimizing for current target");
+        trace!("Updating value fields");
+        trace!("Obtaining new constraints");
+        let mut constraints = self.interpreter_and_embedder_state.get_new_constraints(&sampled_embedder_state);
+        constraints.update_repeat(NUM_CONSTRAINT_REPEATS);
+        constraints.update_shuffle();
 
-        trace!("Performing bayesian update");
-        self.bayesian_update_step();
-        self.interpreter_and_embedder_state.dump_model_traces();
+        trace!("Applying new constraints");
+        self.value_field_state.apply_constraints(&constraints);
 
-        panic!();
+        trace!("Optimizing for highest-value application");
+        let best_application = self.find_best_application(&sampled_embedder_state);
+
+        trace!("Done with newly-evaluated terms, discarding");
+        self.interpreter_and_embedder_state.clear_newly_received();
+
+        trace!("Evaluating best application");
+        let result_ref = self.interpreter_and_embedder_state.interpreter_state.evaluate(&best_application);
+
+        if (result_ref.get_type() == self.value_field_state.target.type_id) {
+            trace!("Best term was in the target type. Evaluating on training data");
+            if let TermReference::FuncRef(func_ptr) = &result_ref {
+                self.evaluate_training_data_step(func_ptr.clone());
+            }
+        }
+
+        match (result_ref) {
+            TermReference::FuncRef(func_ptr) => Option::Some(func_ptr),
+            TermReference::VecRef(_) => Option::None
+        }
+    }
+
+    pub fn find_best_application(&mut self, sampled_embedder_state : &SampledEmbedderState) -> TermApplication {
+        let (nonvec_app, nonvec_value) = 
+            sampled_embedder_state.get_best_nonvector_application_with_value(&self.interpreter_and_embedder_state.interpreter_state,
+                                                                             &self.value_field_state);
+        let (vec_app, vec_value) = self.func_opt_state.update(sampled_embedder_state, &self.value_field_state);
+        if (vec_value > nonvec_value) {
+            vec_app
+        } else {
+            nonvec_app
+        }
     }
 
     pub fn evaluate_training_data_step(&mut self, term_ptr : TermPointer) {
         self.interpreter_and_embedder_state.evaluate_training_data_step(term_ptr, &self.data_points);
     }
 
-    pub fn bayesian_update_step(&mut self) {
-        self.interpreter_and_embedder_state.bayesian_update_step();
-    }
     pub fn init_step(&mut self) {
         self.interpreter_and_embedder_state.init_step();
     }
