@@ -98,24 +98,10 @@ impl ValueFieldState {
     //Assumes that we're dealing with base type vectors
     pub fn apply_constraint(&mut self, func_vec : &TypedVector, arg_vec : &TypedVector, ret_vec : &TypedVector) {
         let func_feat_info = &self.get_value_field(func_vec.type_id).feat_space_info;
-        let arg_feat_info = &self.get_value_field(arg_vec.type_id).feat_space_info;
         let ret_feat_info = &self.get_value_field(ret_vec.type_id).feat_space_info;
 
         let func_feat_vec = func_vec.get_features_from_base(func_feat_info);
-        let arg_feat_vec = arg_vec.get_features_from_base(arg_feat_info);
         let ret_feat_vec = ret_vec.get_features_from_base(ret_feat_info);
-
-        let mut func_scale = 0.5f32;
-        let mut arg_scale = 0.5f32;
-
-        //If the argument is a vector type, then zero its coefficient, since we want it dropped
-        //since we'll want to drop it from the equation
-        if (is_vector_type(arg_vec.type_id)) {
-            func_scale = 1.0f32;
-            arg_scale = 0.0f32;
-        }
-        func_scale *= GAMMA;
-        arg_scale *= GAMMA;
 
         let mut bonus = 0.0f32;
         //If the return type is the target type, add in the bonus
@@ -123,15 +109,47 @@ impl ValueFieldState {
             let sq_dist = self.target.full_inv_schmear.sq_mahalanobis_dist(&ret_vec.vec);
             bonus = -sq_dist;
         }
-        self.apply_feat_constraint(func_scale, arg_scale, LAMBDA, 
-                                   &func_feat_vec, &arg_feat_vec, 
-                                   &ret_feat_vec, bonus);
+
+        if (is_vector_type(arg_vec.type_id)) {
+            self.apply_vector_arg_feat_constraint(GAMMA, LAMBDA, &func_feat_vec, &ret_feat_vec, bonus);
+        } else {
+            let arg_feat_info = &self.get_value_field(arg_vec.type_id).feat_space_info;
+            let arg_feat_vec = arg_vec.get_features_from_base(arg_feat_info);
+
+            self.apply_function_arg_feat_constraint(GAMMA, LAMBDA, &func_feat_vec, &arg_feat_vec,
+                                                    &ret_feat_vec, bonus);
+        }
+    }
+
+    pub fn apply_vector_arg_feat_constraint(&mut self, gamma : f32, lambda : f32,
+                          func_vec : &TypedVector,
+                          ret_vec : &TypedVector, bonus : f32) {
+        let func_field = self.get_value_field(func_vec.type_id);
+        let ret_field = self.get_value_field(ret_vec.type_id);
+
+        //Equations are gamma * func_value = ret_value + bonus
+        let func_coef = gamma * &func_vec.vec;
+        let ret_coef = -1.0f32 * &ret_vec.vec;
+
+        let func_dot = func_field.get_dot_product(&func_coef);
+        let ret_dot = ret_field.get_dot_product(&ret_coef);
+        let total_dot = func_dot + ret_dot;
+
+        let total_sq_magnitude = func_coef.dot(&func_coef) + ret_coef.dot(&ret_coef);
+
+        let coef_update_magnitude = lambda * (bonus - total_dot) / total_sq_magnitude;
+
+        let func_update = coef_update_magnitude * &func_coef;
+        let ret_update = coef_update_magnitude * &ret_coef;
+
+        self.get_value_field_mut(func_vec.type_id).update_coefs(&func_update);
+        self.get_value_field_mut(ret_vec.type_id).update_coefs(&ret_update);
     }
     
 
     //Assumes that we're dealing with _featurized_ type vectors
     //lambda is the relaxation factor for the Kaczmarz method
-    pub fn apply_feat_constraint(&mut self, func_scale : f32, arg_scale : f32, lambda : f32,
+    pub fn apply_function_arg_feat_constraint(&mut self, gamma : f32, lambda : f32,
                           func_vec : &TypedVector, arg_vec : &TypedVector, 
                           ret_vec : &TypedVector, bonus : f32) {
         let func_field = self.get_value_field(func_vec.type_id);
@@ -140,8 +158,8 @@ impl ValueFieldState {
         
         //Equations are gamma * func_value + gamma * arg_value = ret_value + bonus
         
-        let func_coef = func_scale * &func_vec.vec;
-        let arg_coef = arg_scale * &arg_vec.vec;
+        let func_coef = (0.5f32 * gamma) * &func_vec.vec;
+        let arg_coef = (0.5f32 * gamma) * &arg_vec.vec;
         let ret_coef = -1.0f32 * &ret_vec.vec;
 
         let func_dot = func_field.get_dot_product(&func_coef);
