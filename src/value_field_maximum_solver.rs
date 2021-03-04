@@ -7,10 +7,12 @@ use ndarray_linalg::*;
 
 use std::ops;
 use std::rc::*;
+use anyhow::*;
 
 use crate::function_space_info::*;
 use crate::feature_space_info::*;
 use crate::data_points::*;
+use crate::array_utils::*;
 use crate::sigma_points::*;
 use crate::embedder_state::*;
 use crate::pseudoinverse::*;
@@ -101,12 +103,21 @@ impl ArgminOp for ValueFieldMaximumSolver {
 
     fn apply(&self, x_compressed : &Self::Param) -> Result<Self::Output, Error> {
         let neg_result = self.get_value(x_compressed);
-        Ok(-neg_result)
+        let result = -neg_result;
+        if (result.is_finite()) {
+            Ok(result)
+        } else {
+            Err(anyhow!("Non-finite value for vector: {}", x_compressed))
+        }
     }
 
     fn gradient(&self, x_compressed : &Self::Param) -> Result<Self::Param, Error> {
         let mut neg_result = self.get_value_gradient(x_compressed);
         neg_result *= -1.0f32;
-        Ok(neg_result)
+        if (all_finite(&neg_result)) {
+            Ok(neg_result)
+        } else {
+            Err(anyhow!("Non-finite gradient {} for vector {}", neg_result, x_compressed))
+        }
     }
 }

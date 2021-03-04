@@ -90,7 +90,7 @@ impl FunctionOptimumSpace {
             }
 
             let initial_vector = value_field_max_solver.get_compressed_vector_with_max_value(&possible_initial_vectors);
-            
+
             //Optimize starting from the inital vector to yield a new optimal point
             let linesearch = MoreThuenteLineSearch::new();
             let solver = SteepestDescent::new(linesearch);
