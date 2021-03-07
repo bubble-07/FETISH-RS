@@ -24,13 +24,7 @@ pub const RANDOM_VECTORS_PER_ITER : usize = 5;
 
 pub const INITIAL_VALUE_FIELD_VARIANCE : f32 = 0.01f32;
 
-pub const INITIAL_FUNCTION_OPTIMUM_VARIANCE : f32 = 20.0f32;
-
 pub const NUM_CONSTRAINT_REPEATS : usize = 3;
-
-//closer to 0.0 -> less myopic, 1.0 -> more myopic 
-//(exponential moving average, for statistics on optimal arguments to vector-valued funcs)
-pub const LERP_FACTOR : f32 = 0.25f32;
 
 //Numerical algorithm constants
 pub const NUM_STEEPEST_DESCENT_STEPS_PER_ITER : usize = 10;

@@ -44,6 +44,16 @@ pub struct FunctionSpaceInfo {
 }
 
 impl FunctionSpaceInfo {
+    //Given an A -> B, constructs a function space info
+    //for (A -> B) -> A, but with a bogus func_feat_info
+    //operations which would use that will fail
+    pub fn build_optimal_input_func_info(&self) -> FunctionSpaceInfo {
+        FunctionSpaceInfo {
+            in_feat_info : Rc::clone(&self.func_feat_info),
+            out_feat_info : Rc::clone(&self.in_feat_info),
+            func_feat_info : Rc::clone(&self.out_feat_info)
+        }
+    }
     pub fn get_feature_dimensions(&self) -> usize {
         self.in_feat_info.feature_dimensions
     }

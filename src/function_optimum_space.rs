@@ -2,6 +2,8 @@ use ndarray::*;
 use ndarray_linalg::*;
 use std::rc::*;
 use std::collections::HashMap;
+use crate::model::*;
+use crate::normal_inverse_wishart_sampler::*;
 use crate::params::*;
 use crate::sampled_term_embedding::*;
 use crate::sampled_model_embedding::*;
@@ -14,6 +16,7 @@ use crate::type_id::*;
 use crate::sampled_embedder_state::*;
 use crate::sampled_embedding_space::*;
 use crate::value_field_state::*;
+use crate::data_points::*;
 
 use argmin::prelude::*;
 use argmin::solver::gradientdescent::SteepestDescent;
@@ -24,30 +27,28 @@ type ModelKey = usize;
 pub struct FunctionOptimumSpace {
     pub ret_type : TypeId,
     pub func_space_info : FunctionSpaceInfo,
-    pub optimal_input_schmear : Schmear,
-    pub optimal_input_schmear_sampler : SchmearSampler,
+    pub optimal_input_mapping : Model,
+    pub optimal_input_mapping_sampler : NormalInverseWishartSampler,
     pub optimal_input_vectors : HashMap<ModelKey, Array1<f32>>
 }
 
 impl FunctionOptimumSpace {
     pub fn new(ret_type : TypeId, func_space_info : FunctionSpaceInfo) -> FunctionOptimumSpace {
         let n = func_space_info.in_feat_info.base_dimensions;
-        let mean = Array::zeros((n,));
-        let mut covariance = Array::eye(n);
-        covariance *= INITIAL_FUNCTION_OPTIMUM_VARIANCE;
-        let optimal_input_schmear = Schmear {
-            mean,
-            covariance
-        };
-        let optimal_input_schmear_sampler = SchmearSampler::new(&optimal_input_schmear);
+
+        //TODO: Configure parameters for the NIW prior here
+        let optimal_input_func_info = func_space_info.build_optimal_input_func_info();
+
+        let optimal_input_mapping = Model::new(optimal_input_func_info);
+        let optimal_input_mapping_sampler = NormalInverseWishartSampler::new(&optimal_input_mapping.data);
 
         let optimal_input_vectors = HashMap::new();
 
         FunctionOptimumSpace {
             ret_type,
             func_space_info,
-            optimal_input_schmear,
-            optimal_input_schmear_sampler,
+            optimal_input_mapping,
+            optimal_input_mapping_sampler,
             optimal_input_vectors
         }
     }
@@ -67,10 +68,27 @@ impl FunctionOptimumSpace {
                                             };
         let value_field_coefs = &value_field_state.get_value_field(self.ret_type).coefs;
 
-        let mut optimized_vectors : Vec<Array1<f32>> = Vec::new();
+        let mut sampled_func_mats : Vec<Array2<f32>> = Vec::new();
+        for _ in 0..RANDOM_VECTORS_PER_ITER {
+            let mat = self.optimal_input_mapping_sampler.sample(&mut rng);
+            sampled_func_mats.push(mat);
+        }
+
+        let num_models = sampled_embeddings.models.len();
+        let compressed_func_vec_size = self.func_space_info.func_feat_info.get_sketched_dimensions();
+        let in_vec_size = self.func_space_info.in_feat_info.get_sketched_dimensions();
+
+        let mut in_model_funcs = Array::zeros((num_models, compressed_func_vec_size));
+        let mut out_model_vecs = Array::zeros((num_models, in_vec_size));
+        let mut ind = 0;
 
         for model_key in sampled_embeddings.models.keys() {
             let model_embedding = sampled_embeddings.get_embedding(*model_key);
+
+            let model_compressed_vec = &model_embedding.sampled_compressed_vec;
+
+            //Featurized model embedding matrix
+            let model_feat_vec = self.func_space_info.func_feat_info.get_features(model_compressed_vec);
 
             let value_field_max_solver = ValueFieldMaximumSolver {
                 func_space_info : self.func_space_info.clone(),
@@ -84,8 +102,9 @@ impl FunctionOptimumSpace {
                 let vec = self.optimal_input_vectors.get(model_key).unwrap();
                 possible_initial_vectors.push(vec.clone());
             }
-            for _ in 0..RANDOM_VECTORS_PER_ITER {
-                let vec = self.optimal_input_schmear_sampler.sample(&mut rng);
+            for i in 0..RANDOM_VECTORS_PER_ITER {
+                let mat = &sampled_func_mats[i];
+                let vec = mat.dot(&model_feat_vec);
                 possible_initial_vectors.push(vec);
             }
 
@@ -113,17 +132,21 @@ impl FunctionOptimumSpace {
                 }
             };
 
-            optimized_vectors.push(final_vector.clone());
+            in_model_funcs.row_mut(ind).assign(model_compressed_vec);
+            out_model_vecs.row_mut(ind).assign(&final_vector);
+
             self.optimal_input_vectors.insert(*model_key, final_vector);
+
+            ind += 1;
         }
-        let empirical_optimal_input_schmear = Schmear::from_sample_vectors(&optimized_vectors);
-        self.optimal_input_schmear.update_lerp(empirical_optimal_input_schmear, LERP_FACTOR);
-        self.optimal_input_schmear_sampler = SchmearSampler::new(&self.optimal_input_schmear);
+
+        let data_points = DataPoints {
+            in_vecs : in_model_funcs,
+            out_vecs : out_model_vecs
+        };
+        self.optimal_input_mapping += data_points;
+        self.optimal_input_mapping_sampler = NormalInverseWishartSampler::new(&self.optimal_input_mapping.data);
+
         (best_index, best_value)
-    }
-    fn add_vector(&mut self, model_key : ModelKey) {
-        let mut rng = rand::thread_rng();
-        let vec = self.optimal_input_schmear_sampler.sample(&mut rng);
-        self.optimal_input_vectors.insert(model_key, vec);
     }
 }
