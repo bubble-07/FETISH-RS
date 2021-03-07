@@ -5,6 +5,7 @@ use ndarray::*;
 use std::collections::HashMap;
 use crate::type_id::*;
 use crate::displayable_with_state::*;
+use crate::application_chain::*;
 use crate::application_table::*;
 use crate::type_space::*;
 use crate::term::*;
@@ -73,6 +74,47 @@ impl InterpreterState {
             result.append(&mut temp);
         }
         result
+    }
+
+    pub fn evaluate_application_chain(&mut self, app_chain : &ApplicationChain) -> TermReference {
+        let mut current_ref = app_chain.term_refs[0].clone();
+        for i in 1..app_chain.term_refs.len() {
+            let current_type = current_ref.get_type();
+
+            let other_ref = &app_chain.term_refs[i];
+            let other_type = other_ref.get_type();
+
+            let mut current_is_applicative = false;
+            if (!is_vector_type(current_type)) {
+                let arg_type = get_arg_type_id(current_type);
+                current_is_applicative = (arg_type == other_type);
+            }
+
+            let term_app = if (current_is_applicative) {
+                match (current_ref) {
+                    TermReference::FuncRef(current_ptr) => {
+                        TermApplication {
+                            func_ptr : current_ptr,
+                            arg_ref : other_ref.clone()
+                        }
+                    },
+                    TermReference::VecRef(_) => { panic!(); }
+                }
+            } else {
+                match (other_ref) {
+                    TermReference::FuncRef(other_ptr) => {
+                        TermApplication {
+                            func_ptr : other_ptr.clone(),
+                            arg_ref : current_ref
+                        }
+                    },
+                    TermReference::VecRef(_) => { panic!(); }
+                }
+            };
+
+            current_ref = self.evaluate(&term_app);
+        }
+        current_ref
     }
 
     pub fn evaluate(&mut self, term_app : &TermApplication) -> TermReference {
