@@ -153,6 +153,9 @@ impl GlobalTypeInfo {
             ret_ind
         }
     }
+    fn has_type(&self, info : &Type) -> bool {
+        self.ind_map.contains_key(info)
+    }
     fn get(&self, info : &Type) -> TypeId {
         self.ind_map.get(info).unwrap().clone()
     }
@@ -166,6 +169,9 @@ impl GlobalTypeInfo {
 
 pub fn get_application_type_ids(id : TypeId) -> Vec::<(TypeId, TypeId)> {
     GLOBAL_TYPE_INFO.get_application_type_ids(id)
+}
+pub fn has_type(kind : &Type) -> bool {
+    GLOBAL_TYPE_INFO.has_type(kind)
 }
 
 pub fn get_type_id(kind : &Type) -> TypeId {

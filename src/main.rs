@@ -4,6 +4,8 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod type_graph;
+mod type_action;
 mod application_chain;
 mod function_space_directory;
 mod interpreter_and_embedder_state;
