@@ -33,6 +33,15 @@ pub struct FunctionOptimumSpace {
 }
 
 impl FunctionOptimumSpace {
+    pub fn estimate_optimal_vector_for_compressed_func(&self, compressed_func : &Array1<f32>) -> Array1<f32> {
+        let mut rng = rand::thread_rng();
+        let optimal_input_mapping_sample = self.optimal_input_mapping_sampler.sample(&mut rng);
+
+        let func_feats = self.func_space_info.func_feat_info.get_features(compressed_func);
+        let optimal_input_vec = optimal_input_mapping_sample.dot(&func_feats);
+
+        optimal_input_vec
+    }
     pub fn new(ret_type : TypeId, func_space_info : FunctionSpaceInfo) -> FunctionOptimumSpace {
         let n = func_space_info.in_feat_info.base_dimensions;
 
