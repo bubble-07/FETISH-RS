@@ -14,6 +14,7 @@ use crate::sampled_model_embedding::*;
 use crate::term_application::*;
 use crate::typed_vector::*;
 use crate::value_field_state::*;
+use crate::value_field::*;
 
 pub struct SampledEmbedderState {
     pub embedding_spaces : HashMap::<TypeId, SampledEmbeddingSpace>
@@ -75,9 +76,8 @@ impl SampledEmbedderState {
                                 vec : ret_vec,
                                 type_id : ret_type_id
                             };
-                            let ret_feat_space_info = &func_space_info.out_feat_info;
 
-                            let value = value_field_state.get_value_for_vector(ret_feat_space_info, &ret_typed_vec);
+                            let value = value_field_state.get_value_for_vector(&ret_typed_vec);
                             if (value > best_value) {
                                 best_value = value;
                                 best_application = Option::Some(term_app);

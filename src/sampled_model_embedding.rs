@@ -12,6 +12,8 @@ use crate::inverse_schmear::*;
 use crate::array_utils::*;
 use crate::model::*;
 
+//TODO: Store the featurized version of what's sampled, so that you don't have
+//to re-compute that multiple times
 pub struct SampledModelEmbedding {
     pub func_schmear : FuncSchmear,
     pub func_inv_schmear : FuncInverseSchmear,
