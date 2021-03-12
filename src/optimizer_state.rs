@@ -16,6 +16,7 @@ use crate::array_utils::*;
 use crate::type_id::*;
 use crate::application_table::*;
 use crate::type_space::*;
+use crate::space_info::*;
 use crate::params::*;
 use crate::term::*;
 use crate::term_pointer::*;
@@ -128,14 +129,12 @@ impl OptimizerState {
         info!("Readying interpreter state");
         let interpreter_and_embedder_state = InterpreterAndEmbedderState::new();
 
-        let func_space_directory = &interpreter_and_embedder_state.embedder_state.function_space_directory;
-        
         let target_space = interpreter_and_embedder_state.embedder_state.model_spaces.get(&target_type_id).unwrap();
-        let func_space_info = target_space.func_space_info.clone();
+        let func_feat_info = get_feature_space_info(target_type_id);
 
         info!("Readying target");
         
-        let mut target_model : Model = Model::new(func_space_info);
+        let mut target_model : Model = Model::new(in_type_id, out_type_id);
 
         for (in_vec, out_vec) in data_points.iter() {
             let data_point = DataPoint {
@@ -153,7 +152,7 @@ impl OptimizerState {
             precision : normalize_frob(&target_inv_schmear.precision)
         };
 
-        let sketch_mat = target_space.func_space_info.func_feat_info.get_projection_matrix();
+        let sketch_mat = func_feat_info.get_projection_matrix();
         let compressed_target_inv_schmear = normalized_target_inv_schmear.transform_compress(&sketch_mat);
 
         let target = SchmearedHole {
@@ -162,9 +161,9 @@ impl OptimizerState {
             compressed_inv_schmear : compressed_target_inv_schmear
         };
 
-        let value_field_state = ValueFieldState::new(target, func_space_directory);
+        let value_field_state = ValueFieldState::new(target);
 
-        let func_opt_state = FunctionOptimumState::new(func_space_directory);
+        let func_opt_state = FunctionOptimumState::new();
 
         OptimizerState {
             interpreter_and_embedder_state,

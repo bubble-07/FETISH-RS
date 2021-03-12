@@ -7,6 +7,7 @@ use ndarray_linalg::*;
 use std::ops;
 use std::rc::*;
 
+use crate::type_id::*;
 use crate::data_points::*;
 use crate::function_space_info::*;
 use crate::data_update::*;
@@ -28,6 +29,7 @@ use crate::func_schmear::*;
 use crate::func_inverse_schmear::*;
 use crate::params::*;
 use crate::test_utils::*;
+use crate::space_info::*;
 
 use rand::prelude::*;
 
@@ -35,7 +37,8 @@ use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct Model {
-    pub func_space_info : FunctionSpaceInfo,
+    pub arg_type_id : TypeId,
+    pub ret_type_id : TypeId,
     pub data : NormalInverseWishart,
 }
 
@@ -80,6 +83,10 @@ impl Model {
 
 
 impl Model {
+    pub fn get_type_id(&self) -> TypeId {
+        let kind = Type::FuncType(self.arg_type_id, self.ret_type_id);
+        get_type_id(&kind)
+    }
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
         self.data.sample(rng)
     }
@@ -99,26 +106,30 @@ impl Model {
     }
 
     pub fn eval(&self, in_vec: &Array1<f32>) -> Array1<f32> {
-        let feats = self.func_space_info.in_feat_info.get_features(in_vec);
+        let func_space_info = build_function_space_info(self.arg_type_id, self.ret_type_id);
+        let feats = func_space_info.in_feat_info.get_features(in_vec);
         self.data.eval(&feats)
     }
 }
 
 impl ops::AddAssign<DataPoint> for Model {
     fn add_assign(&mut self, other: DataPoint) {
-        self.data += &self.func_space_info.get_data(other);
+        let func_space_info = build_function_space_info(self.arg_type_id, self.ret_type_id);
+        self.data += &func_space_info.get_data(other);
     }
 }
 
 impl ops::AddAssign<DataPoints> for Model {
     fn add_assign(&mut self, other : DataPoints) {
-        self.data.update_datapoints(&self.func_space_info.get_data_points(other));
+        let func_space_info = build_function_space_info(self.arg_type_id, self.ret_type_id);
+        self.data.update_datapoints(&func_space_info.get_data_points(other));
     }
 }
 
 impl ops::SubAssign<DataPoint> for Model {
     fn sub_assign(&mut self, other: DataPoint) {
-        self.data -= &self.func_space_info.get_data(other);
+        let func_space_info = build_function_space_info(self.arg_type_id, self.ret_type_id);
+        self.data -= &func_space_info.get_data(other);
     }
 }
 
@@ -135,12 +146,14 @@ impl ops::SubAssign<&NormalInverseWishart> for Model {
 }
 
 impl Model {
-    pub fn new(func_space_info : FunctionSpaceInfo) -> Model {
+    pub fn new(arg_type_id : TypeId, ret_type_id : TypeId) -> Model {
+        let func_space_info = build_function_space_info(arg_type_id, ret_type_id);
         let data = NormalInverseWishart::from_space_info(&func_space_info);
     
         Model {
-            func_space_info,
-            data : data
+            arg_type_id,
+            ret_type_id,
+            data
         }
     }
 }

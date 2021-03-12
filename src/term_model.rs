@@ -9,12 +9,14 @@ use std::rc::*;
 
 use crate::function_space_info::*;
 use crate::data_update::*;
+use crate::space_info::*;
 use crate::data_point::*;
 use crate::pseudoinverse::*;
 use crate::feature_collection::*;
 use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
 use crate::rand_utils::*;
+use crate::type_id::*;
 use crate::enum_feature_collection::*;
 use crate::linalg_utils::*;
 use crate::normal_inverse_wishart::*;
@@ -64,7 +66,8 @@ impl TermModel {
     }
 
     pub fn get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
-        self.model.func_space_info.in_feat_info.get_features(in_vec)
+        let func_space_info = get_function_space_info(self.model.get_type_id());
+        func_space_info.in_feat_info.get_features(in_vec)
     }
 
     pub fn eval(&self, in_vec : &Array1<f32>) -> Array1<f32> {
@@ -75,7 +78,8 @@ impl TermModel {
         self.data_updates.contains_key(update_key)
     }
     pub fn update_data(&mut self, update_key : TermReference, data_update : DataUpdate) {
-        let feat_update = data_update.featurize(&self.model.func_space_info);
+        let func_space_info = get_function_space_info(self.model.get_type_id());
+        let feat_update = data_update.featurize(&func_space_info);
         self.model.data += &feat_update;
         self.data_updates.insert(update_key, feat_update);
     }
@@ -95,10 +99,12 @@ impl TermModel {
         self.model -= &distr;
     }
 
-    pub fn new(func_space_info : FunctionSpaceInfo) -> TermModel {
+    pub fn new(type_id : TypeId) -> TermModel {
         let prior_updates : HashMap::<TermApplication, NormalInverseWishart> = HashMap::new();
         let data_updates : HashMap::<TermReference, DataUpdate> = HashMap::new();
-        let model = Model::new(func_space_info);
+        let arg_type_id = get_arg_type_id(type_id);
+        let ret_type_id = get_ret_type_id(type_id);
+        let model = Model::new(arg_type_id, ret_type_id);
         TermModel {
             model : model,
             prior_updates : prior_updates,

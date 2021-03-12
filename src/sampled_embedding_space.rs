@@ -8,13 +8,14 @@ use crate::function_space_info::*;
 use crate::term_reference::*;
 use crate::value_field::*;
 use crate::value_field_state::*;
+use crate::space_info::*;
 use crate::typed_vector::*;
 use crate::type_id::*;
 
 type ModelKey = usize;
 
 pub struct SampledEmbeddingSpace {
-    pub func_space_info : FunctionSpaceInfo,
+    pub type_id : TypeId,
     pub models : HashMap<ModelKey, SampledModelEmbedding>
 }
 
@@ -26,11 +27,10 @@ impl SampledEmbeddingSpace {
         self.models.get(&model_key).unwrap()
     }
     pub fn get_term_embedding(&self, model_key : ModelKey) -> SampledTermEmbedding {
-        let space_info = self.func_space_info.clone();
         let model_embedding = self.get_embedding(model_key);
         let sampled_mat = model_embedding.sampled_mat.clone();
 
-        SampledTermEmbedding::FunctionEmbedding(space_info, sampled_mat)
+        SampledTermEmbedding::FunctionEmbedding(self.type_id, sampled_mat)
     }
 
     pub fn get_best_term_index_to_pass_with_value(&self, func_mat : &Array2<f32>, ret_type : TypeId,
@@ -38,9 +38,12 @@ impl SampledEmbeddingSpace {
                                          -> (usize, f32) {
         let mut best_arg_index = 0;
         let mut best_arg_value = f32::NEG_INFINITY;
+
+        let func_feat_info = get_feature_space_info(self.type_id);
+
         for (arg_index, arg_model) in self.models.iter() {
             let arg_vec = &arg_model.sampled_compressed_vec; 
-            let feat_arg_vec = self.func_space_info.func_feat_info.get_features(&arg_vec);
+            let feat_arg_vec = func_feat_info.get_features(&arg_vec);
             let compressed_ret_vec = func_mat.dot(arg_vec);
             let typed_ret_vec = TypedVector {
                 vec : compressed_ret_vec,
@@ -77,9 +80,9 @@ impl SampledEmbeddingSpace {
         (best_model_index, best_model_value)
     }
 
-    pub fn new(func_space_info : FunctionSpaceInfo) -> SampledEmbeddingSpace {
+    pub fn new(type_id : TypeId) -> SampledEmbeddingSpace {
         SampledEmbeddingSpace {
-            func_space_info,
+            type_id,
             models : HashMap::new()
         }
     }

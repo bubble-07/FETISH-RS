@@ -1,13 +1,15 @@
 use ndarray::*;
 use ndarray_linalg::*;
 use std::rc::*;
-use crate::function_space_info::*;
 use crate::array_utils::*;
+use crate::type_id::*;
+use crate::space_info::*;
+use crate::function_space_info::*;
 
 #[derive(Clone)]
 pub enum SampledTermEmbedding {
     VectorEmbedding(Array1<f32>),
-    FunctionEmbedding(FunctionSpaceInfo, Array2<f32>)
+    FunctionEmbedding(TypeId, Array2<f32>)
 }
 
 impl SampledTermEmbedding {
@@ -21,8 +23,9 @@ impl SampledTermEmbedding {
         let flattened_embedding = self.get_flattened();
         match (&self) {
             SampledTermEmbedding::VectorEmbedding(vec) => flattened_embedding,
-            SampledTermEmbedding::FunctionEmbedding(space_info, _) => {
-                space_info.sketch(&flattened_embedding)
+            SampledTermEmbedding::FunctionEmbedding(type_id, _) => {
+                let func_feat_info = get_feature_space_info(*type_id);
+                func_feat_info.sketch(&flattened_embedding)
             }
         }
     }

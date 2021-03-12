@@ -14,7 +14,6 @@ use crate::pseudoinverse::*;
 use crate::term_pointer::*;
 use crate::normal_inverse_wishart::*;
 use crate::alpha_formulas::*;
-use crate::vector_space::*;
 use crate::feature_collection::*;
 use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;

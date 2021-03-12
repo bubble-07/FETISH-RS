@@ -4,6 +4,7 @@ use crate::sampled_embedding_space::*;
 use std::collections::HashMap;
 use std::rc::*;
 use crate::function_space_info::*;
+use crate::space_info::*;
 use crate::term_pointer::*;
 use crate::type_id::*;
 use crate::sampled_term_embedding::*;
@@ -29,10 +30,6 @@ impl SampledEmbedderState {
         let space = self.embedding_spaces.get(&term_ptr.type_id).unwrap();
         space.get_embedding(term_ptr.index)
     }
-    pub fn get_space_info(&self, type_id : &TypeId) -> &FunctionSpaceInfo {
-        let result = &self.embedding_spaces.get(type_id).unwrap().func_space_info;
-        result
-    }
 
     pub fn get_best_nonvector_application_with_value(&self, interpreter_state : &InterpreterState,
                                                             value_field_state : &ValueFieldState) 
@@ -47,6 +44,8 @@ impl SampledEmbedderState {
                 let func_embedding_space = self.embedding_spaces.get(func_type_id).unwrap();
                 let arg_embedding_space = self.embedding_spaces.get(&arg_type_id).unwrap();
 
+                let func_space_info = get_function_space_info(*func_type_id);
+
                 let application_table = interpreter_state.application_tables.get(func_type_id).unwrap();
 
                 for func_index in func_embedding_space.models.keys() {
@@ -55,7 +54,6 @@ impl SampledEmbedderState {
                         index : *func_index
                     };
                     let func_mat = &func_embedding_space.get_embedding(*func_index).sampled_mat;
-                    let func_space_info = &func_embedding_space.func_space_info;
 
                     for arg_index in func_embedding_space.models.keys() {
                         let arg_ptr = TermPointer {
@@ -94,9 +92,8 @@ impl SampledEmbedderState {
         if (is_vector_type(type_id)) {
             SampledTermEmbedding::VectorEmbedding(compressed_embedding)
         } else {
-            let space_info = self.get_space_info(&type_id);
-            let inflated = space_info.inflate_compressed_vector(&compressed_embedding);
-            SampledTermEmbedding::FunctionEmbedding(space_info.clone(), inflated)
+            let inflated = inflate_compressed_vector(type_id, &compressed_embedding);
+            SampledTermEmbedding::FunctionEmbedding(type_id, inflated)
         }
     }
 

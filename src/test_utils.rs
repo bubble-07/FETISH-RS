@@ -4,6 +4,8 @@ extern crate ndarray_linalg;
 use ndarray::*;
 use crate::function_space_info::*;
 use crate::feature_space_info::*;
+use crate::space_info::*;
+use crate::type_id::*;
 use crate::data_point::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
@@ -73,28 +75,21 @@ pub fn random_normal_inverse_wishart(feature_dimensions : usize, out_dimensions 
 }
 //Yields a pair of models (func, arg), of type (in_dimensions -> middle_dimensions) ->
 //out_dimensions
-pub fn random_model_app(in_dimensions : usize, middle_dimensions : usize, out_dimensions : usize) -> (Model, Model) {
-    let arg_model = random_model(in_dimensions, middle_dimensions);
+pub fn random_model_app(func_type_id : TypeId) -> (Model, Model) {
+    let arg_type_id = get_arg_type_id(func_type_id);
+    let arg_model = random_model(arg_type_id);
     let arg_dims = arg_model.get_total_dims();
-    let func_model = random_model(arg_dims, out_dimensions);
+    let func_model = random_model(func_type_id);
     (func_model, arg_model)
 }
 
-pub fn random_func_space_info(in_dimensions : usize, out_dimensions : usize) -> FunctionSpaceInfo {
-    let in_feat_info = FeatureSpaceInfo::build_uncompressed_feature_space(in_dimensions);
-    let out_feat_info = FeatureSpaceInfo::build_uncompressed_feature_space(out_dimensions);
-    let func_feat_info = FeatureSpaceInfo::build_function_feature_space(&in_feat_info, &out_feat_info);
-    FunctionSpaceInfo { 
-        in_feat_info : Rc::new(in_feat_info),
-        out_feat_info : Rc::new(out_feat_info),
-        func_feat_info : Rc::new(func_feat_info)
-    }
-}
-
-pub fn random_model(in_dimensions : usize, out_dimensions : usize) -> Model {
-    let space_info = random_func_space_info(in_dimensions, out_dimensions);
-    let mut result = Model::new(space_info);
-    result.data = random_normal_inverse_wishart(result.func_space_info.get_feature_dimensions(), out_dimensions);
+pub fn random_model(type_id : TypeId) -> Model {
+    let arg_type_id = get_arg_type_id(type_id);
+    let ret_type_id = get_ret_type_id(type_id);
+    let mut result = Model::new(arg_type_id, ret_type_id);
+    let func_space_info = get_function_space_info(type_id);
+    result.data = random_normal_inverse_wishart(func_space_info.get_feature_dimensions(), 
+                                                func_space_info.get_output_dimensions());
     result 
 }
 

@@ -32,14 +32,15 @@ use crate::inverse_schmear::*;
 use crate::func_inverse_schmear::*;
 use crate::feature_collection::*;
 use crate::enum_feature_collection::*;
-use crate::vector_space::*;
 use crate::normal_inverse_wishart::*;
 use crate::embedder_state::*;
 use crate::params::*;
+use crate::type_id::*;
+use crate::space_info::*;
 
 pub struct ValueField {
     pub coefs : Array1<f32>,
-    pub feat_space_info : Rc<FeatureSpaceInfo>
+    pub type_id : TypeId
 }
 
 impl ValueField {
@@ -52,13 +53,14 @@ impl ValueField {
         self.coefs += delta;
     }
 
-    pub fn new(feat_space_info : Rc<FeatureSpaceInfo>) -> ValueField {
+    pub fn new(type_id : TypeId) -> ValueField {
+        let feat_space_info = get_feature_space_info(type_id);
         let n = feat_space_info.feature_dimensions; 
         let mut coefs = Array::random((n,), StandardNormal);
         coefs *= INITIAL_VALUE_FIELD_VARIANCE;
         ValueField {
             coefs,
-            feat_space_info
+            type_id
         }
     }
 }

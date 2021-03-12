@@ -11,6 +11,7 @@ use crate::schmear::*;
 use crate::inverse_schmear::*;
 use crate::array_utils::*;
 use crate::model::*;
+use crate::space_info::*;
 
 //TODO: Store the featurized version of what's sampled, so that you don't have
 //to re-compute that multiple times
@@ -31,8 +32,8 @@ impl SampledModelEmbedding {
         let func_inv_schmear = model.get_inverse_schmear();
         let sampled_vec = flatten_matrix(&sampled_mat);
 
-        let func_space_info = &model.func_space_info;
-        let projection_mat = func_space_info.func_feat_info.get_projection_matrix();
+        let func_feat_info = get_feature_space_info(model.get_type_id());
+        let projection_mat = func_feat_info.get_projection_matrix();
 
         let compressed_schmear = func_schmear.compress(&projection_mat);
         let compressed_inv_schmear = compressed_schmear.inverse();

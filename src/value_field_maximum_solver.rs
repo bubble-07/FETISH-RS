@@ -19,7 +19,6 @@ use crate::pseudoinverse::*;
 use crate::term_pointer::*;
 use crate::normal_inverse_wishart::*;
 use crate::alpha_formulas::*;
-use crate::vector_space::*;
 use crate::feature_collection::*;
 use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
@@ -32,13 +31,15 @@ use crate::params::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
 use crate::inverse_schmear::*;
+use crate::type_id::*;
 use crate::func_inverse_schmear::*;
+use crate::space_info::*;
 use crate::data_point::*;
 use rand::prelude::*;
 use argmin::prelude::*;
 
 pub struct ValueFieldMaximumSolver {
-    pub func_space_info : FunctionSpaceInfo,
+    pub type_id : TypeId,
     pub func_mat : Array2<f32>,
     pub value_field_coefs : Array1<f32>,
     pub target_compressed_inv_schmear : Option<InverseSchmear>
@@ -58,23 +59,25 @@ impl ValueFieldMaximumSolver {
         result
     }
     pub fn get_value(&self, x_compressed : &Array1<f32>) -> f32 {
-        let y_compressed = self.func_space_info.apply(&self.func_mat, x_compressed);
+        let func_space_info = get_function_space_info(self.type_id);
+        let y_compressed = func_space_info.apply(&self.func_mat, x_compressed);
         
         let sq_mahalanobis = match (&self.target_compressed_inv_schmear) {
             Option::None => 0.0f32,
             Option::Some(compressed_inv_schmear) => compressed_inv_schmear.sq_mahalanobis_dist(&y_compressed)
         };
 
-        let y_feats = self.func_space_info.out_feat_info.get_features(&y_compressed);
+        let y_feats = func_space_info.out_feat_info.get_features(&y_compressed);
         let value_field_eval = self.value_field_coefs.dot(&y_feats);
 
         value_field_eval - sq_mahalanobis
     }
     pub fn get_value_gradient(&self, x_compressed : &Array1<f32>) -> Array1<f32> {
-        let y_compressed = self.func_space_info.apply(&self.func_mat, x_compressed);
+        let func_space_info = get_function_space_info(self.type_id);
+        let y_compressed = func_space_info.apply(&self.func_mat, x_compressed);
 
-        let func_jacobian = self.func_space_info.jacobian(&self.func_mat, x_compressed);
-        let out_feat_jacobian = self.func_space_info.out_feat_info.get_feature_jacobian(&y_compressed);
+        let func_jacobian = func_space_info.jacobian(&self.func_mat, x_compressed);
+        let out_feat_jacobian = func_space_info.out_feat_info.get_feature_jacobian(&y_compressed);
 
         let value_field_grad = self.value_field_coefs.dot(&out_feat_jacobian).dot(&func_jacobian);
 

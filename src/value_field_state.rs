@@ -20,6 +20,7 @@ use crate::displayable_with_state::*;
 use crate::type_id::*;
 use crate::application_table::*;
 use crate::type_space::*;
+use crate::space_info::*;
 use crate::term::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
@@ -34,12 +35,10 @@ use crate::inverse_schmear::*;
 use crate::func_inverse_schmear::*;
 use crate::feature_collection::*;
 use crate::enum_feature_collection::*;
-use crate::vector_space::*;
 use crate::normal_inverse_wishart::*;
 use crate::embedder_state::*;
 use crate::value_field::*;
 use crate::typed_vector::*;
-use crate::function_space_directory::*;
 
 pub struct ValueFieldState {
     pub value_fields : HashMap<TypeId, ValueField>,
@@ -47,13 +46,13 @@ pub struct ValueFieldState {
 }
 
 impl ValueFieldState {
-    pub fn new(target : SchmearedHole, func_space_directory : &FunctionSpaceDirectory) -> ValueFieldState {
+    pub fn new(target : SchmearedHole) -> ValueFieldState {
         let mut value_fields = HashMap::new();
-        for func_type_id in func_space_directory.directory.keys() {
-            let func_space_info = func_space_directory.directory.get(func_type_id).unwrap();
-            let func_feat_info = Rc::clone(&func_space_info.func_feat_info);
-            let value_field = ValueField::new(func_feat_info);
-            value_fields.insert(*func_type_id, value_field);
+        for func_type_id in 0..total_num_types() {
+            if (!is_vector_type(func_type_id)) {
+                let value_field = ValueField::new(func_type_id);
+                value_fields.insert(func_type_id, value_field);
+            }
         }
         ValueFieldState {
             value_fields,
@@ -64,7 +63,7 @@ impl ValueFieldState {
     pub fn get_value_for_vector(&self, typed_vector : &TypedVector) -> f32 {
         let type_id = typed_vector.type_id;
         let value_field = self.get_value_field(type_id);
-        let feature_space_info = &value_field.feat_space_info;
+        let feature_space_info = get_feature_space_info(type_id);
         let compressed_vec = &typed_vector.vec;
         let feat_vec = feature_space_info.get_features(compressed_vec);
         let additional_value = value_field.get_dot_product(&feat_vec);
@@ -98,8 +97,8 @@ impl ValueFieldState {
 
     //Assumes that we're dealing with base type vectors
     pub fn apply_constraint(&mut self, func_vec : &TypedVector, arg_vec : &TypedVector, ret_vec : &TypedVector) {
-        let func_feat_info = &self.get_value_field(func_vec.type_id).feat_space_info;
-        let ret_feat_info = &self.get_value_field(ret_vec.type_id).feat_space_info;
+        let func_feat_info = get_feature_space_info(func_vec.type_id);
+        let ret_feat_info = get_feature_space_info(ret_vec.type_id);
 
         let func_feat_vec = func_vec.get_features_from_base(func_feat_info);
         let ret_feat_vec = ret_vec.get_features_from_base(ret_feat_info);
@@ -114,7 +113,7 @@ impl ValueFieldState {
         if (is_vector_type(arg_vec.type_id)) {
             self.apply_vector_arg_feat_constraint(GAMMA, LAMBDA, &func_feat_vec, &ret_feat_vec, bonus);
         } else {
-            let arg_feat_info = &self.get_value_field(arg_vec.type_id).feat_space_info;
+            let arg_feat_info = get_feature_space_info(arg_vec.type_id);
             let arg_feat_vec = arg_vec.get_features_from_base(arg_feat_info);
 
             self.apply_function_arg_feat_constraint(GAMMA, LAMBDA, &func_feat_vec, &arg_feat_vec,

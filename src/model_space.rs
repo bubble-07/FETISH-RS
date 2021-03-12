@@ -15,7 +15,6 @@ use crate::pseudoinverse::*;
 use crate::term_pointer::*;
 use crate::normal_inverse_wishart::*;
 use crate::alpha_formulas::*;
-use crate::vector_space::*;
 use crate::feature_collection::*;
 use crate::quadratic_feature_collection::*;
 use crate::fourier_feature_collection::*;
@@ -25,7 +24,9 @@ use crate::func_scatter_tensor::*;
 use crate::linalg_utils::*;
 use crate::linear_sketch::*;
 use crate::term_model::*;
+use crate::space_info::*;
 use crate::params::*;
+use crate::type_id::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
 use crate::inverse_schmear::*;
@@ -41,7 +42,7 @@ use std::collections::HashMap;
 type ModelKey = usize;
 
 pub struct ModelSpace {
-    pub func_space_info : FunctionSpaceInfo,
+    pub type_id : TypeId,
     pub models : HashMap<ModelKey, TermModel>
 }
 
@@ -61,7 +62,7 @@ impl ModelSpace {
     }
 
     pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbeddingSpace {
-        let mut result = SampledEmbeddingSpace::new(self.func_space_info.clone());
+        let mut result = SampledEmbeddingSpace::new(self.type_id);
         for (key, model) in self.models.iter() {
             let sample = SampledModelEmbedding::new(&model.model, rng);
             result.models.insert(*key, sample);
@@ -71,13 +72,15 @@ impl ModelSpace {
 
     pub fn schmear_to_prior(&self, embedder_state : &EmbedderState, 
                         func_ptr : &TermPointer, in_schmear : &Schmear) -> NormalInverseWishart {
-        let s = self.func_space_info.get_feature_dimensions();
-        let t = self.func_space_info.get_output_dimensions();
+        let func_space_info = get_function_space_info(self.type_id);
+        let func_feat_info = get_feature_space_info(self.type_id);
+        let s = func_space_info.get_feature_dimensions();
+        let t = func_space_info.get_output_dimensions();
 
-        let mean = self.func_space_info.inflate_compressed_vector(&in_schmear.mean);
+        let mean = inflate_compressed_vector(self.type_id, &in_schmear.mean);
 
         //The (t * s) x (t * s) big sigma
-        let big_sigma = self.func_space_info.func_feat_info.expand_covariance(&in_schmear.covariance);
+        let big_sigma = func_feat_info.expand_covariance(&in_schmear.covariance);
         //t x s x t x s
         let big_sigma_tensor = big_sigma.into_shape((t, s, t, s)).unwrap();
         let big_sigma_tensor_reordered = big_sigma_tensor.permuted_axes([0, 2, 1, 3]);
@@ -104,7 +107,7 @@ impl ModelSpace {
         NormalInverseWishart::new(mean, in_precision, big_v, little_v)
     }
     pub fn add_model(&mut self, model_key : ModelKey) {
-        let model = TermModel::new(self.func_space_info.clone());
+        let model = TermModel::new(self.type_id);
         self.models.insert(model_key, model);
     }
     
@@ -118,10 +121,10 @@ impl ModelSpace {
         self.models.contains_key(&model_key)
     }
 
-    pub fn new(func_space_info : FunctionSpaceInfo) -> ModelSpace {
+    pub fn new(type_id : TypeId) -> ModelSpace {
         ModelSpace {
             models : HashMap::new(),
-            func_space_info
+            type_id
         }
     }
 }

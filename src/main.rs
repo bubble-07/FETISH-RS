@@ -4,10 +4,10 @@
 #![allow(unused_parens)]
 #![allow(unused_variables)]
 
+mod space_info;
 mod type_graph;
 mod type_action;
 mod application_chain;
-mod function_space_directory;
 mod interpreter_and_embedder_state;
 mod constraint_collection;
 mod vector_application_result;
@@ -43,7 +43,6 @@ mod array_utils;
 mod pseudoinverse;
 mod linear_sketch;
 mod linalg_utils;
-mod vector_space;
 mod feature_collection;
 mod sketched_linear_feature_collection;
 mod embedder_state;

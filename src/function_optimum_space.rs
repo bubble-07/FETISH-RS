@@ -11,12 +11,12 @@ use crate::function_space_info::*;
 use crate::value_field_maximum_solver::*;
 use crate::schmear::*;
 use crate::schmear_sampler::*;
-use crate::function_space_directory::*;
 use crate::type_id::*;
 use crate::sampled_embedder_state::*;
 use crate::sampled_embedding_space::*;
 use crate::value_field_state::*;
 use crate::data_points::*;
+use crate::space_info::*;
 
 use argmin::prelude::*;
 use argmin::solver::gradientdescent::SteepestDescent;
@@ -25,8 +25,7 @@ use argmin::solver::linesearch::MoreThuenteLineSearch;
 type ModelKey = usize;
 
 pub struct FunctionOptimumSpace {
-    pub ret_type : TypeId,
-    pub func_space_info : FunctionSpaceInfo,
+    pub func_type_id : TypeId,
     pub optimal_input_mapping : Model,
     pub optimal_input_mapping_sampler : NormalInverseWishartSampler,
     pub optimal_input_vectors : HashMap<ModelKey, Array1<f32>>
@@ -37,25 +36,26 @@ impl FunctionOptimumSpace {
         let mut rng = rand::thread_rng();
         let optimal_input_mapping_sample = self.optimal_input_mapping_sampler.sample(&mut rng);
 
-        let func_feats = self.func_space_info.func_feat_info.get_features(compressed_func);
+        let func_feat_info = get_feature_space_info(self.func_type_id);
+        let func_feats = func_feat_info.get_features(compressed_func);
         let optimal_input_vec = optimal_input_mapping_sample.dot(&func_feats);
 
         optimal_input_vec
     }
-    pub fn new(ret_type : TypeId, func_space_info : FunctionSpaceInfo) -> FunctionOptimumSpace {
+
+    pub fn new(func_type_id : TypeId) -> FunctionOptimumSpace {
+        let func_space_info = get_function_space_info(func_type_id);
+
         let n = func_space_info.in_feat_info.base_dimensions;
 
         //TODO: Configure parameters for the NIW prior here
-        let optimal_input_func_info = func_space_info.build_optimal_input_func_info();
-
-        let optimal_input_mapping = Model::new(optimal_input_func_info);
+        let optimal_input_mapping = Model::new(func_type_id, get_arg_type_id(func_type_id));
         let optimal_input_mapping_sampler = NormalInverseWishartSampler::new(&optimal_input_mapping.data);
 
         let optimal_input_vectors = HashMap::new();
 
         FunctionOptimumSpace {
-            ret_type,
-            func_space_info,
+            func_type_id,
             optimal_input_mapping,
             optimal_input_mapping_sampler,
             optimal_input_vectors
@@ -69,13 +69,17 @@ impl FunctionOptimumSpace {
         let mut best_index = 0;
         let mut best_value = f32::NEG_INFINITY;
 
+        let func_space_info = get_function_space_info(self.func_type_id);
+        let func_feat_info = get_feature_space_info(self.func_type_id);
+        let ret_type = get_ret_type_id(self.func_type_id);
+
         let mut rng = rand::thread_rng();
-        let maybe_target_schmear = value_field_state.get_target_for_type(self.ret_type);
+        let maybe_target_schmear = value_field_state.get_target_for_type(ret_type);
         let target_compressed_inv_schmear = match (maybe_target_schmear) {
                                                 Option::None => Option::None,
                                                 Option::Some(hole) => Option::Some(hole.compressed_inv_schmear)
                                             };
-        let value_field_coefs = &value_field_state.get_value_field(self.ret_type).coefs;
+        let value_field_coefs = &value_field_state.get_value_field(ret_type).coefs;
 
         let mut sampled_func_mats : Vec<Array2<f32>> = Vec::new();
         for _ in 0..RANDOM_VECTORS_PER_ITER {
@@ -84,8 +88,8 @@ impl FunctionOptimumSpace {
         }
 
         let num_models = sampled_embeddings.models.len();
-        let compressed_func_vec_size = self.func_space_info.func_feat_info.get_sketched_dimensions();
-        let in_vec_size = self.func_space_info.in_feat_info.get_sketched_dimensions();
+        let compressed_func_vec_size = func_feat_info.get_sketched_dimensions();
+        let in_vec_size = func_space_info.in_feat_info.get_sketched_dimensions();
 
         let mut in_model_funcs = Array::zeros((num_models, compressed_func_vec_size));
         let mut out_model_vecs = Array::zeros((num_models, in_vec_size));
@@ -97,10 +101,10 @@ impl FunctionOptimumSpace {
             let model_compressed_vec = &model_embedding.sampled_compressed_vec;
 
             //Featurized model embedding matrix
-            let model_feat_vec = self.func_space_info.func_feat_info.get_features(model_compressed_vec);
+            let model_feat_vec = func_feat_info.get_features(model_compressed_vec);
 
             let value_field_max_solver = ValueFieldMaximumSolver {
-                func_space_info : self.func_space_info.clone(),
+                type_id : self.func_type_id,
                 func_mat : model_embedding.sampled_mat.clone(),
                 value_field_coefs : value_field_coefs.clone(),
                 target_compressed_inv_schmear : target_compressed_inv_schmear.clone()

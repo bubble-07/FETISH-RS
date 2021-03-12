@@ -2,6 +2,7 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use rand::prelude::*;
+use crate::space_info::*;
 use ndarray::*;
 use ndarray_linalg::*;
 use crate::sigma_points::*;
@@ -18,7 +19,6 @@ use crate::data_point::*;
 use crate::interpreter_state::*;
 use crate::displayable_with_state::*;
 use crate::type_id::*;
-use crate::function_space_directory::*;
 use crate::application_table::*;
 use crate::type_space::*;
 use crate::term::*;
@@ -35,17 +35,13 @@ use crate::inverse_schmear::*;
 use crate::func_inverse_schmear::*;
 use crate::feature_collection::*;
 use crate::enum_feature_collection::*;
-use crate::vector_space::*;
 use crate::normal_inverse_wishart::*;
 use topological_sort::TopologicalSort;
 
 extern crate pretty_env_logger;
 
 pub struct EmbedderState {
-    pub model_spaces : HashMap::<TypeId, ModelSpace>,
-    pub vector_spaces : HashMap::<TypeId, VectorSpace>,
-    pub feature_spaces : HashMap::<TypeId, Rc<FeatureSpaceInfo>>,
-    pub function_space_directory : FunctionSpaceDirectory
+    pub model_spaces : HashMap::<TypeId, ModelSpace>
 }
 
 impl EmbedderState {
@@ -61,77 +57,19 @@ impl EmbedderState {
         }
     }
 
-    pub fn store_vec(&mut self, vec_type : TypeId, vec : Array1<R32>) {
-        self.vector_spaces.get_mut(&vec_type).unwrap().store_vec(vec);
-    }
-
-    pub fn get_feature_space(&mut self, type_id : TypeId) -> &Rc<FeatureSpaceInfo> {
-        self.feature_spaces.get(&type_id).unwrap()
-    }
-
     pub fn new() -> EmbedderState {
         info!("Readying embedder state");
+
         let mut model_spaces = HashMap::<TypeId, ModelSpace>::new();
-        let mut vector_spaces = HashMap::<TypeId, VectorSpace>::new();
-
-        let mut feature_spaces = HashMap::<TypeId, Rc<FeatureSpaceInfo>>::new();
-        let mut function_spaces = HashMap::<TypeId, FunctionSpaceInfo>::new();
-        
-        let mut topo_sort = TopologicalSort::<TypeId>::new();
-        for i in 0..total_num_types() {
-            let type_id : TypeId = i as TypeId;
-            match get_type(type_id) {
-                Type::FuncType(arg_type_id, ret_type_id) => {
-                    topo_sort.add_dependency(arg_type_id, type_id);
-                    topo_sort.add_dependency(ret_type_id, type_id);
-                },
-                Type::VecType(dim) => {
-                    let feat_space = FeatureSpaceInfo::build_uncompressed_feature_space(dim);
-                    feature_spaces.insert(type_id, Rc::new(feat_space));
-
-                    vector_spaces.insert(type_id, VectorSpace::new(dim));
-                }
-            };
-        }
-        
-        while (topo_sort.len() > 0) {
-            let mut type_ids : Vec<TypeId> = topo_sort.pop_all();
-            for func_type_id in type_ids.drain(..) {
-                if let Type::FuncType(arg_type_id, ret_type_id) = get_type(func_type_id) {
-                    let in_feat_info = feature_spaces.get(&arg_type_id).unwrap();
-                    let out_feat_info = feature_spaces.get(&ret_type_id).unwrap();
-                    let func_feat_info = FeatureSpaceInfo::build_function_feature_space(in_feat_info, out_feat_info);
-                    let func_feat_info_rc = Rc::new(func_feat_info);
-
-                    let func_space_info = FunctionSpaceInfo {
-                        in_feat_info : Rc::clone(in_feat_info),
-                        out_feat_info : Rc::clone(out_feat_info),
-                        func_feat_info : Rc::clone(&func_feat_info_rc)
-                    };
-
-                    function_spaces.insert(func_type_id, func_space_info.clone());
-
-                    info!("Creating model space with dims {} -> {}", 
-                          in_feat_info.base_dimensions, 
-                          out_feat_info.base_dimensions);
-
-                    let model_space = ModelSpace::new(func_space_info);
-                    model_spaces.insert(func_type_id, model_space);
-
-                    feature_spaces.insert(func_type_id, func_feat_info_rc);
-                }
+        for func_type_id in 0..total_num_types() {
+            if (!is_vector_type(func_type_id)) {
+                let model_space = ModelSpace::new(func_type_id);
+                model_spaces.insert(func_type_id, model_space);
             }
         }
 
-        let function_space_directory = FunctionSpaceDirectory {
-            directory : function_spaces
-        };
-
         EmbedderState {
-            model_spaces,
-            vector_spaces,
-            feature_spaces,
-            function_space_directory
+            model_spaces
         }
     }
 
@@ -175,11 +113,6 @@ impl EmbedderState {
         self.model_spaces.get(&term_ptr.type_id).unwrap()
     }
 
-    pub fn get_space_info(&self, type_id : &TypeId) -> &FunctionSpaceInfo {
-        let model_space = self.model_spaces.get(type_id).unwrap();
-        &model_space.func_space_info
-    }
-
     pub fn get_mut_embedding(&mut self, term_ptr : TermPointer) -> &mut TermModel {
         let space : &mut ModelSpace = self.model_spaces.get_mut(&term_ptr.type_id).unwrap();
         space.get_model_mut(term_ptr.index)
@@ -201,10 +134,11 @@ impl EmbedderState {
     }
 
     fn get_compressed_schmear_from_ptr(&self, term_ptr : &TermPointer) -> Schmear {
-        let type_id = &term_ptr.type_id;
-        let model_space = self.model_spaces.get(type_id).unwrap();
+        let type_id = term_ptr.type_id;
+        let model_space = self.model_spaces.get(&type_id).unwrap();
         let func_schmear = self.get_schmear_from_ptr(term_ptr);
-        let projection_mat = model_space.func_space_info.func_feat_info.get_projection_matrix();
+        let func_feat_info = get_feature_space_info(type_id);
+        let projection_mat = func_feat_info.get_projection_matrix();
         let result = func_schmear.compress(&projection_mat);
         result
     }
@@ -340,12 +274,14 @@ impl EmbedderState {
         let func_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_func_type()).unwrap();
         let ret_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_ret_type()).unwrap();
 
-        trace!("Propagating prior for space of size {}->{}", func_space.func_space_info.get_feature_dimensions(), 
-                                                             func_space.func_space_info.get_output_dimensions());
+        let func_space_info = get_function_space_info(term_app_res.get_func_type());
+
+        trace!("Propagating prior for space of size {}->{}", func_space_info.get_feature_dimensions(), 
+                                                             func_space_info.get_output_dimensions());
 
         let arg_schmear = self.get_compressed_schmear_from_ref(&term_app_res.get_arg_ref());
 
-        let out_schmear : Schmear = func_space.func_space_info.apply_schmears(&func_schmear, &arg_schmear);
+        let out_schmear : Schmear = func_space_info.apply_schmears(&func_schmear, &arg_schmear);
 
         if let TermReference::FuncRef(ret_ptr) = term_app_res.get_ret_ref() {
             let out_prior : NormalInverseWishart = ret_space.schmear_to_prior(&self, &ret_ptr, &out_schmear);
