@@ -1,9 +1,6 @@
 use ndarray::*;
-use ndarray_linalg::*;
 use crate::sampled_embedding_space::*;
 use std::collections::HashMap;
-use std::rc::*;
-use crate::function_space_info::*;
 use crate::space_info::*;
 use crate::term_pointer::*;
 use crate::type_id::*;
@@ -15,7 +12,6 @@ use crate::sampled_model_embedding::*;
 use crate::term_application::*;
 use crate::typed_vector::*;
 use crate::value_field_state::*;
-use crate::value_field::*;
 
 pub struct SampledEmbedderState {
     pub embedding_spaces : HashMap::<TypeId, SampledEmbeddingSpace>

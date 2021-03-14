@@ -2,16 +2,13 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
 
 use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
 use crate::schmear::*;
 
 use crate::inverse_schmear::*;
-use crate::params::*;
 use crate::pseudoinverse::*;
-use crate::test_utils::*;
 use ndarray_linalg::qr::QRSquare;
 
 #[derive(Clone)]

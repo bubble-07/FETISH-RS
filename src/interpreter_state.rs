@@ -4,7 +4,6 @@ extern crate ndarray_linalg;
 use ndarray::*;
 use std::collections::HashMap;
 use crate::type_id::*;
-use crate::displayable_with_state::*;
 use crate::application_chain::*;
 use crate::application_table::*;
 use crate::type_space::*;
@@ -14,7 +13,6 @@ use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::term_application::*;
 use crate::term_application_result::*;
-use std::collections::HashSet;
 use crate::func_impl::*;
 use topological_sort::TopologicalSort;
 
@@ -279,9 +277,8 @@ impl InterpreterState {
         let mut application_tables = HashMap::<TypeId, ApplicationTable>::new();
         let mut type_spaces = HashMap::<TypeId, TypeSpace>::new();
 
-        for i in 0..total_num_types() {
-            let type_id : TypeId = i as TypeId;
-            if let Type::FuncType(arg_type, ret_type) = get_type(type_id) {
+        for type_id in 0..total_num_types() {
+            if (!is_vector_type(type_id)) {
                 application_tables.insert(type_id, ApplicationTable::new(type_id));
                 type_spaces.insert(type_id, TypeSpace::new(type_id));
             }

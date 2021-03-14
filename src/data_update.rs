@@ -2,14 +2,11 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
 
 use crate::data_point::*;
 use crate::schmear::*;
 use crate::sigma_points::*;
-use crate::model::*;
 use crate::function_space_info::*;
-use std::rc::*;
 
 #[derive(Clone)]
 pub struct DataUpdate { 

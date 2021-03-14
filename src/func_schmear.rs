@@ -1,20 +1,8 @@
 extern crate ndarray;
 extern crate ndarray_linalg;
 
-use std::ops;
 use ndarray::*;
-use crate::array_utils::*;
-use ndarray_linalg::*;
-use ndarray_linalg::solveh::*;
-use noisy_float::prelude::*;
 
-use rand::prelude::*;
-use ndarray_rand::RandomExt;
-use ndarray_rand::rand_distr::StandardNormal;
-use ndarray_rand::rand_distr::ChiSquared;
-
-use crate::test_utils::*;
-use crate::inverse_schmear::*;
 use crate::schmear::*;
 use crate::linalg_utils::*;
 use crate::func_scatter_tensor::*;

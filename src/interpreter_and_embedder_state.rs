@@ -3,39 +3,22 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
-use ndarray_linalg::trace::*;
 
-use std::collections::HashSet;
 use crate::displayable_with_state::*;
 use rand::prelude::*;
-use std::rc::*;
 use crate::vector_application_result::*;
 use crate::constraint_collection::*;
 use crate::sampled_embedder_state::*;
 use crate::linalg_utils::*;
 use crate::array_utils::*;
 use crate::type_id::*;
-use crate::application_table::*;
-use crate::type_space::*;
 use crate::params::*;
-use crate::term::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::term_application::*;
-use crate::func_impl::*;
-use crate::data_point::*;
-use crate::model::*;
-use crate::model_space::*;
-use crate::schmear::*;
-use crate::inverse_schmear::*;
 use crate::embedder_state::*;
 use crate::interpreter_state::*;
-use crate::schmeared_hole::*;
 
-use crate::feature_collection::*;
-use crate::quadratic_feature_collection::*;
-use crate::fourier_feature_collection::*;
-use crate::enum_feature_collection::*;
 use crate::term_application_result::*;
 
 extern crate pretty_env_logger;

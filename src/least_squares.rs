@@ -2,14 +2,7 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
 
-use std::rc::*;
-use crate::model::*;
-use crate::params::*;
-use crate::test_utils::*;
-use crate::inverse_schmear::*;
-use crate::linalg_utils::*;
 use ndarray_linalg::{LeastSquaresSvd};
 use crate::sqrtm::*;
 
@@ -22,7 +15,7 @@ pub fn least_squares(A : &Array2<f32>, b : &Array1<f32>, Q : &Array2<f32>) -> Ar
     let LA = L.dot(A);
     let Lb = L.dot(b);
     let ls = LA.least_squares(&Lb);
-    match (LA.least_squares(&Lb)) {
+    match (ls) {
         Result::Ok(res) => res.solution,
         Result::Err(_) => Array::zeros((dim,))
     }

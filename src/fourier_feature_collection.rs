@@ -2,15 +2,12 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
 
 use crate::alpha_formulas::*;
 use crate::feature_collection::*;
 use crate::linalg_utils::*;
 use rand::prelude::*;
 use crate::params::*;
-use crate::test_utils::*;
-use crate::rand_utils::*;
 
 #[derive(Clone)]
 pub struct FourierFeatureCollection {
@@ -84,6 +81,8 @@ impl FeatureCollection for FourierFeatureCollection {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::*;
+    use crate::rand_utils::*;
 
     #[test]
     fn empirical_jacobian_is_jacobian() {

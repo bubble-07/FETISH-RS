@@ -2,37 +2,17 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
-
-use std::ops;
-use std::rc::*;
 
 use rand::prelude::*;
 use crate::sampled_model_embedding::*;
-use crate::sigma_points::*;
 use crate::embedder_state::*;
 use crate::pseudoinverse::*;
 use crate::term_pointer::*;
 use crate::normal_inverse_wishart::*;
-use crate::alpha_formulas::*;
-use crate::feature_collection::*;
-use crate::quadratic_feature_collection::*;
-use crate::fourier_feature_collection::*;
-use crate::rand_utils::*;
-use crate::enum_feature_collection::*;
-use crate::func_scatter_tensor::*;
-use crate::linalg_utils::*;
-use crate::linear_sketch::*;
 use crate::term_model::*;
 use crate::space_info::*;
-use crate::params::*;
 use crate::type_id::*;
 use crate::schmear::*;
-use crate::func_schmear::*;
-use crate::inverse_schmear::*;
-use crate::func_inverse_schmear::*;
-use rand::prelude::*;
-use crate::function_space_info::*;
 use crate::sampled_embedding_space::*;
 
 extern crate pretty_env_logger;

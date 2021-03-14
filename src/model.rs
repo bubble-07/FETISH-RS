@@ -2,38 +2,20 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
 
 use std::ops;
-use std::rc::*;
 
 use crate::type_id::*;
 use crate::data_points::*;
-use crate::function_space_info::*;
-use crate::data_update::*;
 use crate::data_point::*;
-use crate::pseudoinverse::*;
 use crate::feature_collection::*;
-use crate::quadratic_feature_collection::*;
-use crate::fourier_feature_collection::*;
 use crate::enum_feature_collection::*;
-use crate::linalg_utils::*;
 use crate::normal_inverse_wishart::*;
-use crate::term_application::*;
-use crate::func_scatter_tensor::*;
-use crate::term_pointer::*;
-use crate::term_reference::*;
-use crate::schmear::*;
-use crate::inverse_schmear::*;
 use crate::func_schmear::*;
 use crate::func_inverse_schmear::*;
-use crate::params::*;
-use crate::test_utils::*;
 use crate::space_info::*;
 
 use rand::prelude::*;
-
-use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct Model {

@@ -2,7 +2,6 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
 
 use crate::feature_collection::*;
 use crate::count_sketch::*;
@@ -13,7 +12,6 @@ use rustfft::FFT;
 use rustfft::num_complex::Complex;
 use rustfft::num_traits::Zero;
 use crate::params::*;
-use crate::test_utils::*;
 use crate::alpha_formulas::*;
 
 #[derive(Clone)]
@@ -151,6 +149,7 @@ impl FeatureCollection for QuadraticFeatureCollection {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::*;
 
     #[test]
     fn empirical_jacobian_is_jacobian() {

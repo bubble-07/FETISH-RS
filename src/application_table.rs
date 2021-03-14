@@ -1,5 +1,4 @@
 use crate::type_id::*;
-use crate::interpreter_state::*;
 use crate::term_application::*;
 use crate::term_application_result::*;
 use crate::term_pointer::*;

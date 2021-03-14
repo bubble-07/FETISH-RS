@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use lazy_static::*;
-use topological_sort::*;
 use crate::params::*;
 use std::fmt;
 use rand::prelude::*;
@@ -13,16 +12,16 @@ lazy_static! {
         let scalar_t = types.add(Type::VecType(1));
         let vector_t = types.add(Type::VecType(DIM));
         let unary_vec_func_t = types.add(Type::FuncType(vector_t, vector_t));
-        let binary_vec_func_t = types.add(Type::FuncType(vector_t, unary_vec_func_t));
+        let _binary_vec_func_t = types.add(Type::FuncType(vector_t, unary_vec_func_t));
         let unary_scalar_func_t = types.add(Type::FuncType(scalar_t, scalar_t));
         let binary_scalar_func_t = types.add(Type::FuncType(scalar_t, unary_scalar_func_t));
-        let map_func_t = types.add(Type::FuncType(unary_scalar_func_t, unary_vec_func_t));
+        let _map_func_t = types.add(Type::FuncType(unary_scalar_func_t, unary_vec_func_t));
         let vector_to_scalar_func_t = types.add(Type::FuncType(vector_t, scalar_t));
         let reduce_temp_t = types.add(Type::FuncType(scalar_t, vector_to_scalar_func_t));
-        let reduce_func_t = types.add(Type::FuncType(binary_scalar_func_t, reduce_temp_t));
-        let fill_func_t = types.add(Type::FuncType(scalar_t, vector_t));
+        let _reduce_func_t = types.add(Type::FuncType(binary_scalar_func_t, reduce_temp_t));
+        let _fill_func_t = types.add(Type::FuncType(scalar_t, vector_t));
         let scalar_to_vector_func_t = types.add(Type::FuncType(scalar_t, vector_t));
-        let set_head_func_t = types.add(Type::FuncType(vector_t, scalar_to_vector_func_t));
+        let _set_head_func_t = types.add(Type::FuncType(vector_t, scalar_to_vector_func_t));
         //TODO: ensure that the types here are exactly closed w.r.t. all types
         //in func_impl
         
@@ -41,7 +40,7 @@ lazy_static! {
                     let func_out = types.add(Type::FuncType(n_t, p_t));
 
                     let two_to_out = types.add(Type::FuncType(func_two, func_out));
-                    let compose_type = types.add(Type::FuncType(func_one, two_to_out));
+                    let _compose_type = types.add(Type::FuncType(func_one, two_to_out));
                 }
             }
         }
@@ -53,7 +52,7 @@ lazy_static! {
             for m in [1, DIM].iter() {
                 let m_t = types.add(Type::VecType(*m));
                 let out_func_t = types.add(Type::FuncType(m_t, n_t));
-                let const_func_t = types.add(Type::FuncType(n_t, out_func_t));
+                let _const_func_t = types.add(Type::FuncType(n_t, out_func_t));
             }
         }
 

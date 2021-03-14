@@ -3,30 +3,22 @@ extern crate ndarray_linalg;
 
 use std::ops;
 use ndarray::*;
-use ndarray_linalg::*;
-use ndarray_linalg::solveh::*;
 use crate::params::*;
 use crate::data_points::*;
 use crate::data_update::*;
-use crate::test_utils::*;
 use crate::pseudoinverse::*;
 use crate::func_scatter_tensor::*;
 use crate::func_inverse_schmear::*;
 use crate::func_schmear::*;
 use crate::schmear::*;
 use crate::data_point::*;
-use crate::wishart::*;
 use crate::sherman_morrison::*;
-use crate::inverse_schmear::*;
 use crate::linalg_utils::*;
 use crate::normal_inverse_wishart_sampler::*;
 use crate::schmear_sampler::*;
-use std::rc::*;
 use crate::function_space_info::*;
 
 use rand::prelude::*;
-use rand_distr::{Cauchy, Distribution};
-use rand_distr::StandardNormal;
 
 
 ///Normal-inverse-wishart distribution representation
@@ -159,9 +151,9 @@ impl NormalInverseWishart {
     }
 }
 
-///Allows doing dist ^= dist to invert dist in place
+///Allows doing dist ^= () to invert dist in place
 impl ops::BitXorAssign<()> for NormalInverseWishart {
-    fn bitxor_assign(&mut self, rhs: ()) {
+    fn bitxor_assign(&mut self, _rhs: ()) {
         self.precision_u *= -1.0;
         self.precision *= -1.0;
         self.sigma *= -1.0;

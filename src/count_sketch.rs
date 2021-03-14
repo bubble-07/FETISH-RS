@@ -2,14 +2,8 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
-use crate::test_utils::*;
-
-use crate::feature_collection::*;
 
 use rand::prelude::*;
-
-use rand::distributions::{Bernoulli, Distribution};
 
 #[derive(Clone)]
 pub struct CountSketch {
@@ -25,8 +19,7 @@ impl CountSketch {
         let mut indices = Vec::<usize>::with_capacity(in_dims);
         let mut signs = Vec::<f32>::with_capacity(in_dims);
         let mut rng = rand::thread_rng();
-        let bernoulli_distr = Bernoulli::new(0.5).unwrap();
-        for i in 0..in_dims {
+        for _ in 0..in_dims {
             let r_one : u8 = rng.gen();
             let sign = (((r_one % 2) as i8) * 2 - 1) as f32;
             signs.push(sign);

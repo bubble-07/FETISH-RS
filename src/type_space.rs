@@ -1,11 +1,8 @@
-use std::cmp::*;
-use std::fmt::*;
-use std::hash::*;
 use crate::type_id::*;
 use crate::term::*;
 use crate::term_pointer::*;
 use crate::func_impl::*;
-use rand::{thread_rng, Rng};
+use rand::Rng;
 use std::collections::HashMap;
 
 pub struct TypeSpace {

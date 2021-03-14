@@ -2,7 +2,6 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
 use noisy_float::prelude::*;
 
 pub fn from_noisy(vec : &Array1<R32>) -> Array1<f32> {

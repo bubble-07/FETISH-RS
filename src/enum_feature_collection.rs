@@ -2,8 +2,6 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
-use std::rc::*;
 
 use enum_dispatch::*;
 use crate::feature_collection::*;

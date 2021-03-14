@@ -2,7 +2,6 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
 use enum_dispatch::*;
 
 #[enum_dispatch]

@@ -1,18 +1,10 @@
 use ndarray::*;
-use ndarray_linalg::*;
-use std::rc::*;
 use std::collections::HashMap;
 use crate::model::*;
 use crate::normal_inverse_wishart_sampler::*;
 use crate::params::*;
-use crate::sampled_term_embedding::*;
-use crate::sampled_model_embedding::*;
-use crate::function_space_info::*;
 use crate::value_field_maximum_solver::*;
-use crate::schmear::*;
-use crate::schmear_sampler::*;
 use crate::type_id::*;
-use crate::sampled_embedder_state::*;
 use crate::sampled_embedding_space::*;
 use crate::value_field_state::*;
 use crate::data_points::*;
@@ -44,10 +36,6 @@ impl FunctionOptimumSpace {
     }
 
     pub fn new(func_type_id : TypeId) -> FunctionOptimumSpace {
-        let func_space_info = get_function_space_info(func_type_id);
-
-        let n = func_space_info.in_feat_info.base_dimensions;
-
         //TODO: Configure parameters for the NIW prior here
         let optimal_input_mapping = Model::new(func_type_id, get_arg_type_id(func_type_id));
         let optimal_input_mapping_sampler = NormalInverseWishartSampler::new(&optimal_input_mapping.data);

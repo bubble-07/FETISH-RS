@@ -1,19 +1,9 @@
 extern crate ndarray;
 extern crate ndarray_linalg;
 
-use std::ops;
-use std::cmp;
 use ndarray::*;
 use crate::linalg_utils::*;
-use crate::linear_sketch::*;
-use ndarray_linalg::*;
-use ndarray_linalg::solveh::*;
-use crate::test_utils::*;
-use crate::schmear::*;
-use crate::inverse_schmear::*;
 use crate::pseudoinverse::*;
-use crate::params::*;
-use crate::test_utils::*;
 
 #[derive(Clone)]
 pub struct FuncScatterTensor {

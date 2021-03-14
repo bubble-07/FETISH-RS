@@ -1,4 +1,3 @@
-use ndarray_linalg::*;
 use ndarray::*;
 use crate::type_id::*;
 use crate::feature_space_info::*;

@@ -2,11 +2,8 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use crate::test_utils::*;
 use crate::params::*;
 use ndarray_linalg::*;
-use ndarray_linalg::solveh::*;
-use crate::linalg_utils::*;
 
 extern crate pretty_env_logger;
 
@@ -16,7 +13,7 @@ pub fn pseudoinverse_h(in_mat : &Array2<f32>) -> Array2<f32> {
 
 pub fn pseudoinverse(in_mat : &Array2<f32>) -> Array2<f32> {
     let maybe_svd = in_mat.svd(true, true);
-    if let Result::Err(e) = &maybe_svd {
+    if let Result::Err(_) = &maybe_svd {
         error!("Bad matrix for pseudoinverse {}", in_mat);
     }
 

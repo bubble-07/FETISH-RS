@@ -4,37 +4,20 @@ extern crate ndarray_linalg;
 use rand::prelude::*;
 use crate::space_info::*;
 use ndarray::*;
-use ndarray_linalg::*;
-use crate::sigma_points::*;
-use crate::array_utils::*;
-use noisy_float::prelude::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
-use std::rc::*;
-use crate::feature_space_info::*;
 use crate::sampled_embedder_state::*;
-use crate::function_space_info::*;
 use crate::data_update::*;
-use crate::data_point::*;
 use crate::interpreter_state::*;
-use crate::displayable_with_state::*;
 use crate::type_id::*;
-use crate::application_table::*;
-use crate::type_space::*;
-use crate::term::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
-use crate::term_application::*;
 use crate::term_application_result::*;
-use crate::func_impl::*;
 use crate::term_model::*;
 use crate::model_space::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
-use crate::inverse_schmear::*;
 use crate::func_inverse_schmear::*;
-use crate::feature_collection::*;
-use crate::enum_feature_collection::*;
 use crate::normal_inverse_wishart::*;
 use topological_sort::TopologicalSort;
 
@@ -135,7 +118,6 @@ impl EmbedderState {
 
     fn get_compressed_schmear_from_ptr(&self, term_ptr : &TermPointer) -> Schmear {
         let type_id = term_ptr.type_id;
-        let model_space = self.model_spaces.get(&type_id).unwrap();
         let func_schmear = self.get_schmear_from_ptr(term_ptr);
         let func_feat_info = get_feature_space_info(type_id);
         let projection_mat = func_feat_info.get_projection_matrix();
@@ -170,7 +152,6 @@ impl EmbedderState {
         }
         while (stack.len() > 0) {
             let elem = stack.pop().unwrap();
-            let func_ptr = elem.get_func_ptr();
             let ret_ref = elem.get_ret_ref();
             if let TermReference::FuncRef(ret_func_ptr) = ret_ref {
                 let applications = interpreter_state.get_app_results_with_func(&ret_func_ptr); 
@@ -271,7 +252,6 @@ impl EmbedderState {
         let func_schmear = self.get_prior_propagation_func_schmear(&term_app_res);
       
         //Get the model space for the func type
-        let func_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_func_type()).unwrap();
         let ret_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_ret_type()).unwrap();
 
         let func_space_info = get_function_space_info(term_app_res.get_func_type());

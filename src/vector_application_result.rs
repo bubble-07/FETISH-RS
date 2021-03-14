@@ -1,4 +1,3 @@
-use ndarray_linalg::*;
 use crate::typed_vector::*;
 use ndarray::*;
 use crate::type_id::*;

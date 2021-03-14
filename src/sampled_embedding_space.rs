@@ -1,14 +1,8 @@
 use ndarray::*;
-use ndarray_linalg::*;
-use std::rc::*;
 use std::collections::HashMap;
 use crate::sampled_term_embedding::*;
 use crate::sampled_model_embedding::*;
-use crate::function_space_info::*;
-use crate::term_reference::*;
-use crate::value_field::*;
 use crate::value_field_state::*;
-use crate::space_info::*;
 use crate::typed_vector::*;
 use crate::type_id::*;
 
@@ -39,11 +33,8 @@ impl SampledEmbeddingSpace {
         let mut best_arg_index = 0;
         let mut best_arg_value = f32::NEG_INFINITY;
 
-        let func_feat_info = get_feature_space_info(self.type_id);
-
         for (arg_index, arg_model) in self.models.iter() {
             let arg_vec = &arg_model.sampled_compressed_vec; 
-            let feat_arg_vec = func_feat_info.get_features(&arg_vec);
             let compressed_ret_vec = func_mat.dot(arg_vec);
             let typed_ret_vec = TypedVector {
                 vec : compressed_ret_vec,

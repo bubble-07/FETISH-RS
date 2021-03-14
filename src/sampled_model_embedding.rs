@@ -1,10 +1,5 @@
 use ndarray::*;
-use ndarray_linalg::*;
-use crate::function_space_info::*;
-use std::rc::*;
-use std::collections::HashMap;
 use rand::prelude::*;
-use crate::sampled_term_embedding::*;
 use crate::func_schmear::*;
 use crate::func_inverse_schmear::*;
 use crate::schmear::*;

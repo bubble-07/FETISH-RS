@@ -2,7 +2,6 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
 
 //Data points as input and output
 //matrices, where each row is another data-point

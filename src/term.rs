@@ -1,12 +1,8 @@
-use ndarray::*;
-use ndarray_linalg::*;
 use crate::func_impl::*;
-use crate::term_pointer::*;
 use crate::term_reference::*;
 use std::cmp::*;
 use std::fmt::*;
 use std::hash::*;
-use noisy_float::prelude::*;
 use crate::displayable_with_state::*;
 use crate::interpreter_state::*;
 

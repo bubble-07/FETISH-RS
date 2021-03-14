@@ -3,8 +3,6 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
-use ndarray_linalg::eigh::*;
-use ndarray_linalg::lapack::*;
 
 use std::ops::MulAssign;
 

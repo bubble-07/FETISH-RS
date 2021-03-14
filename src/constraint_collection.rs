@@ -1,7 +1,3 @@
-use ndarray_linalg::*;
-use crate::typed_vector::*;
-use ndarray::*;
-use crate::type_id::*;
 use crate::vector_application_result::*;
 use rand::seq::SliceRandom;
 use rand::thread_rng;

@@ -3,18 +3,13 @@ extern crate ndarray_linalg;
 
 use crate::type_id::*;
 use crate::interpreter_state::*;
-use crate::term_pointer::*;
 use crate::term_reference::*;
-use crate::term::*;
 use crate::term_application::*;
 use enum_dispatch::*;
-use crate::test_utils::*;
 
 use ndarray::*;
-use ndarray_linalg::*;
 use noisy_float::prelude::*;
 
-use std::rc::*;
 use std::cmp::*;
 use std::fmt::*;
 use std::hash::*;
@@ -131,7 +126,7 @@ impl HasFuncSignature for BinaryFuncImpl {
 }
 
 impl FuncImpl for BinaryFuncImpl {
-    fn evaluate(&self, state : &mut InterpreterState, args : Vec::<TermReference>) -> TermReference {
+    fn evaluate(&self, _state : &mut InterpreterState, args : Vec::<TermReference>) -> TermReference {
         if let TermReference::VecRef(arg_one_vec) = &args[0] {
             if let TermReference::VecRef(arg_two_vec) = &args[1] {
                 let result_vec = self.f.act(&arg_one_vec, &arg_two_vec);
@@ -163,7 +158,7 @@ impl HasFuncSignature for RotateImpl {
 }
 
 impl FuncImpl for RotateImpl {
-    fn evaluate(&self, state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
+    fn evaluate(&self, _state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
         if let TermReference::VecRef(arg_vec) = &args[0] {
             let n = arg_vec.len();
             let arg_vec_head : R32 = arg_vec[[0,]];
@@ -195,7 +190,7 @@ impl HasFuncSignature for SetHeadImpl {
     }
 }
 impl FuncImpl for SetHeadImpl {
-    fn evaluate(&self, state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
+    fn evaluate(&self, _state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
         if let TermReference::VecRef(arg_vec) = &args[0] {
             if let TermReference::VecRef(val_vec) = &args[1] {
                 let val : R32 = val_vec[[0,]];
@@ -228,7 +223,7 @@ impl HasFuncSignature for HeadImpl {
     }
 }
 impl FuncImpl for HeadImpl {
-    fn evaluate(&self, state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
+    fn evaluate(&self, _state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
         if let TermReference::VecRef(arg_vec) = &args[0] {
             let ret_val : R32 = arg_vec[[0,]];
             let result_array : Array1::<R32> = Array::from_elem((1,), ret_val);
@@ -317,7 +312,7 @@ impl HasFuncSignature for FillImpl {
     }
 }
 impl FuncImpl for FillImpl {
-    fn evaluate(&self, state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
+    fn evaluate(&self, _state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
         if let TermReference::VecRef(arg_vec) = &args[0] {
             let arg_val : R32 = arg_vec[[0,]];
             let ret_val : Array1::<R32> = Array::from_elem((DIM,), arg_val);
@@ -348,7 +343,7 @@ impl HasFuncSignature for ConstImpl {
     }
 }
 impl FuncImpl for ConstImpl {
-    fn evaluate(&self, state : &mut InterpreterState, args : Vec::<TermReference>) -> TermReference {
+    fn evaluate(&self, _state : &mut InterpreterState, args : Vec::<TermReference>) -> TermReference {
         let result_ptr : TermReference = args[0].clone();
         result_ptr
     }
@@ -427,7 +422,6 @@ impl HasFuncSignature for MapImpl {
 
 impl FuncImpl for MapImpl {
     fn evaluate(&self, state : &mut InterpreterState, args : Vec::<TermReference>) -> TermReference {
-        let unary_vec_type = *VECTOR_T;
         if let TermReference::FuncRef(func_ptr) = &args[0] {
             if let TermReference::VecRef(arg_vec) = &args[1] {
                 let n = arg_vec.len();

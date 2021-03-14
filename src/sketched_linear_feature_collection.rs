@@ -2,7 +2,6 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
 
 use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
@@ -51,7 +50,7 @@ impl FeatureCollection for SketchedLinearFeatureCollection {
         self.alpha * result
     }
 
-    fn get_jacobian(&self, in_vec : &Array1<f32>) -> Array2<f32> {
+    fn get_jacobian(&self, _in_vec : &Array1<f32>) -> Array2<f32> {
         //The jacobian is given by the projection mat plus the part about cconcatenating
         //the constant 1 [derivative zero w.r.t all vars]
         let zero_row = Array::zeros((1,self.in_dimensions));

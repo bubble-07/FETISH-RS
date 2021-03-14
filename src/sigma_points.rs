@@ -2,16 +2,8 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
 
-use crate::model_space::*;
 use crate::schmear::*;
-use crate::model::*;
-use crate::params::*;
-use crate::test_utils::*;
-use crate::linalg_utils::*;
-use crate::inverse_schmear::*;
-use crate::linalg_utils::*;
 use crate::feature_space_info::*;
 use crate::sqrtm::*;
 

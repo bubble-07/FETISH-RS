@@ -2,8 +2,6 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use crate::function_space_info::*;
-use crate::feature_space_info::*;
 use crate::space_info::*;
 use crate::type_id::*;
 use crate::data_point::*;
@@ -11,21 +9,16 @@ use crate::schmear::*;
 use crate::func_schmear::*;
 use crate::inverse_schmear::*;
 use crate::params::*;
-use std::rc::*;
 use rand::prelude::*;
 use ndarray_linalg::*;
 use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
-use crate::linalg_utils::*;
 use crate::func_scatter_tensor::*;
-use crate::enum_feature_collection::*;
-use crate::inverse_schmear::*;
 use plotlib::page::Page;
 use plotlib::repr::{Histogram, HistogramBins};
 use plotlib::style::BoxStyle;
 use plotlib::view::ContinuousView;
 use crate::model::*;
-use crate::data_point::*;
 use crate::normal_inverse_wishart::*;
 use crate::term_reference::*;
 use crate::array_utils::*;
@@ -78,7 +71,6 @@ pub fn random_normal_inverse_wishart(feature_dimensions : usize, out_dimensions 
 pub fn random_model_app(func_type_id : TypeId) -> (Model, Model) {
     let arg_type_id = get_arg_type_id(func_type_id);
     let arg_model = random_model(arg_type_id);
-    let arg_dims = arg_model.get_total_dims();
     let func_model = random_model(func_type_id);
     (func_model, arg_model)
 }
@@ -211,7 +203,7 @@ pub fn random_diag_matrix(t : usize) -> Array2<f32> {
 }
 pub fn random_psd_matrix(t : usize) -> Array2<f32> {
     let mut result = Array::zeros((t, t));
-    for i in 0..t {
+    for _ in 0..t {
         let matrix_sqrt = random_matrix(t, t);
         let matrix = matrix_sqrt.t().dot(&matrix_sqrt);
         result += &matrix;

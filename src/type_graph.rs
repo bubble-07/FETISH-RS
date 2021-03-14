@@ -1,12 +1,6 @@
-use crate::term_pointer::*;
-use crate::term_reference::*;
 use crate::type_action::*;
 use crate::type_id::*;
-use std::cmp::*;
-use std::fmt::*;
 use std::collections::HashSet;
-use crate::interpreter_state::*;
-use crate::displayable_with_state::*;
 
 pub struct TypeGraph {
     //Indices: from, to, edge index

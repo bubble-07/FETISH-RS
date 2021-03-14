@@ -2,9 +2,6 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
-use crate::test_utils::*;
-use crate::pseudoinverse::*;
 use crate::linalg_utils::*;
 use std::ops::AddAssign;
 use std::ops::SubAssign;

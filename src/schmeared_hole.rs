@@ -1,13 +1,6 @@
-extern crate ndarray;
-extern crate ndarray_linalg;
-use ndarray::*;
-use ndarray_linalg::*;
-
-use crate::array_utils::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::type_id::*;
-use crate::params::*;
 use crate::sampled_embedder_state::*;
 use crate::inverse_schmear::*;
 

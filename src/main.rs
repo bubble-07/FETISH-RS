@@ -2,7 +2,7 @@
 #![allow(non_snake_case)]
 #![allow(unused_imports)]
 #![allow(unused_parens)]
-#![allow(unused_variables)]
+//#![allow(unused_variables)]
 
 mod space_info;
 mod type_graph;
@@ -78,14 +78,7 @@ extern crate pretty_env_logger;
 #[macro_use] extern crate log;
 
 use ndarray::*;
-use ndarray_linalg::*;
-use std::rc::*;
-
-use crate::feature_collection::*;
 use crate::displayable_with_state::*;
-use crate::term_pointer::*;
-use crate::inverse_schmear::*;
-use crate::model::*;
 use rand::prelude::*;
 use crate::optimizer_state::*;
 
@@ -98,14 +91,12 @@ fn main() {
 
     let num_iters = 40;
     let num_samples = 100;
-    let in_dimensions = 1;
-    let out_dimensions = 1;
 
     let mut rng = rand::thread_rng();
 
     let mut data_points : Vec::<(Array1<f32>, Array1<f32>)> = Vec::new();
 
-    for i in 0..num_samples {
+    for _ in 0..num_samples {
         let x : f32 = rng.gen();
         let y = f(x);
 

@@ -2,21 +2,13 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use ndarray_linalg::*;
 
 use rand::prelude::*;
-use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
 use ndarray_rand::rand_distr::ChiSquared;
 
 use crate::pseudoinverse::*;
-use crate::feature_collection::*;
-use crate::params::*;
-use crate::test_utils::*;
-use crate::linalg_utils::*;
 use crate::sqrtm::*;
-
-use ndarray_linalg::cholesky::*;
 
 pub struct Wishart {
     pub scale_mat : Array2<f32>,
