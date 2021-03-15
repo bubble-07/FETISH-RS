@@ -87,7 +87,7 @@ mod tests {
     #[test]
     fn empirical_jacobian_is_jacobian() {
         let mut successes : usize = 0;
-        for i in 0..10 {
+        for _ in 0..10 {
             let fourier_feature_collection = FourierFeatureCollection::new(10, gen_cauchy_random);
             let in_vec = random_vector(10);
             let jacobian = fourier_feature_collection.get_jacobian(&in_vec);

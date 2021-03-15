@@ -91,6 +91,8 @@ impl FuncScatterTensor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::*;
+
     #[test]
     fn test_flatten_and_multiply() {
         let in_dim = 5;

@@ -73,13 +73,17 @@ impl FuncSchmear {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::*;
+    use ::rand_distr::StandardNormal;
+    use ndarray_linalg::*;
+    use crate::test_utils::*;
+    use ndarray_rand::*;
 
     #[test]
     fn schmear_application_accurate() {
         let t = 3;
         let s = 3;
         let num_samps = 1000;
-        let func_scale_mult = 0.01f32;
         let arg_scale_mult = 0.01f32;
 
         let normal_inverse_wishart = random_normal_inverse_wishart(s, t);
@@ -106,8 +110,6 @@ mod tests {
 
         for _ in 0..num_samps {
             let func_samp = normal_inverse_wishart.sample(&mut rng);
-
-            let func_diff = &func_samp - &func_schmear.mean;
 
             let standard_normal_arg_vec = Array::random((s,), StandardNormal);
             let arg_samp = &arg_mean + &arg_covariance_sqrt.dot(&standard_normal_arg_vec);

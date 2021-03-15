@@ -454,6 +454,7 @@ impl FuncImpl for MapImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::*;
 
     #[test]
     fn test_addition() {

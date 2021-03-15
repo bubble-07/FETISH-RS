@@ -93,6 +93,7 @@ impl LinearSketch {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::*;
 
     #[test]
     fn compesss_schmear_and_compress_inv_schmear_align() {

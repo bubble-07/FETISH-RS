@@ -28,6 +28,8 @@ pub fn sherman_morrison_update(A : &mut Array2<f32>, A_inv : &mut Array2<f32>,
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pseudoinverse::*;
+    use crate::test_utils::*;
 
     #[test]
     fn test_sherman_morrison() {

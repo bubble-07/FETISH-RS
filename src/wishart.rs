@@ -80,6 +80,7 @@ impl Wishart {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::*;
 
     #[test]
     fn wishart_has_right_mean() {
@@ -97,7 +98,7 @@ mod tests {
 
         let wishart = Wishart::new(scatter, degrees_of_freedom as f32);
 
-        for i in 0..num_samps {
+        for _ in 0..num_samps {
             let samp = wishart.sample(&mut rng);
             actual_mean += &samp; 
         }

@@ -42,6 +42,7 @@ pub fn pseudoinverse(in_mat : &Array2<f32>) -> Array2<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::*;
 
     #[test]
     fn pseudoinverse_is_inverse_on_square() {

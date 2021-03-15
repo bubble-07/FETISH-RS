@@ -143,17 +143,18 @@ impl Model {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::params::*;
+    use crate::linalg_utils::*;
+    use crate::test_utils::*;
 
     fn clone_model(model : &Model) -> Model {
-        let func_space_info = model.func_space_info.clone();
-        let mut result = Model::new(func_space_info);
+        let mut result = Model::new(model.arg_type_id, model.ret_type_id);
         result.data = model.data.clone();
         result
     }
     
     fn clone_and_perturb_model(model : &Model, epsilon : f32) -> Model {
-        let func_space_info = model.func_space_info.clone();
-        let mut result = Model::new(func_space_info);
+        let mut result = Model::new(model.arg_type_id, model.ret_type_id);
         result.data = model.data.clone();
         
         let mean = &model.data.mean;
@@ -171,18 +172,15 @@ mod tests {
 
     #[test]
     fn data_updates_bulk_matches_incremental() {
-        let t = 2;
-        let s = 3;
-
-        let mut bulk_updated = random_model(s, t);
+        let mut bulk_updated = random_model(*UNARY_VEC_FUNC_T);
         let mut incremental_updated = bulk_updated.clone();
 
-        let mut data_point = random_data_point(s, t);
+        let mut data_point = random_data_point(DIM, DIM);
         data_point.weight = 1.0f32;
 
-        let mut in_vecs = Array::zeros((1, s));
+        let mut in_vecs = Array::zeros((1, DIM));
         in_vecs.row_mut(0).assign(&data_point.in_vec);
-        let mut out_vecs = Array::zeros((1, t));
+        let mut out_vecs = Array::zeros((1, DIM));
         out_vecs.row_mut(0).assign(&data_point.out_vec);
         let data_points = DataPoints {
             in_vecs,
@@ -198,13 +196,10 @@ mod tests {
 
     #[test]
     fn data_updates_undo_cleanly() {
-        let t = 5;
-        let s = 4;
-        
-        let expected = random_model(s, t);
+        let expected = random_model(*UNARY_VEC_FUNC_T);
 
         let mut model = expected.clone();
-        let data_point = random_data_point(s, t);
+        let data_point = random_data_point(DIM, DIM);
 
         model += data_point.clone();
         model -= data_point.clone();
@@ -216,9 +211,8 @@ mod tests {
     fn sampling_accurate() {
         let epsilon = 10.0f32;
         let num_samps = 1000;
-        let in_dimensions = 2;
-        let out_dimensions = 2;
-        let model = random_model(in_dimensions, out_dimensions);
+
+        let model = random_model(*UNARY_VEC_FUNC_T);
 
         let model_schmear = model.get_schmear().flatten();
 
@@ -229,7 +223,7 @@ mod tests {
 
         let scale_fac = 1.0f32 / (num_samps as f32);
 
-        for i in 0..num_samps {
+        for _ in 0..num_samps {
             let sample = model.sample_as_vec(&mut rng);
 
             mean += &sample;
@@ -241,7 +235,7 @@ mod tests {
 
 
         let mut covariance = Array::zeros((model_dims, model_dims));
-        for i in 0..num_samps {
+        for _ in 0..num_samps {
             let sample = model.sample_as_vec(&mut rng);
 
             let diff = &sample - &model_schmear.mean;

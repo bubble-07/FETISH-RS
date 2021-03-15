@@ -54,6 +54,7 @@ impl CountSketch {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::*;
 
     #[test]
     fn signs_have_abs_value_one() {

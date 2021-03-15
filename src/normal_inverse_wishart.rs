@@ -339,16 +339,15 @@ impl ops::SubAssign<&NormalInverseWishart> for NormalInverseWishart {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::*;
+    use crate::type_id::*;
 
     #[test]
     fn prior_updates_undo_cleanly() {
-        let t = 5;
-        let s = 4;
-
-        let expected = random_model(s, t);
+        let expected = random_model(*UNARY_VEC_FUNC_T);
 
         let mut model = expected.clone();
-        let other = random_model(s, t);
+        let other = random_model(*UNARY_VEC_FUNC_T);
 
         model.data += &other.data;
         model.data -= &other.data;
@@ -365,7 +364,7 @@ mod tests {
         let mut model = standard_normal_inverse_wishart(s, t);
 
         let mat = random_matrix(t, s);
-        for i in 0..num_samps {
+        for _ in 0..num_samps {
             let vec = random_vector(s);
             let out = mat.dot(&vec);
 
