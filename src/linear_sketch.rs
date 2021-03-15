@@ -7,13 +7,15 @@ use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
 use crate::schmear::*;
 
+use crate::kernel::*;
 use crate::inverse_schmear::*;
 use crate::pseudoinverse::*;
 
 #[derive(Clone)]
 pub struct LinearSketch {
     projection_mat : Array2<f32>,
-    projection_mat_pinv : Array2<f32>
+    projection_mat_pinv : Array2<f32>,
+    kernel_mat : Option<Array2<f32>>
 }
 
 impl LinearSketch {
@@ -24,16 +26,20 @@ impl LinearSketch {
         projection_mat *= alpha;
         projection_mat_pinv *= (1.0f32 / alpha);
 
+        let kernel_mat = kernel(&projection_mat); 
+
         LinearSketch {
             projection_mat,
-            projection_mat_pinv
+            projection_mat_pinv,
+            kernel_mat
         }
     }
     pub fn trivial_sketch(dimensions : usize) -> LinearSketch {
         let ident = Array::eye(dimensions);
         LinearSketch {
             projection_mat : ident.clone(),
-            projection_mat_pinv : ident
+            projection_mat_pinv : ident,
+            kernel_mat : Option::None
         }
     }
 
