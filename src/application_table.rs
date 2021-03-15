@@ -7,9 +7,7 @@ use std::collections::HashMap;
 use multimap::MultiMap;
 
 pub struct ApplicationTable {
-    func_space : TypeId,
-    arg_space : TypeId,
-    result_space : TypeId,
+    func_type_id : TypeId,
     table : HashMap::<TermApplication, TermReference>,
     result_to_application_map :  MultiMap::<TermReference, TermApplicationResult>,
     arg_to_application_map : MultiMap::<TermReference, TermApplicationResult>,
@@ -17,13 +15,10 @@ pub struct ApplicationTable {
 }
 
 impl ApplicationTable {
-    pub fn new(func_space : TypeId) -> ApplicationTable {
-        let func_type = get_type(func_space);
-        if let Type::FuncType(arg_space, result_space) = func_type {
+    pub fn new(func_type_id : TypeId) -> ApplicationTable {
+        if (!is_vector_type(func_type_id)) {
             ApplicationTable {
-                func_space : func_space,
-                arg_space : arg_space,
-                result_space : result_space,
+                func_type_id,
                 table : HashMap::new(),
                 result_to_application_map : MultiMap::new(),
                 arg_to_application_map : MultiMap::new(),

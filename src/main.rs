@@ -2,7 +2,6 @@
 #![allow(non_snake_case)]
 #![allow(unused_imports)]
 #![allow(unused_parens)]
-//#![allow(unused_variables)]
 
 mod space_info;
 mod type_graph;
@@ -36,7 +35,6 @@ mod data_point;
 mod normal_inverse_wishart;
 mod normal_inverse_wishart_sampler;
 mod wishart;
-mod least_squares;
 mod alpha_formulas;
 mod test_utils;
 mod array_utils;

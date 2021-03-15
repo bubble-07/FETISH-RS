@@ -31,8 +31,6 @@ pub const NUM_STEEPEST_DESCENT_STEPS_PER_ITER : usize = 10;
 
 pub const PINV_TRUNCATION_THRESH : f32 = 0.0001f32;
 
-pub const FUNC_SCATTER_TENSOR_ZEROING_THRESH : f32 = 1e-15f32;
-
 pub const DEFAULT_TEST_THRESH : f32 = 0.001f32;
 
 pub fn log_tapered_linear(k : usize, x : usize) -> usize {

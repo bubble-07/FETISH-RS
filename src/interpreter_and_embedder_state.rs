@@ -29,23 +29,6 @@ pub struct InterpreterAndEmbedderState {
 }
 
 impl InterpreterAndEmbedderState {
-    pub fn dump_model_traces(&self) {
-        for (type_id, model_space) in self.embedder_state.model_spaces.iter() {
-            let resolved_type = get_type(*type_id);
-            info!("{}:", resolved_type);
-            for (term_index, model) in model_space.models.iter() {
-                let term_pointer = TermPointer {
-                    type_id : *type_id,
-                    index : *term_index
-                };
-                let term_string = term_pointer.display(&self.interpreter_state);
-                let distr = &model.model.data;
-                let trace = distr.sigma.trace().unwrap();
-                info!("{} : {}", term_string, trace);
-            }
-            info!("\n");
-        }
-    }
     pub fn init_step(&mut self) {
     }
     pub fn evaluate_training_data_step(&mut self, term_ptr : TermPointer, 
