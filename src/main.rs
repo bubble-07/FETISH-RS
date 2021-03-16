@@ -3,6 +3,7 @@
 #![allow(unused_imports)]
 #![allow(unused_parens)]
 
+mod elaborator;
 mod kernel;
 mod space_info;
 mod type_graph;

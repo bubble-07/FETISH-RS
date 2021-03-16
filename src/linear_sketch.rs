@@ -62,6 +62,9 @@ impl LinearSketch {
     pub fn get_projection_matrix(&self) -> &Array2<f32> {
         &self.projection_mat
     }
+    pub fn get_kernel_matrix(&self) -> &Option<Array2<f32>> {
+        &self.kernel_mat
+    }
 
     pub fn get_expansion_matrix(&self) -> &Array2<f32> {
         &self.projection_mat_pinv

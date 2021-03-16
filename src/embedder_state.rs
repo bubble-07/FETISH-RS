@@ -19,12 +19,14 @@ use crate::schmear::*;
 use crate::func_schmear::*;
 use crate::func_inverse_schmear::*;
 use crate::normal_inverse_wishart::*;
+use crate::elaborator::*;
 use topological_sort::TopologicalSort;
 
 extern crate pretty_env_logger;
 
 pub struct EmbedderState {
-    pub model_spaces : HashMap::<TypeId, ModelSpace>
+    pub model_spaces : HashMap::<TypeId, ModelSpace>,
+    pub elaborators : HashMap::<TypeId, Elaborator>
 }
 
 impl EmbedderState {
@@ -44,15 +46,20 @@ impl EmbedderState {
         info!("Readying embedder state");
 
         let mut model_spaces = HashMap::<TypeId, ModelSpace>::new();
+        let mut elaborators = HashMap::<TypeId, Elaborator>::new();
         for func_type_id in 0..total_num_types() {
             if (!is_vector_type(func_type_id)) {
                 let model_space = ModelSpace::new(func_type_id);
                 model_spaces.insert(func_type_id, model_space);
+
+                let elaborator = Elaborator::new(func_type_id);
+                elaborators.insert(func_type_id, elaborator);
             }
         }
 
         EmbedderState {
-            model_spaces
+            model_spaces,
+            elaborators
         }
     }
 

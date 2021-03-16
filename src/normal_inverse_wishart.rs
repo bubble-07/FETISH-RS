@@ -119,10 +119,7 @@ impl NormalInverseWishart {
 }
 
 impl NormalInverseWishart {
-    pub fn from_space_info(func_space_info : &FunctionSpaceInfo) -> NormalInverseWishart {
-        let feat_dims = func_space_info.get_feature_dimensions();
-        let out_dims = func_space_info.get_output_dimensions();
-
+    pub fn from_in_out_dims(feat_dims : usize, out_dims : usize) -> NormalInverseWishart {
         let mean : Array2<f32> = Array::zeros((out_dims, feat_dims));
 
         let precision_mult : f32 = (1.0f32 / (PRIOR_SIGMA * PRIOR_SIGMA));
@@ -131,6 +128,12 @@ impl NormalInverseWishart {
         let little_v = (out_dims as f32) + 1.0f32;
 
         NormalInverseWishart::new(mean, in_precision, out_precision, little_v)
+    }
+    pub fn from_space_info(func_space_info : &FunctionSpaceInfo) -> NormalInverseWishart {
+        let feat_dims = func_space_info.get_feature_dimensions();
+        let out_dims = func_space_info.get_output_dimensions();
+
+        NormalInverseWishart::from_in_out_dims(feat_dims, out_dims)
     }
     pub fn new(mean : Array2<f32>, precision : Array2<f32>, big_v : Array2<f32>, little_v : f32) -> NormalInverseWishart {
         let precision_u : Array2<f32> = mean.dot(&precision);
