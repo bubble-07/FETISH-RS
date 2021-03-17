@@ -146,6 +146,17 @@ impl EmbedderState {
         let mut topo_sort = TopologicalSort::<TermApplicationResult>::new();
         let mut stack = Vec::<TermApplicationResult>::new();
 
+        info!("Obtaining elaborator func schmears");
+        let mut elaborator_func_schmears = HashMap::new();
+        for type_id in 0..total_num_types() {
+            if (!is_vector_type(type_id)) {
+                let elaborator = self.elaborators.get(&type_id).unwrap(); 
+                let elaborator_func_schmear = elaborator.get_expansion_func_schmear();
+                elaborator_func_schmears.insert(type_id, elaborator_func_schmear);
+            }
+        }
+        info!("Propagating priors");
+
         for func_ptr in to_propagate {
             let applications = interpreter_state.get_app_results_with_func(&func_ptr);
             for application in applications {
@@ -176,9 +187,11 @@ impl EmbedderState {
         }
 
         while (!topo_sort.is_empty()) {
-            let to_process = topo_sort.pop_all();
-            for elem in to_process {
-                self.propagate_prior(elem.clone());
+            let mut to_process = topo_sort.pop_all();
+            for elem in to_process.drain(..) {
+                let out_type = elem.get_ret_type();
+                let elaborator_func_schmear = elaborator_func_schmears.get(&out_type).unwrap();
+                self.propagate_prior(elem, elaborator_func_schmear);
             }
         }
     }
@@ -255,7 +268,8 @@ impl EmbedderState {
     //Given a TermApplicationResult, compute the estimated output from the application
     //and use it to update the model for the result. If an existing update
     //exists for the given application of terms, this will first remove that update
-    fn propagate_prior(&mut self, term_app_res : TermApplicationResult) {
+    fn propagate_prior(&mut self, term_app_res : TermApplicationResult,
+                       elaborator_func_schmear : &FuncSchmear) {
         let func_schmear = self.get_prior_propagation_func_schmear(&term_app_res);
       
         //Get the model space for the func type
@@ -271,7 +285,8 @@ impl EmbedderState {
         let out_schmear : Schmear = func_space_info.apply_schmears(&func_schmear, &arg_schmear);
 
         if let TermReference::FuncRef(ret_ptr) = term_app_res.get_ret_ref() {
-            let out_prior : NormalInverseWishart = ret_space.schmear_to_prior(&self, &ret_ptr, &out_schmear);
+            let out_prior : NormalInverseWishart = ret_space.schmear_to_prior(&self, elaborator_func_schmear,
+                                                                              &ret_ptr, &out_schmear);
             //Actually perform the update
             let ret_embedding : &mut TermModel = self.get_mut_embedding(ret_ptr);
             if (ret_embedding.has_prior(&term_app_res.term_app)) {

@@ -84,15 +84,6 @@ impl SampledEmbedderState {
         (best_application.unwrap(), best_value)
     }
 
-    fn inflate_embedding(&self, type_id : TypeId, compressed_embedding : Array1<f32>) -> SampledTermEmbedding {
-        if (is_vector_type(type_id)) {
-            SampledTermEmbedding::VectorEmbedding(compressed_embedding)
-        } else {
-            let inflated = inflate_compressed_vector(type_id, &compressed_embedding);
-            SampledTermEmbedding::FunctionEmbedding(type_id, inflated)
-        }
-    }
-
     pub fn get_term_embedding(&self, term_ref : &TermReference) -> SampledTermEmbedding {
         match (term_ref) {
             TermReference::VecRef(vec) => SampledTermEmbedding::VectorEmbedding(from_noisy(vec)),

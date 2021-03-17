@@ -4,6 +4,7 @@ extern crate ndarray_linalg;
 use ndarray::*;
 
 use rand::prelude::*;
+use crate::func_schmear::*;
 use crate::sampled_model_embedding::*;
 use crate::embedder_state::*;
 use crate::pseudoinverse::*;
@@ -50,17 +51,17 @@ impl ModelSpace {
         result
     }
 
-    pub fn schmear_to_prior(&self, embedder_state : &EmbedderState, 
+    pub fn schmear_to_prior(&self, embedder_state : &EmbedderState, elaborator_func_schmear : &FuncSchmear,
                         func_ptr : &TermPointer, in_schmear : &Schmear) -> NormalInverseWishart {
         let func_space_info = get_function_space_info(self.type_id);
-        let func_feat_info = get_feature_space_info(self.type_id);
         let s = func_space_info.get_feature_dimensions();
         let t = func_space_info.get_output_dimensions();
 
-        let mean = inflate_compressed_vector(self.type_id, &in_schmear.mean);
+        let full_flat_schmear = elaborator_func_schmear.apply(in_schmear);
+        let mean = full_flat_schmear.mean.into_shape((t, s)).unwrap();
 
         //The (t * s) x (t * s) big sigma
-        let big_sigma = func_feat_info.expand_covariance(&in_schmear.covariance);
+        let big_sigma = full_flat_schmear.covariance;
         //t x s x t x s
         let big_sigma_tensor = big_sigma.into_shape((t, s, t, s)).unwrap();
         let big_sigma_tensor_reordered = big_sigma_tensor.permuted_axes([0, 2, 1, 3]);

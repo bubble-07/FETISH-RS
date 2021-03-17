@@ -30,18 +30,6 @@ impl FeatureSpaceInfo {
             Option::Some(sketch) => sketch.get_projection_matrix().clone()
         }
     }
-    pub fn expand(&self, mean : &Array1<f32>) -> Array1<f32> {
-        match (&self.sketcher) {
-            Option::None => mean.clone(),
-            Option::Some(sketch) => sketch.expand(mean)
-        }
-    }
-    pub fn expand_covariance(&self, covariance : &Array2<f32>) -> Array2<f32> {
-        match (&self.sketcher) {
-            Option::None => covariance.clone(),
-            Option::Some(sketch) => sketch.expand_covariance(covariance)
-        }
-    }
     pub fn get_sketched_dimensions(&self) -> usize {
         match (&self.sketcher) {
             Option::None => self.base_dimensions,

@@ -59,24 +59,6 @@ pub fn get_feature_space_info(type_id : TypeId) -> &'static FeatureSpaceInfo {
     &GLOBAL_SPACE_INFO.feature_spaces[type_id]
 }
 
-//TODO: Deprecate
-pub fn inflate_compressed_vector(func_type_id : TypeId, compressed_func : &Array1<f32>) -> Array2<f32> {
-    let func_feat_info = get_feature_space_info(func_type_id);
-    let full_flat_func = func_feat_info.expand(compressed_func);
-
-    let arg_type_id = get_arg_type_id(func_type_id);
-    let ret_type_id = get_ret_type_id(func_type_id);
-
-    let arg_feat_info = get_feature_space_info(arg_type_id);
-    let ret_feat_info = get_feature_space_info(ret_type_id);
-
-    let out_dims = ret_feat_info.get_sketched_dimensions();
-    let feat_dims = arg_feat_info.feature_dimensions;
-
-    let result = full_flat_func.into_shape((out_dims, feat_dims)).unwrap();
-    result
-}
-
 pub fn build_function_space_info(arg_type_id : TypeId, ret_type_id : TypeId) -> FunctionSpaceInfo<'static> {
     let arg_feat_info = get_feature_space_info(arg_type_id);
     let ret_feat_info = get_feature_space_info(ret_type_id);
