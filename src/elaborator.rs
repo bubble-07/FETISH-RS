@@ -51,8 +51,10 @@ impl Elaborator {
         let feature_space_info = get_feature_space_info(self.type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
         let expansion_mat = sketcher.get_expansion_matrix();
+
         let kernel_mat = sketcher.get_kernel_matrix().as_ref().unwrap();
-        let kernel_mat_t = kernel_mat.t();
+        let kernel_mat_t_temp = kernel_mat.t();
+        let kernel_mat_t = kernel_mat_t_temp.as_standard_layout();
 
         //dims: sketched_dimension -> kernel_basis_dimension
         let model_func_schmear = self.model.get_schmear();
