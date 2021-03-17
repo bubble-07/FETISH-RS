@@ -146,17 +146,6 @@ impl EmbedderState {
         let mut topo_sort = TopologicalSort::<TermApplicationResult>::new();
         let mut stack = Vec::<TermApplicationResult>::new();
 
-        info!("Obtaining elaborator func schmears");
-        let mut elaborator_func_schmears = HashMap::new();
-        for type_id in 0..total_num_types() {
-            if (!is_vector_type(type_id)) {
-                let elaborator = self.elaborators.get(&type_id).unwrap(); 
-                let elaborator_func_schmear = elaborator.get_expansion_func_schmear();
-                elaborator_func_schmears.insert(type_id, elaborator_func_schmear);
-            }
-        }
-        info!("Propagating priors");
-
         for func_ptr in to_propagate {
             let applications = interpreter_state.get_app_results_with_func(&func_ptr);
             for application in applications {
@@ -168,9 +157,14 @@ impl EmbedderState {
                 }
             }
         }
+
+        let mut ret_type_set = HashSet::new();
         while (stack.len() > 0) {
             let elem = stack.pop().unwrap();
             let ret_ref = elem.get_ret_ref();
+
+            ret_type_set.insert(elem.get_ret_type());
+
             if let TermReference::FuncRef(ret_func_ptr) = ret_ref {
                 let applications = interpreter_state.get_app_results_with_func(&ret_func_ptr); 
                 for application in applications {
@@ -185,6 +179,17 @@ impl EmbedderState {
                 all_modified.insert(ret_func_ptr);
             }
         }
+
+        info!("Obtaining elaborator func schmears");
+        let mut elaborator_func_schmears = HashMap::new();
+        for type_id in ret_type_set.drain() {
+            if (!is_vector_type(type_id)) {
+                let elaborator = self.elaborators.get(&type_id).unwrap(); 
+                let elaborator_func_schmear = elaborator.get_expansion_func_schmear();
+                elaborator_func_schmears.insert(type_id, elaborator_func_schmear);
+            }
+        }
+        info!("Propagating priors");
 
         while (!topo_sort.is_empty()) {
             let mut to_process = topo_sort.pop_all();
