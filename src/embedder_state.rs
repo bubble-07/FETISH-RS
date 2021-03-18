@@ -84,9 +84,18 @@ impl EmbedderState {
         }
 
         trace!("Propagating data updates for {} applications", updated_apps.len());
-        self.propagate_data_recursive(interpreter_state, updated_apps, &mut data_updated_terms);
+        self.propagate_data_recursive(interpreter_state, &updated_apps, &mut data_updated_terms);
         trace!("Propagating prior updates for {} applications", data_updated_terms.len());
-        self.propagate_prior_recursive(interpreter_state, data_updated_terms, &mut prior_updated_terms);
+        self.propagate_prior_recursive(interpreter_state, &data_updated_terms, &mut prior_updated_terms);
+
+        let mut all_updated_terms = HashSet::new();
+        for data_updated_term in data_updated_terms.drain() {
+            all_updated_terms.insert(data_updated_term);
+        }
+        for prior_updated_term in prior_updated_terms.drain() {
+            all_updated_terms.insert(prior_updated_term);
+        }
+        self.update_elaborators(all_updated_terms);
     }
 
     pub fn has_embedding(&self, term_ptr : &TermPointer) -> bool {
@@ -139,15 +148,29 @@ impl EmbedderState {
         }
     }
 
+    pub fn update_elaborators(&mut self, mut updated_terms : HashSet::<TermPointer>) {
+        for term_ptr in updated_terms.drain() {
+            let elaborator = self.elaborators.get_mut(&term_ptr.type_id).unwrap();
+
+            //Remove existing data for the term
+            if (elaborator.has_data(&term_ptr.index)) {
+                elaborator.downdate_data(&term_ptr.index);
+            }
+
+            let term_model = self.model_spaces.get(&term_ptr.type_id).unwrap().get_model(term_ptr.index);
+            elaborator.update_data(term_ptr.index, &term_model.model);
+        }
+    }
+
     //Propagates prior updates downwards
     pub fn propagate_prior_recursive(&mut self, interpreter_state : &InterpreterState,
-                                     to_propagate : HashSet::<TermPointer>,
+                                     to_propagate : &HashSet::<TermPointer>,
                                      all_modified : &mut HashSet::<TermPointer>) {
         let mut topo_sort = TopologicalSort::<TermApplicationResult>::new();
         let mut stack = Vec::<TermApplicationResult>::new();
 
         for func_ptr in to_propagate {
-            let applications = interpreter_state.get_app_results_with_func(&func_ptr);
+            let applications = interpreter_state.get_app_results_with_func(func_ptr);
             for application in applications {
                 if let TermReference::FuncRef(_) = application.get_ret_ref() {
                     if (self.has_nontrivial_prior_update(&application)) {
@@ -203,7 +226,7 @@ impl EmbedderState {
 
     //Propagates data updates upwards
     pub fn propagate_data_recursive(&mut self, interpreter_state : &InterpreterState,
-                                    to_propagate : HashSet::<TermApplicationResult>,
+                                    to_propagate : &HashSet::<TermApplicationResult>,
                                     all_modified : &mut HashSet::<TermPointer>) {
         let mut topo_sort = TopologicalSort::<TermApplicationResult>::new();
         let mut stack = Vec::<TermApplicationResult>::new();
