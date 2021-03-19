@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::sampled_term_embedding::*;
 use crate::sampled_model_embedding::*;
 use crate::value_field_state::*;
+use crate::space_info::*;
 use crate::typed_vector::*;
 use crate::type_id::*;
 
@@ -26,6 +27,21 @@ impl SampledEmbeddingSpace {
         let sampled_mat = model_embedding.sampled_mat.clone();
 
         SampledTermEmbedding::FunctionEmbedding(self.type_id, sampled_mat)
+    }
+
+    pub fn expand_compressed_vector(&self, compressed_vec : &Array1<f32>) -> Array1<f32> {
+        let elaborated_vec = self.elaborator.dot(compressed_vec);
+        elaborated_vec
+    }
+
+    pub fn expand_compressed_function(&self, compressed_vec : &Array1<f32>) -> Array2<f32> {
+        let func_space_info = get_function_space_info(self.type_id);
+        let feat_dims = func_space_info.get_feature_dimensions();
+        let out_dims = func_space_info.get_output_dimensions();
+
+        let elaborated_vec = self.expand_compressed_vector(compressed_vec);
+        let result = elaborated_vec.into_shape((out_dims, feat_dims)).unwrap(); 
+        result
     }
 
     pub fn get_best_term_index_to_pass_with_value(&self, func_mat : &Array2<f32>, ret_type : TypeId,

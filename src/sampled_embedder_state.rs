@@ -27,6 +27,12 @@ impl SampledEmbedderState {
         space.get_embedding(term_ptr.index)
     }
 
+    pub fn expand_compressed_function(&self, compressed_vec : &TypedVector) -> Array2<f32> {
+        let space = self.embedding_spaces.get(&compressed_vec.type_id).unwrap();
+        let result = space.expand_compressed_function(&compressed_vec.vec);
+        result
+    }
+
     pub fn get_best_nonvector_application_with_value(&self, interpreter_state : &InterpreterState,
                                                             value_field_state : &ValueFieldState) 
                                                   -> (TermApplication, f32) {
