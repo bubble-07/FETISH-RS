@@ -10,6 +10,7 @@ type ModelKey = usize;
 
 pub struct SampledEmbeddingSpace {
     pub type_id : TypeId,
+    pub elaborator : Array2<f32>,
     pub models : HashMap<ModelKey, SampledModelEmbedding>
 }
 
@@ -71,9 +72,10 @@ impl SampledEmbeddingSpace {
         (best_model_index, best_model_value)
     }
 
-    pub fn new(type_id : TypeId) -> SampledEmbeddingSpace {
+    pub fn new(type_id : TypeId, elaborator : Array2<f32>) -> SampledEmbeddingSpace {
         SampledEmbeddingSpace {
             type_id,
+            elaborator,
             models : HashMap::new()
         }
     }

@@ -14,6 +14,7 @@ use crate::term_model::*;
 use crate::space_info::*;
 use crate::type_id::*;
 use crate::schmear::*;
+use crate::elaborator::*;
 use crate::sampled_embedding_space::*;
 
 extern crate pretty_env_logger;
@@ -24,6 +25,7 @@ type ModelKey = usize;
 
 pub struct ModelSpace {
     pub type_id : TypeId,
+    pub elaborator : Elaborator,
     pub models : HashMap<ModelKey, TermModel>
 }
 
@@ -43,7 +45,9 @@ impl ModelSpace {
     }
 
     pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbeddingSpace {
-        let mut result = SampledEmbeddingSpace::new(self.type_id);
+        let elaborator = self.elaborator.sample(rng);
+
+        let mut result = SampledEmbeddingSpace::new(self.type_id, elaborator);
         for (key, model) in self.models.iter() {
             let sample = SampledModelEmbedding::new(&model.model, rng);
             result.models.insert(*key, sample);
@@ -105,6 +109,7 @@ impl ModelSpace {
     pub fn new(type_id : TypeId) -> ModelSpace {
         ModelSpace {
             models : HashMap::new(),
+            elaborator : Elaborator::new(type_id),
             type_id
         }
     }

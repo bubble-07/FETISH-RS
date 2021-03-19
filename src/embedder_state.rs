@@ -25,8 +25,7 @@ use topological_sort::TopologicalSort;
 extern crate pretty_env_logger;
 
 pub struct EmbedderState {
-    pub model_spaces : HashMap::<TypeId, ModelSpace>,
-    pub elaborators : HashMap::<TypeId, Elaborator>
+    pub model_spaces : HashMap::<TypeId, ModelSpace>
 }
 
 impl EmbedderState {
@@ -46,20 +45,15 @@ impl EmbedderState {
         info!("Readying embedder state");
 
         let mut model_spaces = HashMap::<TypeId, ModelSpace>::new();
-        let mut elaborators = HashMap::<TypeId, Elaborator>::new();
         for func_type_id in 0..total_num_types() {
             if (!is_vector_type(func_type_id)) {
                 let model_space = ModelSpace::new(func_type_id);
                 model_spaces.insert(func_type_id, model_space);
-
-                let elaborator = Elaborator::new(func_type_id);
-                elaborators.insert(func_type_id, elaborator);
             }
         }
 
         EmbedderState {
-            model_spaces,
-            elaborators
+            model_spaces
         }
     }
 
@@ -150,14 +144,15 @@ impl EmbedderState {
 
     pub fn update_elaborators(&mut self, mut updated_terms : HashSet::<TermPointer>) {
         for term_ptr in updated_terms.drain() {
-            let elaborator = self.elaborators.get_mut(&term_ptr.type_id).unwrap();
+            let model_space = self.model_spaces.get_mut(&term_ptr.type_id).unwrap();
+            let elaborator = &mut model_space.elaborator;
 
             //Remove existing data for the term
             if (elaborator.has_data(&term_ptr.index)) {
                 elaborator.downdate_data(&term_ptr.index);
             }
 
-            let term_model = self.model_spaces.get(&term_ptr.type_id).unwrap().get_model(term_ptr.index);
+            let term_model = model_space.models.get(&term_ptr.index).unwrap();
             elaborator.update_data(term_ptr.index, &term_model.model);
         }
     }
@@ -207,7 +202,8 @@ impl EmbedderState {
         let mut elaborator_func_schmears = HashMap::new();
         for type_id in ret_type_set.drain() {
             if (!is_vector_type(type_id)) {
-                let elaborator = self.elaborators.get(&type_id).unwrap(); 
+                let model_space = self.model_spaces.get(&type_id).unwrap();
+                let elaborator = &model_space.elaborator;
                 let elaborator_func_schmear = elaborator.get_expansion_func_schmear();
                 elaborator_func_schmears.insert(type_id, elaborator_func_schmear);
             }

@@ -5,6 +5,7 @@ use ndarray::*;
 
 use crate::sampled_embedder_state::*;
 use crate::linalg_utils::*;
+use crate::application_chain::*;
 use crate::type_id::*;
 use crate::space_info::*;
 use crate::params::*;
@@ -48,14 +49,15 @@ impl OptimizerState {
         trace!("Applying new constraints");
         self.value_field_state.apply_constraints(&constraints);
 
-        trace!("Optimizing for highest-value application");
-        let best_application = self.find_best_application(&sampled_embedder_state);
+        trace!("Optimizing for highest-value application chain");
+        let best_application_chain = self.find_best_application_chain(&sampled_embedder_state);
 
         trace!("Done with newly-evaluated terms, discarding");
         self.interpreter_and_embedder_state.clear_newly_received();
 
         trace!("Evaluating best application");
-        let result_ref = self.interpreter_and_embedder_state.interpreter_state.evaluate(&best_application);
+        let result_ref = self.interpreter_and_embedder_state
+                             .interpreter_state.evaluate_application_chain(&best_application_chain);
 
         if (result_ref.get_type() == self.value_field_state.target.type_id) {
             trace!("Best term was in the target type. Evaluating on training data");
@@ -68,6 +70,12 @@ impl OptimizerState {
             TermReference::FuncRef(func_ptr) => Option::Some(func_ptr),
             TermReference::VecRef(_) => Option::None
         }
+    }
+    
+    pub fn find_best_application_chain(&mut self, 
+                                       sampled_embedder_state : &SampledEmbedderState) -> ApplicationChain {
+        let best_application = self.find_best_application(sampled_embedder_state); 
+        panic!();        
     }
 
     pub fn find_best_application(&mut self, sampled_embedder_state : &SampledEmbedderState) -> TermApplication {
