@@ -44,9 +44,6 @@ impl SampledEmbedderState {
             let ret_type_id = get_ret_type_id(*func_type_id);
             if (!is_vector_type(arg_type_id) && !is_vector_type(ret_type_id)) {
                 let func_embedding_space = self.embedding_spaces.get(func_type_id).unwrap();
-                let arg_embedding_space = self.embedding_spaces.get(&arg_type_id).unwrap();
-
-                let func_space_info = get_function_space_info(*func_type_id);
 
                 let application_table = interpreter_state.application_tables.get(func_type_id).unwrap();
 
@@ -55,7 +52,6 @@ impl SampledEmbedderState {
                         type_id : *func_type_id,
                         index : *func_index
                     };
-                    let func_mat = &func_embedding_space.get_embedding(*func_index).sampled_mat;
 
                     for arg_index in func_embedding_space.models.keys() {
                         let arg_ptr = TermPointer {
@@ -68,15 +64,9 @@ impl SampledEmbedderState {
                             arg_ref
                         };
 
-
                         if (!application_table.has_computed(&term_app)) {
-                            let arg_vec = &arg_embedding_space.get_embedding(*arg_index).sampled_compressed_vec;
-                            let ret_vec = func_space_info.apply(func_mat, arg_vec);
-                            let ret_typed_vec = TypedVector {
-                                vec : ret_vec,
-                                type_id : ret_type_id
-                            };
-
+                            let ret_typed_vec = self.evaluate_term_application(&term_app);
+                            
                             let value = value_field_state.get_value_for_vector(&ret_typed_vec);
                             if (value > best_value) {
                                 best_value = value;
@@ -88,6 +78,29 @@ impl SampledEmbedderState {
             }
         }
         (best_application.unwrap(), best_value)
+    }
+
+    pub fn evaluate_term_application(&self, term_application : &TermApplication) -> TypedVector {
+        let func_type_id = term_application.func_ptr.type_id;
+        let ret_type_id = get_ret_type_id(func_type_id);
+        
+        let func_space_info = get_function_space_info(func_type_id);
+        let func_embedding_space = self.embedding_spaces.get(&func_type_id).unwrap();
+        let func_mat = &func_embedding_space.get_embedding(term_application.func_ptr.index).sampled_mat;
+
+        let arg_vec = match (&term_application.arg_ref) {
+            TermReference::VecRef(vec) => from_noisy(vec),
+            TermReference::FuncRef(arg_ptr) => {
+                let arg_embedding_space = self.embedding_spaces.get(&arg_ptr.type_id).unwrap();
+                arg_embedding_space.get_embedding(arg_ptr.index).sampled_compressed_vec.clone()
+            }
+        };
+
+        let ret_vec = func_space_info.apply(func_mat, &arg_vec);
+        TypedVector {
+            vec : ret_vec,
+            type_id : ret_type_id
+        }
     }
 
     pub fn get_term_embedding(&self, term_ref : &TermReference) -> SampledTermEmbedding {
