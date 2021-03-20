@@ -16,6 +16,8 @@ pub const DIM_TAPER_START : usize = 4;
 
 pub const TRAINING_POINTS_PER_ITER : usize = 5;
 
+pub const OPT_MAX_ITERS : usize = 10;
+
 //Optimization algorithm constants
 pub const GAMMA : f32 = 0.95f32;
 pub const LAMBDA : f32 = 1.0f32;

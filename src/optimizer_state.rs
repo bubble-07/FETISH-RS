@@ -3,6 +3,7 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 
+use crate::typed_vector::*;
 use crate::sampled_embedder_state::*;
 use crate::linalg_utils::*;
 use crate::application_chain::*;
@@ -71,11 +72,61 @@ impl OptimizerState {
             TermReference::VecRef(_) => Option::None
         }
     }
+
+    pub fn find_best_next_application(&self, sampled_embedder_state : &SampledEmbedderState,
+                                      current_compressed_vec : &TypedVector) ->
+                                      (TermReference, TypedVector, f32) {
+        panic!();
+    }
+
+    pub fn find_playout_next_application(&self, sampled_embedder_state : &SampledEmbedderState,
+                                         current_compressed_vec : &TypedVector) ->
+                                       (TermReference, TypedVector) {
+        panic!();
+    }
     
     pub fn find_best_application_chain(&mut self, 
                                        sampled_embedder_state : &SampledEmbedderState) -> ApplicationChain {
+        let target_type_id = self.value_field_state.target.type_id;
+
         let best_application = self.find_best_application(sampled_embedder_state); 
-        panic!();        
+
+        let mut current_compressed_vec = sampled_embedder_state.evaluate_term_application(&best_application);
+        let mut current_chain = ApplicationChain::from_term_application(best_application);
+
+        let mut current_best_chain = Option::None;
+        let mut current_best_value = f32::NEG_INFINITY;
+
+        for _ in 0..OPT_MAX_ITERS {
+            //Pick best actions until we get to the target type, then compare with current best
+            //chain
+            let (picked_term, next_compressed_vec, current_value) = 
+                self.find_best_next_application(sampled_embedder_state, &current_compressed_vec);
+
+            current_compressed_vec = next_compressed_vec;
+            current_chain.add_to_chain(picked_term);
+
+            if (current_compressed_vec.type_id == target_type_id) {
+                if (current_value > current_best_value) {
+                    current_best_value = current_value;
+                    current_best_chain = Option::Some(current_chain.clone());
+                } else {
+                    //If we've hit the target again, but the chain
+                    //has gotten worst, fall back on the current best chain
+                    return current_best_chain.unwrap();
+                }
+            }
+        }
+        
+        while (current_compressed_vec.type_id != target_type_id) { 
+            //Pick playout actions until we get to the target type, then yield that
+            let (picked_term, next_compressed_vec) = 
+                self.find_playout_next_application(sampled_embedder_state, &current_compressed_vec);
+
+            current_compressed_vec = next_compressed_vec;
+            current_chain.add_to_chain(picked_term);
+        }
+        current_chain
     }
 
     pub fn find_best_application(&mut self, sampled_embedder_state : &SampledEmbedderState) -> TermApplication {
