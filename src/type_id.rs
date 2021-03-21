@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use lazy_static::*;
 use crate::params::*;
+use crate::type_graph::*;
 use std::fmt;
 use rand::prelude::*;
 

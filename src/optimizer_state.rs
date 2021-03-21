@@ -5,6 +5,7 @@ use ndarray::*;
 
 use crate::typed_vector::*;
 use crate::sampled_embedder_state::*;
+use crate::type_action::*;
 use crate::linalg_utils::*;
 use crate::application_chain::*;
 use crate::type_id::*;
@@ -71,6 +72,12 @@ impl OptimizerState {
             TermReference::FuncRef(func_ptr) => Option::Some(func_ptr),
             TermReference::VecRef(_) => Option::None
         }
+    }
+
+    pub fn find_best_next_with_transition(&self, sampled_embedder_state : &SampledEmbedderState,
+                                      current_compressed_vec : &TypedVector, transition : &TypeAction) ->
+                                      (TermReference, TypedVector, f32) {
+        panic!();
     }
 
     pub fn find_best_next_application(&self, sampled_embedder_state : &SampledEmbedderState,
