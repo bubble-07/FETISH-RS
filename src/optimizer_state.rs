@@ -3,12 +3,14 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 
+use rand::prelude::*;
 use crate::typed_vector::*;
 use crate::sampled_embedder_state::*;
 use crate::type_action::*;
 use crate::linalg_utils::*;
 use crate::application_chain::*;
 use crate::type_id::*;
+use crate::type_graph::*;
 use crate::space_info::*;
 use crate::params::*;
 use crate::term_pointer::*;
@@ -33,6 +35,10 @@ pub struct OptimizerState {
 }
 
 impl OptimizerState {
+
+    pub fn get_target_type_id(&self) -> TypeId {
+        self.value_field_state.target.type_id
+    }
 
     pub fn step(&mut self) -> Option<TermPointer> {
         trace!("Applying Bayesian update");
@@ -61,7 +67,7 @@ impl OptimizerState {
         let result_ref = self.interpreter_and_embedder_state
                              .interpreter_state.evaluate_application_chain(&best_application_chain);
 
-        if (result_ref.get_type() == self.value_field_state.target.type_id) {
+        if (result_ref.get_type() == self.get_target_type_id()) {
             trace!("Best term was in the target type. Evaluating on training data");
             if let TermReference::FuncRef(func_ptr) = &result_ref {
                 self.evaluate_training_data_step(func_ptr.clone());
@@ -75,7 +81,8 @@ impl OptimizerState {
     }
 
     pub fn find_best_next_with_transition(&self, sampled_embedder_state : &SampledEmbedderState,
-                                      current_compressed_vec : &TypedVector, transition : &TypeAction) ->
+                                      current_compressed_vec : &TypedVector, 
+                                      transition : &TypeAction, dest_type : TypeId) ->
                                       (TermReference, TypedVector, f32) {
         panic!();
     }
@@ -83,18 +90,67 @@ impl OptimizerState {
     pub fn find_best_next_application(&self, sampled_embedder_state : &SampledEmbedderState,
                                       current_compressed_vec : &TypedVector) ->
                                       (TermReference, TypedVector, f32) {
-        panic!();
+        let current_type_id = current_compressed_vec.type_id;
+        let target_type_id = self.get_target_type_id();
+
+        let mut best_value = f32::NEG_INFINITY;
+        let mut best_term = Option::None;
+        let mut best_vec = Option::None;
+
+        let successor_types =  get_type_successors(current_type_id);
+        for successor_type in successor_types.iter() {
+            if is_type_reachable_from(*successor_type, target_type_id) {
+                let type_actions = get_type_actions(current_type_id, *successor_type);
+                for type_action in type_actions.iter() {
+                    let (term, vec, value) = self.find_best_next_with_transition(sampled_embedder_state,
+                                                  current_compressed_vec, type_action, *successor_type);
+                    if (value > best_value) {
+                        best_term = Option::Some(term.clone());
+                        best_vec = Option::Some(vec.clone());
+                        best_value = value;
+                    }
+                }
+            }
+        }
+        (best_term.unwrap(), best_vec.unwrap(), best_value)
     }
 
     pub fn find_playout_next_application(&self, sampled_embedder_state : &SampledEmbedderState,
                                          current_compressed_vec : &TypedVector) ->
                                        (TermReference, TypedVector) {
-        panic!();
+        let current_type_id = current_compressed_vec.type_id;
+        let target_type_id = self.get_target_type_id();
+
+        let successor_types = get_type_successors(current_type_id);
+    
+        let mut rng = rand::thread_rng();
+
+        let mut random_usize : usize = rng.gen();
+        let mut successor_ind = random_usize % successor_types.len();
+        while (!is_type_reachable_from(successor_types[successor_ind], target_type_id)) {
+            random_usize = rng.gen();
+            successor_ind = random_usize % successor_types.len();
+        }
+
+        let successor_type = successor_types[successor_ind];
+
+        let type_actions = get_type_actions(current_type_id, successor_type);
+
+        random_usize = rng.gen();
+        let action_ind = random_usize & type_actions.len();
+
+        let action = &type_actions[action_ind];
+
+        let (term, vec, _) = self.find_best_next_with_transition(sampled_embedder_state, 
+                                                                current_compressed_vec,
+                                                                action, successor_type);
+
+        (term, vec)
     }
     
     pub fn find_best_application_chain(&mut self, 
                                        sampled_embedder_state : &SampledEmbedderState) -> ApplicationChain {
-        let target_type_id = self.value_field_state.target.type_id;
+        let target_type_id = self.get_target_type_id();
 
         let best_application = self.find_best_application(sampled_embedder_state); 
 

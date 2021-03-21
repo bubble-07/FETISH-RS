@@ -2,6 +2,7 @@ use ndarray::*;
 use crate::type_id::*;
 use crate::feature_space_info::*;
 
+#[derive(Clone)]
 pub struct TypedVector {
     pub type_id : TypeId, 
     pub vec : Array1<f32>
