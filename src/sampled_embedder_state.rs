@@ -80,6 +80,40 @@ impl SampledEmbedderState {
         (best_application.unwrap(), best_value)
     }
 
+    pub fn get_best_term_to_apply(&self, compressed_arg_vector : &TypedVector,
+                                         func_type_id : TypeId, value_field_state : &ValueFieldState)
+                                  -> (TermPointer, TypedVector, f32) {
+        let ret_type_id = get_ret_type_id(func_type_id);
+        let arg_feat_space = get_feature_space_info(compressed_arg_vector.type_id);
+        let featurized_arg_vector = arg_feat_space.get_features(&compressed_arg_vector.vec);
+        let func_embedding_space = self.embedding_spaces.get(&func_type_id).unwrap();
+        let (func_index, ret_vec, value) = func_embedding_space.get_best_term_index_to_apply_with_value(
+                                                &featurized_arg_vector,
+                                                ret_type_id, value_field_state);
+        let func_ptr = TermPointer {
+            index : func_index,
+            type_id : func_type_id
+        };
+        (func_ptr, ret_vec, value)
+    }
+
+    pub fn get_best_term_to_pass(&self, compressed_func_vector : &TypedVector, 
+                                        value_field_state : &ValueFieldState)
+                                -> (TermPointer, TypedVector, f32) {
+        let func_mat = self.expand_compressed_function(compressed_func_vector);
+        let arg_type = get_arg_type_id(compressed_func_vector.type_id);
+        let ret_type = get_ret_type_id(compressed_func_vector.type_id);
+        let arg_embedding_space = self.embedding_spaces.get(&arg_type).unwrap();
+        let (arg_index, ret_compressed_vec, value) = arg_embedding_space.get_best_term_index_to_pass_with_value(
+                                                 &func_mat, ret_type, value_field_state);
+        let arg_ptr = TermPointer {
+            index : arg_index,
+            type_id : arg_type
+        };
+
+        (arg_ptr, ret_compressed_vec, value)
+    }
+
     pub fn evaluate_term_application(&self, term_application : &TermApplication) -> TypedVector {
         let func_type_id = term_application.func_ptr.type_id;
         let ret_type_id = get_ret_type_id(func_type_id);

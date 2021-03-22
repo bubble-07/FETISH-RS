@@ -4,6 +4,7 @@ extern crate ndarray_linalg;
 use ndarray::*;
 
 use rand::prelude::*;
+use crate::array_utils::*;
 use crate::typed_vector::*;
 use crate::sampled_embedder_state::*;
 use crate::type_action::*;
@@ -82,9 +83,35 @@ impl OptimizerState {
 
     pub fn find_best_next_with_transition(&self, sampled_embedder_state : &SampledEmbedderState,
                                       current_compressed_vec : &TypedVector, 
-                                      transition : &TypeAction, dest_type : TypeId) ->
+                                      transition : &TypeAction) ->
                                       (TermReference, TypedVector, f32) {
-        panic!();
+
+        //The current type id must be a function type
+        match (transition) {
+            TypeAction::Applying(func_type_id) => {
+                //In this case, both the function and the argument will be functions
+                let (func_ptr, next_compressed_vec, value) = 
+                    sampled_embedder_state.get_best_term_to_apply(current_compressed_vec, *func_type_id,
+                                                                  &self.value_field_state);
+                let func_ref = TermReference::FuncRef(func_ptr); 
+                (func_ref, next_compressed_vec, value)
+            },
+            TypeAction::Passing(arg_type_id) => {
+                if (is_vector_type(*arg_type_id)) {
+                    let (arg_vec, next_compressed_vec, value) = 
+                        self.func_opt_state.get_best_vector_to_pass(current_compressed_vec,
+                                                    &self.value_field_state, sampled_embedder_state);
+                    let arg_ref = TermReference::VecRef(to_noisy(&arg_vec));
+                    (arg_ref, next_compressed_vec, value)
+                } else {
+                    let (arg_ptr, next_compressed_vec, value) =
+                        sampled_embedder_state.get_best_term_to_pass(current_compressed_vec, 
+                                                                     &self.value_field_state);
+                    let arg_ref = TermReference::FuncRef(arg_ptr);
+                    (arg_ref, next_compressed_vec, value)
+                }
+            }
+        }
     }
 
     pub fn find_best_next_application(&self, sampled_embedder_state : &SampledEmbedderState,
@@ -103,7 +130,7 @@ impl OptimizerState {
                 let type_actions = get_type_actions(current_type_id, *successor_type);
                 for type_action in type_actions.iter() {
                     let (term, vec, value) = self.find_best_next_with_transition(sampled_embedder_state,
-                                                  current_compressed_vec, type_action, *successor_type);
+                                                  current_compressed_vec, type_action);
                     if (value > best_value) {
                         best_term = Option::Some(term.clone());
                         best_vec = Option::Some(vec.clone());
@@ -143,7 +170,7 @@ impl OptimizerState {
 
         let (term, vec, _) = self.find_best_next_with_transition(sampled_embedder_state, 
                                                                 current_compressed_vec,
-                                                                action, successor_type);
+                                                                action);
 
         (term, vec)
     }

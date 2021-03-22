@@ -1,11 +1,15 @@
+use ndarray::*;
+use ndarray_linalg::*;
 use std::collections::HashMap;
 use crate::term_pointer::*;
 use crate::type_id::*;
+use crate::typed_vector::*;
 use crate::term_reference::*;
 use crate::function_optimum_space::*;
 use crate::term_application::*;
 use crate::value_field_state::*;
 use crate::sampled_embedder_state::*;
+use crate::space_info::*;
 
 pub struct FunctionOptimumState {
     pub function_spaces : HashMap::<TypeId, FunctionOptimumSpace>
@@ -27,6 +31,32 @@ impl FunctionOptimumState {
         FunctionOptimumState {
             function_spaces
         }
+    }
+    pub fn get_best_vector_to_pass(&self, compressed_func_vector : &TypedVector, 
+                                   value_field_state : &ValueFieldState,
+                                   sampled_embedder_state : &SampledEmbedderState)
+                                   -> (Array1<f32>, TypedVector, f32) {
+
+        let func_type_id = compressed_func_vector.type_id;
+        let arg_type_id = get_arg_type_id(func_type_id);
+        let ret_type_id = get_ret_type_id(func_type_id);
+
+        let arg_feat_space = get_feature_space_info(arg_type_id);
+
+        let func_optimum_space = self.function_spaces.get(&func_type_id).unwrap();
+        let best_arg_vector = func_optimum_space.estimate_optimal_vector_for_compressed_func(
+                                                 &compressed_func_vector.vec);
+
+        let best_feat_vector = arg_feat_space.get_features(&best_arg_vector);
+        let func_mat = sampled_embedder_state.expand_compressed_function(compressed_func_vector);
+        let ret_vec = func_mat.dot(&best_feat_vector);
+        let ret_typed_vec = TypedVector {
+            vec : ret_vec,
+            type_id : ret_type_id
+        };
+        let value = value_field_state.get_value_for_vector(&ret_typed_vec);
+
+        (best_arg_vector, ret_typed_vec, value)
     }
     pub fn update(&mut self, sampled_embedder_state : &SampledEmbedderState, 
                              value_field_state : &ValueFieldState) -> (TermApplication, f32) {

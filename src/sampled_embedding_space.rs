@@ -46,8 +46,9 @@ impl SampledEmbeddingSpace {
 
     pub fn get_best_term_index_to_pass_with_value(&self, func_mat : &Array2<f32>, ret_type : TypeId,
                                             value_field_state : &ValueFieldState)
-                                         -> (usize, f32) {
+                                         -> (usize, TypedVector, f32) {
         let mut best_arg_index = 0;
+        let mut best_ret_vec = Option::None;
         let mut best_arg_value = f32::NEG_INFINITY;
 
         for (arg_index, arg_model) in self.models.iter() {
@@ -60,16 +61,18 @@ impl SampledEmbeddingSpace {
             let value = value_field_state.get_value_for_vector(&typed_ret_vec);
             if (value > best_arg_value) {
                 best_arg_value = value;
+                best_ret_vec = Option::Some(typed_ret_vec);
                 best_arg_index = *arg_index;
             }
         }
-        (best_arg_index, best_arg_value)
+        (best_arg_index, best_ret_vec.unwrap(), best_arg_value)
     }
 
     pub fn get_best_term_index_to_apply_with_value(&self, featurized_arg_vector : &Array1<f32>, 
                                          ret_type : TypeId, value_field_state : &ValueFieldState) 
-                                         -> (usize, f32) {
+                                         -> (usize, TypedVector, f32) {
         let mut best_model_index = 0;
+        let mut best_compressed_vec = Option::None;
         let mut best_model_value = f32::NEG_INFINITY;
 
         for (model_index, model) in self.models.iter() {
@@ -82,10 +85,11 @@ impl SampledEmbeddingSpace {
             let value = value_field_state.get_value_for_vector(&typed_ret_vec);
             if (value > best_model_value) {
                 best_model_value = value;
+                best_compressed_vec = Option::Some(typed_ret_vec);
                 best_model_index = *model_index;
             }
         }
-        (best_model_index, best_model_value)
+        (best_model_index, best_compressed_vec.unwrap(), best_model_value)
     }
 
     pub fn new(type_id : TypeId, elaborator : Array2<f32>) -> SampledEmbeddingSpace {
