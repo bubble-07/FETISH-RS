@@ -103,31 +103,24 @@ impl Elaborator {
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
         let kernel_mat = &sketcher.get_kernel_matrix().as_ref().unwrap();
 
-        let func_schmear = data_update.get_schmear();        
-        let schmear = func_schmear.flatten();
+        let func_mean = data_update.get_mean_as_vec();
 
         let mut data_updates = Vec::new();
 
-        let mut sigma_points = get_sigma_points(&schmear);
-        let num_sigma_points = sigma_points.len();
-        let weight = 1.0f32 / (num_sigma_points as f32);
+        let sketched = sketcher.sketch(&func_mean);
+        let expanded = sketcher.expand(&sketched);
+        let diff = func_mean - &expanded;
+        let diff_in_kernel_basis = kernel_mat.t().dot(&diff);
 
-        for sigma_point in sigma_points.drain(..) {
-            let sketched = sketcher.sketch(&sigma_point);
-            let expanded = sketcher.expand(&sketched);
-            let diff = sigma_point - &expanded;
-            let diff_in_kernel_basis = kernel_mat.t().dot(&diff);
+        let data_update = DataPoint {
+            in_vec : sketched,
+            out_vec : diff_in_kernel_basis,
+            weight : 1.0f32
+        };
 
-            let data_update = DataPoint {
-                in_vec : sketched,
-                out_vec : diff_in_kernel_basis,
-                weight
-            };
+        self.model += &data_update;
 
-            self.model += &data_update;
-
-            data_updates.push(data_update);
-        }
+        data_updates.push(data_update);
 
         self.updates.insert(update_key, data_updates);
     }
