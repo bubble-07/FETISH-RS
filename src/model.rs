@@ -5,6 +5,7 @@ use ndarray::*;
 
 use std::ops;
 
+use crate::prior_specification::*;
 use crate::type_id::*;
 use crate::data_points::*;
 use crate::data_point::*;
@@ -128,9 +129,11 @@ impl ops::SubAssign<&NormalInverseWishart> for Model {
 }
 
 impl Model {
-    pub fn new(arg_type_id : TypeId, ret_type_id : TypeId) -> Model {
+    pub fn new(prior_spec : &dyn PriorSpecification,
+               arg_type_id : TypeId, ret_type_id : TypeId) -> Model {
+
         let func_space_info = build_function_space_info(arg_type_id, ret_type_id);
-        let data = NormalInverseWishart::from_space_info(&func_space_info);
+        let data = NormalInverseWishart::from_space_info(prior_spec, &func_space_info);
     
         Model {
             arg_type_id,

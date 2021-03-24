@@ -9,6 +9,7 @@ use crate::sampled_embedding_space::*;
 use crate::value_field_state::*;
 use crate::data_points::*;
 use crate::space_info::*;
+use crate::prior_specification::*;
 
 use argmin::prelude::*;
 use argmin::solver::gradientdescent::SteepestDescent;
@@ -21,6 +22,23 @@ pub struct FunctionOptimumSpace {
     pub optimal_input_mapping : Model,
     pub optimal_input_mapping_sampler : NormalInverseWishartSampler,
     pub optimal_input_vectors : HashMap<ModelKey, Array1<f32>>
+}
+
+struct FunctionOptimumPriorSpecification {
+}
+
+impl PriorSpecification for FunctionOptimumPriorSpecification {
+    fn get_in_precision_multiplier(&self, _feat_dims : usize) -> f32 {
+        FUNC_OPTIMUM_IN_PRECISION_MULTIPLIER
+    }
+    fn get_out_covariance_multiplier(&self, out_dims : usize) -> f32 {
+        let pseudo_observations = self.get_out_pseudo_observations(out_dims);
+        pseudo_observations * FUNC_OPTIMUM_OUT_COVARIANCE_MULTIPLIER
+    }
+    fn get_out_pseudo_observations(&self, out_dims : usize) -> f32 {
+        //we need to ensure that the model and its covariance are always well-specified
+        (out_dims as f32) * FUNC_OPTIMUM_ERROR_COVARIANCE_PRIOR_OBSERVATIONS_PER_DIMENSION + 2.0f32
+    }
 }
 
 impl FunctionOptimumSpace {
@@ -36,8 +54,10 @@ impl FunctionOptimumSpace {
     }
 
     pub fn new(func_type_id : TypeId) -> FunctionOptimumSpace {
-        //TODO: Configure parameters for the NIW prior here
-        let optimal_input_mapping = Model::new(func_type_id, get_arg_type_id(func_type_id));
+
+        let prior_specification = FunctionOptimumPriorSpecification { };
+
+        let optimal_input_mapping = Model::new(&prior_specification, func_type_id, get_arg_type_id(func_type_id));
         let optimal_input_mapping_sampler = NormalInverseWishartSampler::new(&optimal_input_mapping.data);
 
         let optimal_input_vectors = HashMap::new();

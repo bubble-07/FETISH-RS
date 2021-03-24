@@ -3,6 +3,7 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 
+use crate::params::*;
 use crate::data_update::*;
 use crate::space_info::*;
 use crate::type_id::*;
@@ -10,6 +11,7 @@ use crate::normal_inverse_wishart::*;
 use crate::term_application::*;
 use crate::term_reference::*;
 use crate::func_schmear::*;
+use crate::prior_specification::*;
 use crate::func_inverse_schmear::*;
 
 use rand::prelude::*;
@@ -22,6 +24,27 @@ pub struct TermModel {
     pub model : Model,
     prior_updates : HashMap::<TermApplication, NormalInverseWishart>,
     pub data_updates : HashMap::<TermReference, DataUpdate>
+}
+
+pub struct TermModelPriorSpecification {
+}
+
+impl PriorSpecification for TermModelPriorSpecification {
+    fn get_in_precision_multiplier(&self, _feat_dims : usize) -> f32 {
+        TERM_MODEL_IN_PRECISION_MULTIPLIER
+    }
+    fn get_out_covariance_multiplier(&self, out_dims : usize) -> f32 {
+        let pseudo_observations = self.get_out_pseudo_observations(out_dims);
+        pseudo_observations * TERM_MODEL_OUT_COVARIANCE_MULTIPLIER
+    }
+    fn get_out_pseudo_observations(&self, out_dims : usize) -> f32 {
+        //Minimal number of pseudo-observations to have a defined
+        //covariance with at least one observation of model application
+        //We do this to be as non-informative as possible while
+        //also forcing models to have at least one observation about them
+        //before doing a Bayesian update
+        (out_dims as f32) + 1.0f32
+    }
 }
 
 impl TermModel {
@@ -85,7 +108,10 @@ impl TermModel {
         let data_updates : HashMap::<TermReference, DataUpdate> = HashMap::new();
         let arg_type_id = get_arg_type_id(type_id);
         let ret_type_id = get_ret_type_id(type_id);
-        let model = Model::new(arg_type_id, ret_type_id);
+
+        let prior_specification = TermModelPriorSpecification {};
+
+        let model = Model::new(&prior_specification, arg_type_id, ret_type_id);
         TermModel {
             model : model,
             prior_updates : prior_updates,

@@ -3,6 +3,7 @@ extern crate ndarray_linalg;
 
 use std::ops;
 use ndarray::*;
+use crate::prior_specification::*;
 use crate::params::*;
 use crate::data_points::*;
 use crate::data_update::*;
@@ -119,21 +120,26 @@ impl NormalInverseWishart {
 }
 
 impl NormalInverseWishart {
-    pub fn from_in_out_dims(feat_dims : usize, out_dims : usize) -> NormalInverseWishart {
+    pub fn from_in_out_dims(prior_specification : &dyn PriorSpecification,
+                            feat_dims : usize, out_dims : usize) -> NormalInverseWishart {
         let mean : Array2<f32> = Array::zeros((out_dims, feat_dims));
 
-        let precision_mult : f32 = (1.0f32 / (PRIOR_SIGMA * PRIOR_SIGMA));
-        let in_precision : Array2<f32> = precision_mult * Array::eye(feat_dims);
-        let out_precision : Array2<f32> = precision_mult * Array::eye(out_dims);
-        let little_v = (out_dims as f32) + 1.0f32;
+        let in_precision_multiplier = prior_specification.get_in_precision_multiplier(feat_dims);
+        let out_covariance_multiplier = prior_specification.get_out_covariance_multiplier(out_dims);
 
-        NormalInverseWishart::new(mean, in_precision, out_precision, little_v)
+        let in_precision : Array2<f32> = in_precision_multiplier * Array::eye(feat_dims);
+        let out_covariance : Array2<f32> = out_covariance_multiplier * Array::eye(out_dims);
+
+        let little_v = prior_specification.get_out_pseudo_observations(out_dims);
+
+        NormalInverseWishart::new(mean, in_precision, out_covariance, little_v)
     }
-    pub fn from_space_info(func_space_info : &FunctionSpaceInfo) -> NormalInverseWishart {
+    pub fn from_space_info(prior_specification : &dyn PriorSpecification,
+                           func_space_info : &FunctionSpaceInfo) -> NormalInverseWishart {
         let feat_dims = func_space_info.get_feature_dimensions();
         let out_dims = func_space_info.get_output_dimensions();
 
-        NormalInverseWishart::from_in_out_dims(feat_dims, out_dims)
+        NormalInverseWishart::from_in_out_dims(prior_specification, feat_dims, out_dims)
     }
     pub fn new(mean : Array2<f32>, precision : Array2<f32>, big_v : Array2<f32>, little_v : f32) -> NormalInverseWishart {
         let precision_u : Array2<f32> = mean.dot(&precision);

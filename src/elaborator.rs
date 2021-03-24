@@ -2,6 +2,7 @@ use ndarray::*;
 use ndarray_linalg::*;
 use rand::prelude::*;
 use crate::type_id::*;
+use crate::params::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
 use crate::func_scatter_tensor::*;
@@ -11,6 +12,7 @@ use crate::data_point::*;
 use crate::func_schmear::*;
 use crate::sigma_points::*;
 use crate::model::*;
+use crate::prior_specification::*;
 use std::collections::HashMap;
 
 //Learned "opposite" of the sketcher for a given type
@@ -23,6 +25,24 @@ pub struct Elaborator {
     pub updates : HashMap::<ModelKey, Vec<DataPoint>>
 }
 
+struct ElaboratorPrior {
+}
+impl PriorSpecification for ElaboratorPrior {
+    fn get_in_precision_multiplier(&self, _feat_dims : usize) -> f32 {
+        ELABORATOR_IN_PRECISION_MULTIPLIER
+    }
+    fn get_out_covariance_multiplier(&self, out_dims : usize) -> f32 { 
+        //We'll directly tinker with the mean covariance schmear's size
+        let pseudo_observations = self.get_out_pseudo_observations(out_dims);
+        pseudo_observations * ELABORATOR_OUT_COVARIANCE_MULTIPLIER
+    }
+    fn get_out_pseudo_observations(&self, out_dims : usize) -> f32 {
+        //The +2 is because we need to ensure that we always have
+        //a valid covariance schmear for this model
+        (out_dims as f32) * ELABORATOR_ERROR_COVARIANCE_PRIOR_OBSERVATIONS_PER_DIMENSION + 2.0f32
+    }
+}
+
 impl Elaborator {
     //Before calling, need to check that there is a sketcher, and it has a kernel.
     //There's no point in constructing one of these otherwise
@@ -33,8 +53,9 @@ impl Elaborator {
         let kernel_mat = sketcher.get_kernel_matrix().as_ref().unwrap();
         let kernel_basis_dimension = kernel_mat.shape()[1];
 
-        //TODO: Prior params!
-        let model = NormalInverseWishart::from_in_out_dims(sketched_dimension, kernel_basis_dimension);
+        let prior_specification = ElaboratorPrior {};
+        let model = NormalInverseWishart::from_in_out_dims(&prior_specification,
+                                                           sketched_dimension, kernel_basis_dimension);
 
         Elaborator {
             type_id,

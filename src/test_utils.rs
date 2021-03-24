@@ -3,6 +3,7 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use crate::space_info::*;
+use crate::term_model::*;
 use crate::type_id::*;
 use crate::data_point::*;
 use crate::schmear::*;
@@ -78,7 +79,10 @@ pub fn random_model_app(func_type_id : TypeId) -> (Model, Model) {
 pub fn random_model(type_id : TypeId) -> Model {
     let arg_type_id = get_arg_type_id(type_id);
     let ret_type_id = get_ret_type_id(type_id);
-    let mut result = Model::new(arg_type_id, ret_type_id);
+
+    let prior_specification = TermModelPriorSpecification { };
+
+    let mut result = Model::new(&prior_specification, arg_type_id, ret_type_id);
     let func_space_info = get_function_space_info(type_id);
     result.data = random_normal_inverse_wishart(func_space_info.get_feature_dimensions(), 
                                                 func_space_info.get_output_dimensions());

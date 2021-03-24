@@ -8,6 +8,7 @@ use crate::array_utils::*;
 use crate::typed_vector::*;
 use crate::sampled_embedder_state::*;
 use crate::type_action::*;
+use crate::term_model::*;
 use crate::linalg_utils::*;
 use crate::application_chain::*;
 use crate::type_id::*;
@@ -260,8 +261,10 @@ impl OptimizerState {
         let func_feat_info = get_feature_space_info(target_type_id);
 
         info!("Readying target");
+
+        let prior_specification = TermModelPriorSpecification { };
         
-        let mut target_model : Model = Model::new(in_type_id, out_type_id);
+        let mut target_model : Model = Model::new(&prior_specification, in_type_id, out_type_id);
 
         for (in_vec, out_vec) in data_points.iter() {
             let data_point = DataPoint {
