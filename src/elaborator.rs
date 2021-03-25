@@ -37,9 +37,10 @@ impl PriorSpecification for ElaboratorPrior {
         pseudo_observations * ELABORATOR_OUT_COVARIANCE_MULTIPLIER
     }
     fn get_out_pseudo_observations(&self, out_dims : usize) -> f32 {
-        //The +2 is because we need to ensure that we always have
-        //a valid covariance schmear for this model
-        (out_dims as f32) * ELABORATOR_ERROR_COVARIANCE_PRIOR_OBSERVATIONS_PER_DIMENSION + 2.0f32
+        //The +4 is because we need to ensure that we always have
+        //a valid covariance schmear for this model. See Wikipedia
+        //page on the Inverse-Wishart distribution's variance
+        (out_dims as f32) * ELABORATOR_ERROR_COVARIANCE_PRIOR_OBSERVATIONS_PER_DIMENSION + 4.0f32
     }
 }
 

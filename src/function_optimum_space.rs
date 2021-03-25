@@ -37,7 +37,7 @@ impl PriorSpecification for FunctionOptimumPriorSpecification {
     }
     fn get_out_pseudo_observations(&self, out_dims : usize) -> f32 {
         //we need to ensure that the model and its covariance are always well-specified
-        (out_dims as f32) * FUNC_OPTIMUM_ERROR_COVARIANCE_PRIOR_OBSERVATIONS_PER_DIMENSION + 2.0f32
+        (out_dims as f32) * FUNC_OPTIMUM_ERROR_COVARIANCE_PRIOR_OBSERVATIONS_PER_DIMENSION + 4.0f32
     }
 }
 

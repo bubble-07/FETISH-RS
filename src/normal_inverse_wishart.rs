@@ -221,6 +221,12 @@ impl NormalInverseWishart {
     }
     fn update(&mut self, data_point : &DataPoint, downdate : bool) {
         let x = &data_point.in_vec;
+        let x_norm_sq = x.dot(x);
+        
+        if (x_norm_sq < UPDATE_SQ_NORM_TRUNCATION_THRESH) {
+            return;
+        }
+
         let y = &data_point.out_vec;
         let s = if (downdate) {-1.0f32} else {1.0f32};
         let w = data_point.weight * s;
@@ -234,7 +240,6 @@ impl NormalInverseWishart {
 
         self.little_v += w;
 
-        let x_norm_sq = x.dot(x);
         let update_mean = (1.0f32 / x_norm_sq) * outer(y, x);
         let update_precision = w * outer(x, x);
 
