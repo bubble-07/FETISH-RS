@@ -83,10 +83,8 @@ impl FunctionOptimumSpace {
 
         let mut rng = rand::thread_rng();
         let maybe_target_schmear = value_field_state.get_target_for_type(ret_type);
-        let target_compressed_inv_schmear = match (maybe_target_schmear) {
-                                                Option::None => Option::None,
-                                                Option::Some(hole) => Option::Some(hole.compressed_inv_schmear)
-                                            };
+        let target_compressed_inv_schmear = maybe_target_schmear.map(|hole| hole.compressed_inv_schmear);
+
         let value_field_coefs = &value_field_state.get_value_field(ret_type).coefs;
 
         let mut sampled_func_mats : Vec<Array2<f32>> = Vec::new();

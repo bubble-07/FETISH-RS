@@ -45,7 +45,10 @@ impl ModelSpace {
     }
 
     pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbeddingSpace {
-        let elaborator = self.elaborator.sample(rng);
+        //We do this for speed, but also because the variation should
+        //already mostly be captured in the values for the embeddings
+        //of various models. In light of that, this is taken as the MLE
+        let elaborator = self.elaborator.get_mean();
 
         let mut result = SampledEmbeddingSpace::new(self.type_id, elaborator);
         for (key, model) in self.models.iter() {

@@ -65,6 +65,19 @@ impl Elaborator {
         }
     }
 
+    pub fn get_mean(&self) -> Array2<f32> {
+        let feature_space_info = get_feature_space_info(self.type_id);
+        let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
+        let kernel_mat = sketcher.get_kernel_matrix().as_ref().unwrap();
+        let expansion_mat = sketcher.get_expansion_matrix();
+
+        let model_sample = &self.model.mean;
+        let mut expanded_model_sample = kernel_mat.dot(model_sample);
+        expanded_model_sample += expansion_mat;
+
+        expanded_model_sample
+    }
+
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
         let feature_space_info = get_feature_space_info(self.type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
