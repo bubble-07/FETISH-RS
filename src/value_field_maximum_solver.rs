@@ -9,13 +9,12 @@ use crate::array_utils::*;
 use crate::inverse_schmear::*;
 use crate::type_id::*;
 use crate::space_info::*;
+use crate::value_field::*;
 use argmin::prelude::*;
 
 pub struct ValueFieldMaximumSolver {
-    pub type_id : TypeId,
     pub func_mat : Array2<f32>,
-    pub value_field_coefs : Array1<f32>,
-    pub target_compressed_inv_schmear : Option<InverseSchmear>
+    pub value_field : ValueField
 }
 
 impl ValueFieldMaximumSolver {
@@ -31,39 +30,30 @@ impl ValueFieldMaximumSolver {
         }
         result
     }
-    pub fn get_value(&self, x_compressed : &Array1<f32>) -> f32 {
-        let func_space_info = get_function_space_info(self.type_id);
-        let y_compressed = func_space_info.apply(&self.func_mat, x_compressed);
-        
-        let sq_mahalanobis = match (&self.target_compressed_inv_schmear) {
-            Option::None => 0.0f32,
-            Option::Some(compressed_inv_schmear) => compressed_inv_schmear.sq_mahalanobis_dist(&y_compressed)
-        };
 
-        let y_feats = func_space_info.out_feat_info.get_features(&y_compressed);
-        let value_field_eval = self.value_field_coefs.dot(&y_feats);
-
-        value_field_eval - sq_mahalanobis
+    pub fn get_type_id(&self) -> TypeId {
+        self.value_field.get_type_id()
     }
+
+    pub fn get_value(&self, x_compressed : &Array1<f32>) -> f32 {
+        self.value_field.get_value_for_vector(x_compressed)
+    }
+
     pub fn get_value_gradient(&self, x_compressed : &Array1<f32>) -> Array1<f32> {
-        let func_space_info = get_function_space_info(self.type_id);
+        let func_space_info = get_function_space_info(self.get_type_id());
         let y_compressed = func_space_info.apply(&self.func_mat, x_compressed);
 
         let func_jacobian = func_space_info.jacobian(&self.func_mat, x_compressed);
         let out_feat_jacobian = func_space_info.out_feat_info.get_feature_jacobian(&y_compressed);
 
-        let value_field_grad = self.value_field_coefs.dot(&out_feat_jacobian).dot(&func_jacobian);
+        let value_field_grad = self.value_field.coefs.dot(&out_feat_jacobian).dot(&func_jacobian);
 
-        let sq_mahalanobis_grad = match (&self.target_compressed_inv_schmear) {
-            Option::None => Array::zeros((value_field_grad.shape()[0],)),
-            Option::Some(compressed_inv_schmear) => {
-                let diff = &y_compressed - &compressed_inv_schmear.mean;
-                let precision_func_jacobian = compressed_inv_schmear.precision.dot(&func_jacobian);
-                let delta = diff.dot(&precision_func_jacobian);
-                let result = 2.0f32 * &delta;
-                result
-            }
-        };
+        let compressed_inv_schmear = &self.value_field.prior_schmear.compressed_inv_schmear;
+        let diff = &y_compressed - &compressed_inv_schmear.mean;
+        let precision_func_jacobian = compressed_inv_schmear.precision.dot(&func_jacobian);
+        let delta = diff.dot(&precision_func_jacobian);
+        let sq_mahalanobis_grad = 2.0f32 * &delta;
+
         let mut result = value_field_grad;
         result -= &sq_mahalanobis_grad;
         result

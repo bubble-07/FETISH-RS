@@ -9,8 +9,7 @@ use crate::value_field::*;
 use crate::typed_vector::*;
 
 pub struct ValueFieldState {
-    pub value_fields : HashMap<TypeId, ValueField>,
-    pub target : SchmearedHole
+    pub value_fields : HashMap<TypeId, ValueField>
 }
 
 impl ValueFieldState {
@@ -18,37 +17,27 @@ impl ValueFieldState {
         let mut value_fields = HashMap::new();
         for func_type_id in 0..total_num_types() {
             if (!is_vector_type(func_type_id)) {
-                let value_field = ValueField::new(func_type_id);
+                let value_field = if (func_type_id == target.type_id) {
+                                      //If the target, construct from the target
+                                      ValueField::new(target.clone())
+                                  } else {
+                                      ValueField::from_type_id(func_type_id)
+                                  };
                 value_fields.insert(func_type_id, value_field);
             }
         }
         ValueFieldState {
-            value_fields,
-            target
+            value_fields
         }
     }
     //Deals in compressed vectors
     pub fn get_value_for_vector(&self, typed_vector : &TypedVector) -> f32 {
         let type_id = typed_vector.type_id;
         let value_field = self.get_value_field(type_id);
-        let feature_space_info = get_feature_space_info(type_id);
-        let compressed_vec = &typed_vector.vec;
-        let feat_vec = feature_space_info.get_features(compressed_vec);
-        let additional_value = value_field.get_dot_product(&feat_vec);
-        if (type_id == self.target.type_id) {
-            let schmear_sq_dist = self.target.compressed_inv_schmear.sq_mahalanobis_dist(&compressed_vec);
-            additional_value - schmear_sq_dist
-        } else {
-            additional_value
-        }
+        let result = value_field.get_value_for_vector(&typed_vector.vec);
+        result
     }
-    pub fn get_target_for_type(&self, type_id : TypeId) -> Option<SchmearedHole> {
-        if (type_id == self.target.type_id) {
-            Option::Some(self.target.clone())
-        } else {
-            Option::None
-        }
-    }
+
 
     pub fn apply_constraints(&mut self, constraint_collection : &ConstraintCollection) {
         for vec_app_result in &constraint_collection.constraints {
@@ -72,17 +61,20 @@ impl ValueFieldState {
         let ret_feat_vec = ret_vec.get_features_from_base(ret_feat_info);
 
         let mut bonus = 0.0f32;
-        //If the return type is the target type, add in the bonus
-        if (self.target.type_id == ret_vec.type_id) {
-            let sq_dist = self.target.full_inv_schmear.sq_mahalanobis_dist(&ret_vec.vec);
-            bonus = -sq_dist;
-        }
+        let func_value_field = self.get_value_field(func_vec.type_id);
+        let ret_value_field = self.get_value_field(ret_vec.type_id);
+        
+        bonus += func_value_field.get_schmear_sq_dist(&func_vec.vec);
+        bonus -= ret_value_field.get_schmear_sq_dist(&ret_vec.vec);
 
         if (is_vector_type(arg_vec.type_id)) {
             self.apply_vector_arg_feat_constraint(GAMMA, LAMBDA, &func_feat_vec, &ret_feat_vec, bonus);
         } else {
             let arg_feat_info = get_feature_space_info(arg_vec.type_id);
             let arg_feat_vec = arg_vec.get_features_from_base(arg_feat_info);
+
+            let arg_value_field = self.get_value_field(arg_vec.type_id);
+            bonus += arg_value_field.get_schmear_sq_dist(&arg_vec.vec);
 
             self.apply_function_arg_feat_constraint(GAMMA, LAMBDA, &func_feat_vec, &arg_feat_vec,
                                                     &ret_feat_vec, bonus);

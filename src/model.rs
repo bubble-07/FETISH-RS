@@ -5,6 +5,7 @@ use ndarray::*;
 
 use std::ops;
 
+use crate::schmeared_hole::*;
 use crate::prior_specification::*;
 use crate::type_id::*;
 use crate::data_points::*;
@@ -92,6 +93,22 @@ impl Model {
         let func_space_info = build_function_space_info(self.arg_type_id, self.ret_type_id);
         let feats = func_space_info.in_feat_info.get_features(in_vec);
         self.data.eval(&feats)
+    }
+
+    pub fn get_schmeared_hole(&self) -> SchmearedHole {
+        let func_type_id = self.get_type_id();
+        let func_feat_info = get_feature_space_info(func_type_id);
+
+        let full_inv_schmear =  self.get_inverse_schmear().flatten();
+        let sketch_mat = func_feat_info.get_projection_matrix();
+        let compressed_inv_schmear = full_inv_schmear.transform_compress(&sketch_mat);
+
+        let result = SchmearedHole {
+            type_id : func_type_id,
+            full_inv_schmear,
+            compressed_inv_schmear
+        };
+        result
     }
 }
 

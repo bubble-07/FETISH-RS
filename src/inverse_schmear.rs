@@ -11,6 +11,15 @@ pub struct InverseSchmear {
 }
 
 impl InverseSchmear {
+    pub fn rescale_spread(&self, scale_fac : f32) -> InverseSchmear {
+        let mut precision = self.precision.clone();
+        precision *= scale_fac;
+
+        InverseSchmear {
+            mean : self.mean.clone(),
+            precision
+        }
+    }
     pub fn sq_mahalanobis_dist(&self, vec : &Array1<f32>) -> f32 {
         let diff = vec - &self.mean;
         let precision_diff = self.precision.dot(&diff);

@@ -16,6 +16,8 @@ pub const TRAINING_POINTS_PER_ITER : usize = 5;
 
 pub const OPT_MAX_ITERS : usize = 10;
 
+pub const TARGET_INV_SCHMEAR_SCALE_FAC : f32 = 0.001f32;
+
 //Priors for function optimum state
 //Should be relatively big to reflect our strong belief in model misspecification
 //in this case, due to the fact that optima may not be continuous w.r.t. function params

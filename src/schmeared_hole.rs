@@ -12,6 +12,15 @@ pub struct SchmearedHole {
 }
 
 impl SchmearedHole {
+    pub fn rescale_spread(&self, scale_fac : f32) -> SchmearedHole {
+        let full_inv_schmear = self.full_inv_schmear.rescale_spread(scale_fac);
+        let compressed_inv_schmear = self.compressed_inv_schmear.rescale_spread(scale_fac);
+        SchmearedHole {
+            type_id : self.type_id,
+            full_inv_schmear,
+            compressed_inv_schmear
+        }
+    }
     pub fn get_closest_term(&self, embedder_state : &SampledEmbedderState) -> (TermReference, f32) {
         if (is_vector_type(self.type_id)) {
             (TermReference::from(&self.full_inv_schmear.mean), 0.0f32)

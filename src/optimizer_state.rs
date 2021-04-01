@@ -33,13 +33,14 @@ pub struct OptimizerState {
     pub interpreter_and_embedder_state : InterpreterAndEmbedderState,
     pub value_field_state : ValueFieldState,
     pub func_opt_state : FunctionOptimumState,
+    pub target_type_id : TypeId,
     data_points : Vec::<(Array1<f32>, Array1<f32>)>
 }
 
 impl OptimizerState {
 
     pub fn get_target_type_id(&self) -> TypeId {
-        self.value_field_state.target.type_id
+        self.target_type_id
     }
 
     pub fn step(&mut self) -> Option<TermPointer> {
@@ -253,12 +254,9 @@ impl OptimizerState {
 
         let in_type_id : TypeId = get_type_id(&Type::VecType(in_dimensions));
         let out_type_id : TypeId = get_type_id(&Type::VecType(out_dimensions));
-        let target_type_id : TypeId = get_type_id(&Type::FuncType(in_type_id, out_type_id));
 
         info!("Readying interpreter state");
         let interpreter_and_embedder_state = InterpreterAndEmbedderState::new();
-
-        let func_feat_info = get_feature_space_info(target_type_id);
 
         info!("Readying target");
 
@@ -275,21 +273,8 @@ impl OptimizerState {
             target_model += data_point;
         }
 
-        let target_inv_schmear : InverseSchmear = target_model.get_inverse_schmear().flatten();
-
-        let normalized_target_inv_schmear = InverseSchmear {
-            mean : target_inv_schmear.mean,
-            precision : normalize_frob(&target_inv_schmear.precision)
-        };
-
-        let sketch_mat = func_feat_info.get_projection_matrix();
-        let compressed_target_inv_schmear = normalized_target_inv_schmear.transform_compress(&sketch_mat);
-
-        let target = SchmearedHole {
-            type_id : target_type_id,
-            full_inv_schmear : normalized_target_inv_schmear,
-            compressed_inv_schmear : compressed_target_inv_schmear
-        };
+        let target = target_model.get_schmeared_hole().rescale_spread(TARGET_INV_SCHMEAR_SCALE_FAC);
+        let target_type_id = target.type_id;
 
         let value_field_state = ValueFieldState::new(target);
 
@@ -299,6 +284,7 @@ impl OptimizerState {
             interpreter_and_embedder_state,
             value_field_state,
             func_opt_state,
+            target_type_id,
             data_points
         }
     }

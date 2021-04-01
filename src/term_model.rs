@@ -39,11 +39,8 @@ impl PriorSpecification for TermModelPriorSpecification {
     }
     fn get_out_pseudo_observations(&self, out_dims : usize) -> f32 {
         //Minimal number of pseudo-observations to have a defined
-        //covariance with at least one observation of model application
-        //We do this to be as non-informative as possible while
-        //also forcing models to have at least one observation about them
-        //before doing a Bayesian update
-        (out_dims as f32) + 1.0f32
+        //mean and covariance with no observations on the model
+        (out_dims as f32) + 4.0f32
     }
 }
 
