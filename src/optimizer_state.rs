@@ -23,6 +23,7 @@ use crate::interpreter_and_embedder_state::*;
 use crate::model::*;
 use crate::inverse_schmear::*;
 use crate::schmeared_hole::*;
+use crate::sampled_value_field_state::*;
 
 use crate::value_field_state::*;
 use crate::function_optimum_state::*;
@@ -57,11 +58,15 @@ impl OptimizerState {
         constraints.update_repeat(NUM_CONSTRAINT_REPEATS);
         constraints.update_shuffle();
 
+        trace!("Sampling value field state");
+        let mut sampled_value_field_state = self.value_field_state.sample(&sampled_embedder_state);
+
         trace!("Applying new constraints");
-        self.value_field_state.apply_constraints(&constraints);
+        sampled_value_field_state.apply_constraints(&constraints);
 
         trace!("Optimizing for highest-value application chain");
-        let best_application_chain = self.find_best_application_chain(&sampled_embedder_state);
+        let best_application_chain = self.find_best_application_chain(&sampled_embedder_state, 
+                                                                      &sampled_value_field_state);
 
         trace!("Done with newly-evaluated terms, discarding");
         self.interpreter_and_embedder_state.clear_newly_received();
@@ -84,6 +89,7 @@ impl OptimizerState {
     }
 
     pub fn find_best_next_with_transition(&self, sampled_embedder_state : &SampledEmbedderState,
+                                      sampled_value_field_state : &SampledValueFieldState,
                                       current_compressed_vec : &TypedVector, 
                                       transition : &TypeAction) ->
                                       (TermReference, TypedVector, f32) {
@@ -94,7 +100,7 @@ impl OptimizerState {
                 //In this case, both the function and the argument will be functions
                 let (func_ptr, next_compressed_vec, value) = 
                     sampled_embedder_state.get_best_term_to_apply(current_compressed_vec, *func_type_id,
-                                                                  &self.value_field_state);
+                                                                  sampled_value_field_state);
                 let func_ref = TermReference::FuncRef(func_ptr); 
                 (func_ref, next_compressed_vec, value)
             },
@@ -102,13 +108,13 @@ impl OptimizerState {
                 if (is_vector_type(*arg_type_id)) {
                     let (arg_vec, next_compressed_vec, value) = 
                         self.func_opt_state.get_best_vector_to_pass(current_compressed_vec,
-                                                    &self.value_field_state, sampled_embedder_state);
+                                                    sampled_value_field_state, sampled_embedder_state);
                     let arg_ref = TermReference::VecRef(to_noisy(&arg_vec));
                     (arg_ref, next_compressed_vec, value)
                 } else {
                     let (arg_ptr, next_compressed_vec, value) =
                         sampled_embedder_state.get_best_term_to_pass(current_compressed_vec, 
-                                                                     &self.value_field_state);
+                                                                     sampled_value_field_state);
                     let arg_ref = TermReference::FuncRef(arg_ptr);
                     (arg_ref, next_compressed_vec, value)
                 }
@@ -117,6 +123,7 @@ impl OptimizerState {
     }
 
     pub fn find_best_next_application(&self, sampled_embedder_state : &SampledEmbedderState,
+                                      sampled_value_field_state : &SampledValueFieldState,
                                       current_compressed_vec : &TypedVector) ->
                                       (TermReference, TypedVector, f32) {
         let current_type_id = current_compressed_vec.type_id;
@@ -132,6 +139,7 @@ impl OptimizerState {
                 let type_actions = get_type_actions(current_type_id, *successor_type);
                 for type_action in type_actions.iter() {
                     let (term, vec, value) = self.find_best_next_with_transition(sampled_embedder_state,
+                                                  sampled_value_field_state,
                                                   current_compressed_vec, type_action);
                     if (value > best_value) {
                         best_term = Option::Some(term.clone());
@@ -145,6 +153,7 @@ impl OptimizerState {
     }
 
     pub fn find_playout_next_application(&self, sampled_embedder_state : &SampledEmbedderState,
+                                         sampled_value_field_state : &SampledValueFieldState,
                                          current_compressed_vec : &TypedVector) ->
                                        (TermReference, TypedVector) {
         let current_type_id = current_compressed_vec.type_id;
@@ -171,17 +180,18 @@ impl OptimizerState {
         let action = &type_actions[action_ind];
 
         let (term, vec, _) = self.find_best_next_with_transition(sampled_embedder_state, 
+                                                                sampled_value_field_state,
                                                                 current_compressed_vec,
                                                                 action);
 
         (term, vec)
     }
     
-    pub fn find_best_application_chain(&mut self, 
-                                       sampled_embedder_state : &SampledEmbedderState) -> ApplicationChain {
+    pub fn find_best_application_chain(&mut self, sampled_embedder_state : &SampledEmbedderState,
+                                       sampled_value_field_state : &SampledValueFieldState) -> ApplicationChain {
         let target_type_id = self.get_target_type_id();
 
-        let best_application = self.find_best_application(sampled_embedder_state); 
+        let best_application = self.find_best_application(sampled_embedder_state, sampled_value_field_state);
 
         let mut current_compressed_vec = sampled_embedder_state.evaluate_term_application(&best_application);
         let mut current_chain = ApplicationChain::from_term_application(best_application);
@@ -193,7 +203,8 @@ impl OptimizerState {
             //Pick best actions until we get to the target type, then compare with current best
             //chain
             let (picked_term, next_compressed_vec, current_value) = 
-                self.find_best_next_application(sampled_embedder_state, &current_compressed_vec);
+                self.find_best_next_application(sampled_embedder_state, sampled_value_field_state,
+                                                &current_compressed_vec);
 
             current_compressed_vec = next_compressed_vec;
             current_chain.add_to_chain(picked_term);
@@ -213,7 +224,8 @@ impl OptimizerState {
         while (current_compressed_vec.type_id != target_type_id) { 
             //Pick playout actions until we get to the target type, then yield that
             let (picked_term, next_compressed_vec) = 
-                self.find_playout_next_application(sampled_embedder_state, &current_compressed_vec);
+                self.find_playout_next_application(sampled_embedder_state, sampled_value_field_state,
+                                                   &current_compressed_vec);
 
             current_compressed_vec = next_compressed_vec;
             current_chain.add_to_chain(picked_term);
@@ -221,11 +233,13 @@ impl OptimizerState {
         current_chain
     }
 
-    pub fn find_best_application(&mut self, sampled_embedder_state : &SampledEmbedderState) -> TermApplication {
+    pub fn find_best_application(&mut self, sampled_embedder_state : &SampledEmbedderState,
+                                            sampled_value_field_state : &SampledValueFieldState)
+                                 -> TermApplication {
         let (nonvec_app, nonvec_value) = 
             sampled_embedder_state.get_best_nonvector_application_with_value(&self.interpreter_and_embedder_state.interpreter_state,
-                                                                             &self.value_field_state);
-        let (vec_app, vec_value) = self.func_opt_state.update(sampled_embedder_state, &self.value_field_state);
+                                                                             sampled_value_field_state);
+        let (vec_app, vec_value) = self.func_opt_state.update(sampled_embedder_state, sampled_value_field_state);
         if (vec_value > nonvec_value) {
             vec_app
         } else {

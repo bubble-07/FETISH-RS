@@ -9,12 +9,13 @@ use crate::array_utils::*;
 use crate::inverse_schmear::*;
 use crate::type_id::*;
 use crate::space_info::*;
+use crate::sampled_value_field::*;
 use crate::value_field::*;
 use argmin::prelude::*;
 
 pub struct ValueFieldMaximumSolver {
     pub func_mat : Array2<f32>,
-    pub value_field : ValueField
+    pub value_field : SampledValueField
 }
 
 impl ValueFieldMaximumSolver {
@@ -36,7 +37,10 @@ impl ValueFieldMaximumSolver {
     }
 
     pub fn get_value(&self, x_compressed : &Array1<f32>) -> f32 {
-        self.value_field.get_value_for_vector(x_compressed)
+        let func_space_info = get_function_space_info(self.get_type_id());
+        let y_compressed = func_space_info.apply(&self.func_mat, x_compressed);
+
+        self.value_field.get_value_for_compressed_vector(&y_compressed)
     }
 
     pub fn get_value_gradient(&self, x_compressed : &Array1<f32>) -> Array1<f32> {
@@ -46,11 +50,14 @@ impl ValueFieldMaximumSolver {
         let func_jacobian = func_space_info.jacobian(&self.func_mat, x_compressed);
         let out_feat_jacobian = func_space_info.out_feat_info.get_feature_jacobian(&y_compressed);
 
-        let value_field_grad = self.value_field.coefs.dot(&out_feat_jacobian).dot(&func_jacobian);
+        let feat_vec_coefs = self.value_field.get_feat_vec_coefs();
+        let value_field_grad = feat_vec_coefs.dot(&out_feat_jacobian).dot(&func_jacobian);
 
-        let compressed_inv_schmear = &self.value_field.prior_schmear.compressed_inv_schmear;
-        let diff = &y_compressed - &compressed_inv_schmear.mean;
-        let precision_func_jacobian = compressed_inv_schmear.precision.dot(&func_jacobian);
+        let compressed_inv_schmear = &self.value_field.compressed_prior_inv_schmear;
+        //The extra constant doesn't matter for gradient computation
+        let inv_schmear_part = &compressed_inv_schmear.inv_schmear;
+        let diff = &y_compressed - &inv_schmear_part.mean;
+        let precision_func_jacobian = inv_schmear_part.precision.dot(&func_jacobian);
         let delta = diff.dot(&precision_func_jacobian);
         let sq_mahalanobis_grad = 2.0f32 * &delta;
 

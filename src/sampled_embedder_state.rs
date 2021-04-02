@@ -11,7 +11,7 @@ use crate::interpreter_state::*;
 use crate::sampled_model_embedding::*;
 use crate::term_application::*;
 use crate::typed_vector::*;
-use crate::value_field_state::*;
+use crate::sampled_value_field_state::*;
 
 pub struct SampledEmbedderState {
     pub embedding_spaces : HashMap::<TypeId, SampledEmbeddingSpace>
@@ -34,7 +34,7 @@ impl SampledEmbedderState {
     }
 
     pub fn get_best_nonvector_application_with_value(&self, interpreter_state : &InterpreterState,
-                                                            value_field_state : &ValueFieldState) 
+                                                            value_field_state : &SampledValueFieldState) 
                                                   -> (TermApplication, f32) {
         let mut best_value = f32::NEG_INFINITY;
         let mut best_application = Option::None;
@@ -67,7 +67,7 @@ impl SampledEmbedderState {
                         if (!application_table.has_computed(&term_app)) {
                             let ret_typed_vec = self.evaluate_term_application(&term_app);
                             
-                            let value = value_field_state.get_value_for_vector(&ret_typed_vec);
+                            let value = value_field_state.get_value_for_compressed_vector(&ret_typed_vec);
                             if (value > best_value) {
                                 best_value = value;
                                 best_application = Option::Some(term_app);
@@ -81,7 +81,7 @@ impl SampledEmbedderState {
     }
 
     pub fn get_best_term_to_apply(&self, compressed_arg_vector : &TypedVector,
-                                         func_type_id : TypeId, value_field_state : &ValueFieldState)
+                                         func_type_id : TypeId, value_field_state : &SampledValueFieldState)
                                   -> (TermPointer, TypedVector, f32) {
         let ret_type_id = get_ret_type_id(func_type_id);
         let arg_feat_space = get_feature_space_info(compressed_arg_vector.type_id);
@@ -98,7 +98,7 @@ impl SampledEmbedderState {
     }
 
     pub fn get_best_term_to_pass(&self, compressed_func_vector : &TypedVector, 
-                                        value_field_state : &ValueFieldState)
+                                        value_field_state : &SampledValueFieldState)
                                 -> (TermPointer, TypedVector, f32) {
         let func_mat = self.expand_compressed_function(compressed_func_vector);
         let arg_type = get_arg_type_id(compressed_func_vector.type_id);

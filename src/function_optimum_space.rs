@@ -6,7 +6,7 @@ use crate::params::*;
 use crate::value_field_maximum_solver::*;
 use crate::type_id::*;
 use crate::sampled_embedding_space::*;
-use crate::value_field_state::*;
+use crate::sampled_value_field_state::*;
 use crate::data_points::*;
 use crate::space_info::*;
 use crate::prior_specification::*;
@@ -73,7 +73,7 @@ impl FunctionOptimumSpace {
         self.optimal_input_vectors.get(&model_key).unwrap()
     }
     pub fn update(&mut self, sampled_embeddings : &SampledEmbeddingSpace, 
-                             value_field_state : &ValueFieldState) -> (usize, f32) {
+                             value_field_state : &SampledValueFieldState) -> (usize, f32) {
         let mut best_index = 0;
         let mut best_value = f32::NEG_INFINITY;
 

@@ -42,12 +42,7 @@ impl FeatureSpaceInfo {
             Option::Some(sketch) => sketch.sketch(mean)
         }
     }
-    pub fn compress_inverse_schmear(&self, inv_schmear : &InverseSchmear) -> InverseSchmear {
-        match (&self.sketcher) {
-            Option::None => inv_schmear.clone(),
-            Option::Some(sketch) => sketch.compress_inverse_schmear(inv_schmear)
-        }
-    }
+
     pub fn compress_schmear(&self, schmear : &Schmear) -> Schmear {
         match (&self.sketcher) {
             Option::None => schmear.clone(),

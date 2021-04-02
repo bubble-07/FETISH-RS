@@ -43,9 +43,6 @@ impl LinearSketch {
         }
     }
 
-    pub fn compress_inverse_schmear(&self, inv_schmear : &InverseSchmear) -> InverseSchmear {
-        inv_schmear.transform_compress(&self.projection_mat)
-    }
     pub fn compress_schmear(&self, schmear : &Schmear) -> Schmear {
         schmear.transform_compress(&self.projection_mat)
     }
@@ -56,9 +53,7 @@ impl LinearSketch {
     pub fn expand(&self, mean : &Array1<f32>) -> Array1<f32> {
         self.projection_mat_pinv.dot(mean)
     }
-    pub fn expand_covariance(&self, covariance : &Array2<f32>) -> Array2<f32> {
-        self.projection_mat_pinv.dot(covariance).dot(&self.projection_mat_pinv.t())
-    }
+
     pub fn get_projection_matrix(&self) -> &Array2<f32> {
         &self.projection_mat
     }

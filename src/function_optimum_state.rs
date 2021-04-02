@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use crate::term_pointer::*;
 use crate::type_id::*;
 use crate::typed_vector::*;
+use crate::sampled_value_field_state::*;
 use crate::term_reference::*;
 use crate::function_optimum_space::*;
 use crate::term_application::*;
@@ -33,7 +34,7 @@ impl FunctionOptimumState {
         }
     }
     pub fn get_best_vector_to_pass(&self, compressed_func_vector : &TypedVector, 
-                                   value_field_state : &ValueFieldState,
+                                   value_field_state : &SampledValueFieldState,
                                    sampled_embedder_state : &SampledEmbedderState)
                                    -> (Array1<f32>, TypedVector, f32) {
 
@@ -54,12 +55,12 @@ impl FunctionOptimumState {
             vec : ret_vec,
             type_id : ret_type_id
         };
-        let value = value_field_state.get_value_for_vector(&ret_typed_vec);
+        let value = value_field_state.get_value_for_compressed_vector(&ret_typed_vec);
 
         (best_arg_vector, ret_typed_vec, value)
     }
     pub fn update(&mut self, sampled_embedder_state : &SampledEmbedderState, 
-                             value_field_state : &ValueFieldState) -> (TermApplication, f32) {
+                             value_field_state : &SampledValueFieldState) -> (TermApplication, f32) {
 
         let mut best_term_app = Option::None;
         let mut best_value = f32::NEG_INFINITY;

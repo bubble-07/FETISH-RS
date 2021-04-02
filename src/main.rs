@@ -3,6 +3,9 @@
 #![allow(unused_imports)]
 #![allow(unused_parens)]
 
+mod compressed_inv_schmear;
+mod sampled_value_field_state;
+mod sampled_value_field;
 mod prior_specification;
 mod elaborator;
 mod kernel;

@@ -97,16 +97,11 @@ impl Model {
 
     pub fn get_schmeared_hole(&self) -> SchmearedHole {
         let func_type_id = self.get_type_id();
-        let func_feat_info = get_feature_space_info(func_type_id);
-
-        let full_inv_schmear =  self.get_inverse_schmear().flatten();
-        let sketch_mat = func_feat_info.get_projection_matrix();
-        let compressed_inv_schmear = full_inv_schmear.transform_compress(&sketch_mat);
+        let inv_schmear =  self.get_inverse_schmear().flatten();
 
         let result = SchmearedHole {
             type_id : func_type_id,
-            full_inv_schmear,
-            compressed_inv_schmear
+            inv_schmear
         };
         result
     }

@@ -2,7 +2,7 @@ use ndarray::*;
 use std::collections::HashMap;
 use crate::sampled_term_embedding::*;
 use crate::sampled_model_embedding::*;
-use crate::value_field_state::*;
+use crate::sampled_value_field_state::*;
 use crate::space_info::*;
 use crate::typed_vector::*;
 use crate::type_id::*;
@@ -45,7 +45,7 @@ impl SampledEmbeddingSpace {
     }
 
     pub fn get_best_term_index_to_pass_with_value(&self, func_mat : &Array2<f32>, ret_type : TypeId,
-                                            value_field_state : &ValueFieldState)
+                                            value_field_state : &SampledValueFieldState)
                                          -> (usize, TypedVector, f32) {
         let mut best_arg_index = 0;
         let mut best_ret_vec = Option::None;
@@ -58,7 +58,7 @@ impl SampledEmbeddingSpace {
                 vec : compressed_ret_vec,
                 type_id : ret_type
             };
-            let value = value_field_state.get_value_for_vector(&typed_ret_vec);
+            let value = value_field_state.get_value_for_compressed_vector(&typed_ret_vec);
             if (value > best_arg_value) {
                 best_arg_value = value;
                 best_ret_vec = Option::Some(typed_ret_vec);
@@ -69,7 +69,7 @@ impl SampledEmbeddingSpace {
     }
 
     pub fn get_best_term_index_to_apply_with_value(&self, featurized_arg_vector : &Array1<f32>, 
-                                         ret_type : TypeId, value_field_state : &ValueFieldState) 
+                                         ret_type : TypeId, value_field_state : &SampledValueFieldState) 
                                          -> (usize, TypedVector, f32) {
         let mut best_model_index = 0;
         let mut best_compressed_vec = Option::None;
@@ -82,7 +82,7 @@ impl SampledEmbeddingSpace {
                 vec : compressed_ret_vec,
                 type_id : ret_type
             };
-            let value = value_field_state.get_value_for_vector(&typed_ret_vec);
+            let value = value_field_state.get_value_for_compressed_vector(&typed_ret_vec);
             if (value > best_model_value) {
                 best_model_value = value;
                 best_compressed_vec = Option::Some(typed_ret_vec);
