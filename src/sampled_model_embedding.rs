@@ -8,8 +8,6 @@ use crate::array_utils::*;
 use crate::model::*;
 use crate::space_info::*;
 
-//TODO: Store the featurized version of what's sampled, so that you don't have
-//to re-compute that multiple times
 pub struct SampledModelEmbedding {
     pub func_schmear : FuncSchmear,
     pub func_inv_schmear : FuncInverseSchmear,
@@ -17,7 +15,8 @@ pub struct SampledModelEmbedding {
     pub compressed_inv_schmear : InverseSchmear,
     pub sampled_mat : Array2<f32>,
     pub sampled_vec : Array1<f32>,
-    pub sampled_compressed_vec : Array1<f32>
+    pub sampled_compressed_vec : Array1<f32>,
+    pub sampled_feat_vec : Array1<f32>
 }
 
 impl SampledModelEmbedding {
@@ -34,6 +33,8 @@ impl SampledModelEmbedding {
         let compressed_inv_schmear = compressed_schmear.inverse();
         let sampled_compressed_vec = projection_mat.dot(&sampled_vec);
 
+        let sampled_feat_vec = func_feat_info.get_features(&sampled_compressed_vec);
+
         SampledModelEmbedding {
             func_schmear,
             func_inv_schmear,
@@ -41,7 +42,8 @@ impl SampledModelEmbedding {
             compressed_inv_schmear,
             sampled_mat,
             sampled_vec,
-            sampled_compressed_vec
+            sampled_compressed_vec,
+            sampled_feat_vec
         }
     }
 }

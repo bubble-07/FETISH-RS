@@ -106,6 +106,7 @@ impl OptimizerState {
             },
             TypeAction::Passing(arg_type_id) => {
                 if (is_vector_type(*arg_type_id)) {
+                    println!("Current func type: {}", get_type(current_compressed_vec.type_id));
                     let (arg_vec, next_compressed_vec, value) = 
                         self.func_opt_state.get_best_vector_to_pass(current_compressed_vec,
                                                     sampled_value_field_state, sampled_embedder_state);

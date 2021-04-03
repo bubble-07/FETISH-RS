@@ -49,7 +49,7 @@ impl TypeGraph {
                 let edge_exists = i == j || edges[i][j].len() > 0;
                 row.push(edge_exists);
             }
-            result.push(Vec::new());
+            result.push(row);
         }
 
         for k in 0..total_num_types() {

@@ -10,6 +10,11 @@ impl TypeAction {
     pub fn get_actions_for(source_type : TypeId, dest_type : TypeId) -> Vec<TypeAction> {
         let mut result = Vec::new();
 
+        if (is_vector_type(dest_type)) {
+            //Vector destination types are forbidden
+            return result;
+        }
+
         if (!is_vector_type(source_type)) {
             let ret_type = get_ret_type_id(source_type);
             if (ret_type == dest_type) {

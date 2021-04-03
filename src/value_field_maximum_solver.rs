@@ -15,7 +15,8 @@ use argmin::prelude::*;
 
 pub struct ValueFieldMaximumSolver {
     pub func_mat : Array2<f32>,
-    pub value_field : SampledValueField
+    pub value_field : SampledValueField,
+    pub func_type_id : TypeId
 }
 
 impl ValueFieldMaximumSolver {
@@ -32,19 +33,23 @@ impl ValueFieldMaximumSolver {
         result
     }
 
-    pub fn get_type_id(&self) -> TypeId {
+    pub fn get_function_type_id(&self) -> TypeId {
+        self.func_type_id
+    }
+
+    pub fn get_return_type_id(&self) -> TypeId {
         self.value_field.get_type_id()
     }
 
-    pub fn get_value(&self, x_compressed : &Array1<f32>) -> f32 {
-        let func_space_info = get_function_space_info(self.get_type_id());
+    fn get_value(&self, x_compressed : &Array1<f32>) -> f32 {
+        let func_space_info = get_function_space_info(self.get_function_type_id());
         let y_compressed = func_space_info.apply(&self.func_mat, x_compressed);
 
         self.value_field.get_value_for_compressed_vector(&y_compressed)
     }
 
     pub fn get_value_gradient(&self, x_compressed : &Array1<f32>) -> Array1<f32> {
-        let func_space_info = get_function_space_info(self.get_type_id());
+        let func_space_info = get_function_space_info(self.get_function_type_id());
         let y_compressed = func_space_info.apply(&self.func_mat, x_compressed);
 
         let func_jacobian = func_space_info.jacobian(&self.func_mat, x_compressed);

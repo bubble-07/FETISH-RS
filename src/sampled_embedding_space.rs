@@ -52,7 +52,7 @@ impl SampledEmbeddingSpace {
         let mut best_arg_value = f32::NEG_INFINITY;
 
         for (arg_index, arg_model) in self.models.iter() {
-            let arg_vec = &arg_model.sampled_compressed_vec; 
+            let arg_vec = &arg_model.sampled_feat_vec; 
             let compressed_ret_vec = func_mat.dot(arg_vec);
             let typed_ret_vec = TypedVector {
                 vec : compressed_ret_vec,
