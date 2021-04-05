@@ -142,7 +142,7 @@ impl OptimizerState {
                     let (term, vec, value) = self.find_best_next_with_transition(sampled_embedder_state,
                                                   sampled_value_field_state,
                                                   current_compressed_vec, type_action);
-                    if (value > best_value) {
+                    if (value > best_value || best_term.is_none()) {
                         best_term = Option::Some(term.clone());
                         best_vec = Option::Some(vec.clone());
                         best_value = value;
@@ -176,7 +176,7 @@ impl OptimizerState {
         let type_actions = get_type_actions(current_type_id, successor_type);
 
         random_usize = rng.gen();
-        let action_ind = random_usize & type_actions.len();
+        let action_ind = random_usize % type_actions.len();
 
         let action = &type_actions[action_ind];
 
@@ -211,12 +211,12 @@ impl OptimizerState {
             current_chain.add_to_chain(picked_term);
 
             if (current_compressed_vec.type_id == target_type_id) {
-                if (current_value > current_best_value) {
+                if (current_value > current_best_value || current_best_chain.is_none()) {
                     current_best_value = current_value;
                     current_best_chain = Option::Some(current_chain.clone());
                 } else {
                     //If we've hit the target again, but the chain
-                    //has gotten worst, fall back on the current best chain
+                    //has gotten worse, fall back on the current best chain
                     return current_best_chain.unwrap();
                 }
             }

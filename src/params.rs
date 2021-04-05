@@ -14,7 +14,7 @@ pub const DIM_TAPER_START : usize = 4;
 
 pub const TRAINING_POINTS_PER_ITER : usize = 5;
 
-pub const OPT_MAX_ITERS : usize = 10;
+pub const OPT_MAX_ITERS : usize = 100;
 
 pub const TARGET_INV_SCHMEAR_SCALE_FAC : f32 = 0.001f32;
 
@@ -43,8 +43,8 @@ pub const TERM_MODEL_OUT_COVARIANCE_MULTIPLIER : f32 = 2.0f32;
 pub const TERM_MODEL_IN_PRECISION_MULTIPLIER : f32 = 1.0f32;
 
 //Optimization algorithm constants
-pub const GAMMA : f32 = 0.95f32;
-pub const LAMBDA : f32 = 1.0f32;
+pub const GAMMA : f32 = 1.05f32;
+pub const LAMBDA : f32 = 0.5f32;
 
 pub const RANDOM_VECTORS_PER_ITER : usize = 5;
 

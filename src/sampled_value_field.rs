@@ -56,6 +56,11 @@ impl SampledValueField {
 
         let schmear_sq_dist = self.get_schmear_sq_dist_from_compressed_vec(compressed_vec);
 
-        additional_value - schmear_sq_dist
+        let result = additional_value - schmear_sq_dist;
+
+        if (!result.is_finite()) {
+            error!("Non-finite value for type {} and vec {}", get_type(type_id), compressed_vec);
+        }
+        result
     }
 }

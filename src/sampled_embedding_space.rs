@@ -59,7 +59,7 @@ impl SampledEmbeddingSpace {
                 type_id : ret_type
             };
             let value = value_field_state.get_value_for_compressed_vector(&typed_ret_vec);
-            if (value > best_arg_value) {
+            if (value > best_arg_value || best_ret_vec.is_none()) {
                 best_arg_value = value;
                 best_ret_vec = Option::Some(typed_ret_vec);
                 best_arg_index = *arg_index;
@@ -83,7 +83,7 @@ impl SampledEmbeddingSpace {
                 type_id : ret_type
             };
             let value = value_field_state.get_value_for_compressed_vector(&typed_ret_vec);
-            if (value > best_model_value) {
+            if (value > best_model_value || best_compressed_vec.is_none()) {
                 best_model_value = value;
                 best_compressed_vec = Option::Some(typed_ret_vec);
                 best_model_index = *model_index;

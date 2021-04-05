@@ -55,7 +55,12 @@ impl ValueField {
         
         let schmear_sq_dist = self.get_schmear_sq_dist_from_full_vec(full_vec);
 
-        additional_value - schmear_sq_dist
+        let result = additional_value - schmear_sq_dist;
+
+        if (!result.is_finite()) {
+            error!("Non-finite value for type {} and vec {}", get_type(type_id), full_vec);
+        }
+        result
     }
 
     pub fn from_type_id(type_id : TypeId) -> ValueField {
