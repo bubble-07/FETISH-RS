@@ -5,6 +5,9 @@ use ndarray::*;
 use crate::pseudoinverse::*;
 use crate::compressed_inv_schmear::*;
 
+///Represents a (multivariate) probability distribution by its
+///mean and its precision matrix, which is the inverse of covariance.
+///See also [`crate::schmear::Schmear`], [`crate::func_schmear::FuncSchmear`]
 #[derive(Clone)]
 pub struct InverseSchmear {
     pub mean : Array1<f32>,
@@ -12,6 +15,11 @@ pub struct InverseSchmear {
 }
 
 impl InverseSchmear {
+    ///Given a matrix M representing a linear transformation _from_ a space
+    ///of smaller dimension _to_ the dimension of this [`InverseSchmear`],
+    ///yields the [`CompressedInverseSchmear`] representing the quadratic
+    ///form `x -> (u - Mx)^T P (u - Mx)`, where `u` and `P` are this [`InverseSchmear`]'s
+    ///mean vector and precision matrix, respectively
     pub fn compress(&self, expansion_mat : &Array2<f32>) -> CompressedInverseSchmear {
         let m_t_lambda = expansion_mat.t().dot(&self.precision);
         let Q = m_t_lambda.dot(expansion_mat);
@@ -38,6 +46,7 @@ impl InverseSchmear {
         result
     }
 
+    ///Scales the precision matrix by the passed scale factor
     pub fn rescale_spread(&self, scale_fac : f32) -> InverseSchmear {
         let mut precision = self.precision.clone();
         precision *= scale_fac;
@@ -47,6 +56,9 @@ impl InverseSchmear {
             precision
         }
     }
+    ///Computes the squared Mahalanobis distance
+    ///`(u - x)^T P (u - x)` of the argument, where `u` and `P` are this [`InverseSchmear`]'s
+    ///mean vector and precision matrix, respectively, and `x` is the passed vector.
     pub fn sq_mahalanobis_dist(&self, vec : &Array1<f32>) -> f32 {
         let diff = vec - &self.mean;
         let precision_diff = self.precision.dot(&diff);
@@ -54,6 +66,7 @@ impl InverseSchmear {
         result
     }
 
+    ///Creates a [`InverseSchmear`] with the given mean and an all-zero precision matrix.
     pub fn zero_precision_from_vec(vec : &Array1<f32>) -> InverseSchmear {
         let n = vec.len();
         let precision = Array::zeros((n, n));

@@ -7,14 +7,25 @@ use crate::schmear::*;
 use crate::linalg_utils::*;
 use crate::func_scatter_tensor::*;
 
+///Represents a probability distribution over linear mappings
+///whose covariance structure is separable between input and output.
+///This can be conceptualized as a specialization of [`Schmear`]
+///for a distribution over matrices where the covariance of the (vectorized)
+///random variable takes the separable form `kron(out_covariance, in_covariance)`
+///for `out_covariance` and `in_covariance` output coordinate and input coordinate
+///covariances, respectively, and `kron` referring to [`crate::linalg_utils::kron`] 
+///See also [`FuncScatterTensor`].
 pub struct FuncSchmear {
     pub mean : Array2<f32>,
     pub covariance : FuncScatterTensor
 }
 
 impl FuncSchmear {
-    //Flattens and then compresses this func schmear by the given
-    //projection mat
+    ///Given a transformation matrix from the full, flattened dimension
+    ///of this [`FuncSchmear`] to a smaller dimension, performs a fused
+    ///[`FuncSchmear::flatten`] and [`Schmear::transform`] operation using
+    ///the specified transformation. This fused operation is written
+    ///to be much faster than manually performing the aforementioned operations.
     pub fn compress(&self, mat : &Array2<f32>) -> Schmear {
         let t = self.mean.shape()[0];
         let s = self.mean.shape()[1];
@@ -29,7 +40,9 @@ impl FuncSchmear {
             covariance : covariance_transformed
         }
     }
-
+    
+    ///Converts this [`FuncSchmear`] over linear maps to its corresponding [`Schmear`]
+    ///over vectorized linear mappings.
     pub fn flatten(&self) -> Schmear {
         let t = self.mean.shape()[0];
         let s = self.mean.shape()[1];
@@ -41,8 +54,12 @@ impl FuncSchmear {
             covariance
         }
     }
-    ///Computes the output schmear of this func schmear applied
-    ///to a given argument schmear
+    ///Computes the output [`Schmear`] of this [`FuncSchmear`] applied
+    ///to a given argument [`Schmear`].
+    ///Given an input schmear, computes the output schmear which
+    ///would result from sampling `(function, input)` pairs,
+    ///computing `function(input)` for each of them, and then
+    ///obtaining the [`Schmear`] over those results.
     pub fn apply(&self, x : &Schmear) -> Schmear {
         let sigma_dot_u = frob_inner(&self.covariance.in_scatter, &x.covariance);
         let u_inner_product = x.mean.dot(&self.covariance.in_scatter).dot(&x.mean);
