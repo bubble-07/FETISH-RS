@@ -11,7 +11,6 @@ use crate::type_id::*;
 use crate::data_points::*;
 use crate::data_point::*;
 use crate::feature_collection::*;
-use crate::enum_feature_collection::*;
 use crate::normal_inverse_wishart::*;
 use crate::func_schmear::*;
 use crate::func_inverse_schmear::*;
@@ -26,7 +25,7 @@ pub struct Model {
     pub data : NormalInverseWishart,
 }
 
-pub fn to_features(feature_collections : &Vec<EnumFeatureCollection>, in_vec : &Array1<f32>) -> Array1<f32> {
+pub fn to_features(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_vec : &Array1<f32>) -> Array1<f32> {
     let comps = feature_collections.iter()
                                    .map(|coll| coll.get_features(in_vec))
                                    .collect::<Vec<_>>();
@@ -37,7 +36,8 @@ pub fn to_features(feature_collections : &Vec<EnumFeatureCollection>, in_vec : &
     stack(Axis(0), &comp_views).unwrap()
 }
 
-pub fn to_features_mat(feature_collections : &Vec<EnumFeatureCollection>, in_mat : &Array2<f32>) -> Array2<f32> {
+pub fn to_features_mat(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_mat : &Array2<f32>)
+                      -> Array2<f32> {
     let comps = feature_collections.iter()
                                    .map(|coll| coll.get_features_mat(in_mat))
                                    .collect::<Vec<_>>();
@@ -47,7 +47,7 @@ pub fn to_features_mat(feature_collections : &Vec<EnumFeatureCollection>, in_mat
     stack(Axis(1), &comp_views).unwrap()
 }
 
-pub fn to_jacobian(feature_collections : &Vec<EnumFeatureCollection>, in_vec : &Array1<f32>) -> Array2<f32> {
+pub fn to_jacobian(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_vec : &Array1<f32>) -> Array2<f32> {
     let comps = feature_collections.iter()
                                    .map(|coll| coll.get_jacobian(in_vec))
                                    .collect::<Vec<_>>();

@@ -2,10 +2,12 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
-use enum_dispatch::*;
+use crate::fourier_feature_collection::*;
+use crate::quadratic_feature_collection::*;
+use crate::sketched_linear_feature_collection::*;
+use crate::rand_utils::*;
 
-#[enum_dispatch]
-pub trait FeatureCollection {
+pub trait FeatureCollection : Sync {
     ///Return the number of input dimensions
     fn get_in_dimensions(&self) -> usize;
 
@@ -32,4 +34,25 @@ pub trait FeatureCollection {
         }
         result
     }
+}
+
+pub fn get_feature_collections(in_dimensions : usize) -> Vec<Box<dyn FeatureCollection>> {
+    let linear_collection = SketchedLinearFeatureCollection::new(in_dimensions);
+    let quadratic_collection = QuadraticFeatureCollection::new(in_dimensions);
+    let fourier_collection = FourierFeatureCollection::new(in_dimensions, gen_cauchy_random);
+
+    let mut result = Vec::<Box<dyn FeatureCollection>>::new();
+    result.push(Box::new(linear_collection));
+    result.push(Box::new(quadratic_collection));
+    result.push(Box::new(fourier_collection));
+
+    result
+}
+
+pub fn get_total_feat_dims(feature_collections : &Vec<Box<dyn FeatureCollection>>) -> usize {
+    let mut total_feat_dims : usize = 0;
+    for collection in feature_collections.iter() {
+        total_feat_dims += collection.get_dimension();
+    }
+    total_feat_dims
 }

@@ -15,7 +15,7 @@ impl TypeSpace {
     pub fn new(id : TypeId) -> TypeSpace {
         TypeSpace {
             my_type : id,
-            terms : Vec::<PartiallyAppliedTerm>::new(),
+            terms : Vec::new(),
             term_to_index_map : HashMap::new()
         }
     }
@@ -42,7 +42,7 @@ impl TypeSpace {
         &self.terms[term_index]
     }
 
-    pub fn add_init(&mut self, func : EnumFuncImpl) -> TermPointer {
+    pub fn add_init(&mut self, func : Box<dyn FuncImpl>) -> TermPointer {
         let term = PartiallyAppliedTerm::new(func);
         self.add(term)
     }
@@ -61,7 +61,7 @@ impl TypeSpace {
             self.terms.push(term.clone());
             self.term_to_index_map.insert(term, new_ind);
             TermPointer {
-                type_id : self.my_type.clone(),
+                type_id : self.my_type,
                 index : new_ind
             }
         }

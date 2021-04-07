@@ -15,10 +15,6 @@ use ndarray_linalg::*;
 use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
 use crate::func_scatter_tensor::*;
-use plotlib::page::Page;
-use plotlib::repr::{Histogram, HistogramBins};
-use plotlib::style::BoxStyle;
-use plotlib::view::ContinuousView;
 use crate::model::*;
 use crate::normal_inverse_wishart::*;
 use crate::term_reference::*;
@@ -295,11 +291,3 @@ pub fn empirical_jacobian<F>(f : F, x : &Array1<f32>) -> Array2<f32>
     }
     result
 }
-
-pub fn plot_histogram(filename : &str, values : Vec<f64>, num_buckets : usize) {
-    let h = Histogram::from_slice(&values, HistogramBins::Count(num_buckets))
-            .style(&BoxStyle::new().fill("burlywood"));
-    let v = ContinuousView::new().add(h);
-    Page::single(&v).save("charts/".to_owned() + &filename + ".svg").expect("saving svg");
-}
-

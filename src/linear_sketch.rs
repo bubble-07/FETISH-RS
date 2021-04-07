@@ -44,7 +44,7 @@ impl LinearSketch {
     }
 
     pub fn compress_schmear(&self, schmear : &Schmear) -> Schmear {
-        schmear.transform_compress(&self.projection_mat)
+        schmear.transform(&self.projection_mat)
     }
 
     pub fn sketch(&self, vec : &Array1<f32>) -> Array1<f32> {

@@ -54,7 +54,6 @@ mod count_sketch;
 mod quadratic_feature_collection;
 mod fourier_feature_collection;
 mod func_scatter_tensor;
-mod enum_feature_collection;
 mod model;
 mod inverse_schmear;
 mod func_schmear;

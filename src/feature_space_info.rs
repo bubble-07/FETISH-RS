@@ -6,7 +6,7 @@ use ndarray::*;
 use crate::sigma_points::*;
 use crate::alpha_formulas::*;
 use crate::linear_sketch::*;
-use crate::enum_feature_collection::*;
+use crate::feature_collection::*;
 use crate::model::*;
 use crate::params::*;
 use crate::schmear::*;
@@ -14,12 +14,10 @@ use crate::inverse_schmear::*;
 
 extern crate pretty_env_logger;
 
-
-#[derive(Clone)]
 pub struct FeatureSpaceInfo {
     pub base_dimensions : usize,
     pub feature_dimensions : usize,
-    pub feature_collections : Vec<EnumFeatureCollection>,
+    pub feature_collections : Vec<Box<dyn FeatureCollection>>,
     pub sketcher : Option<LinearSketch>
 }
 

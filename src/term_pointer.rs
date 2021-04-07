@@ -13,7 +13,7 @@ pub struct TermPointer {
 
 impl DisplayableWithState for TermPointer {
     fn display(&self, state : &InterpreterState) -> String {
-        let partially_applied = state.get(self);
-        partially_applied.display(state)
+        let term = state.get(self);
+        term.display(state)
     }
 }

@@ -6,10 +6,17 @@ use std::hash::*;
 use crate::displayable_with_state::*;
 use crate::interpreter_state::*;
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+#[derive(Clone, Hash, Eq)]
 pub struct PartiallyAppliedTerm {
-    pub func_impl : EnumFuncImpl,
+    pub func_impl : Box<dyn FuncImpl>,
     pub args : Vec<TermReference> 
+}
+
+impl PartialEq for PartiallyAppliedTerm {
+    fn eq(&self, other : &Self) -> bool {
+        &self.func_impl == &other.func_impl &&
+        &self.args == &other.args
+    }
 }
 
 impl DisplayableWithState for PartiallyAppliedTerm {
@@ -35,11 +42,10 @@ impl DisplayableWithState for PartiallyAppliedTerm {
 }
 
 impl PartiallyAppliedTerm {
-    pub fn new(func_impl : EnumFuncImpl) -> PartiallyAppliedTerm {
+    pub fn new(func_impl : Box<dyn FuncImpl>) -> PartiallyAppliedTerm {
         PartiallyAppliedTerm {
             func_impl,
             args : Vec::new()
         }
     }
 }
-

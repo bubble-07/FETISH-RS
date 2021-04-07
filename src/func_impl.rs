@@ -5,7 +5,6 @@ use crate::type_id::*;
 use crate::interpreter_state::*;
 use crate::term_reference::*;
 use crate::term_application::*;
-use enum_dispatch::*;
 
 use ndarray::*;
 use noisy_float::prelude::*;
@@ -15,7 +14,6 @@ use std::fmt::*;
 use std::hash::*;
 use crate::params::*;
 
-#[enum_dispatch]
 pub trait HasFuncSignature {
     fn get_name(&self) -> String;
     fn ret_type(&self) -> TypeId;
@@ -39,32 +37,61 @@ pub trait HasFuncSignature {
     }
 }
 
-#[enum_dispatch]
 pub trait FuncImpl : HasFuncSignature {
     fn evaluate(&self, state : &mut InterpreterState, args : Vec::<TermReference>) -> TermReference;
+    fn clone_box(&self) -> Box<dyn FuncImpl>;
 }
 
-#[enum_dispatch(FuncImpl)]
-#[enum_dispatch(HasFuncSignature)]
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
-pub enum EnumFuncImpl {    
-    BinaryFuncImpl, 
-    MapImpl,
-    ConstImpl,
-    ComposeImpl,
-    FillImpl,
-    SetHeadImpl,
-    HeadImpl,
-    RotateImpl,
-    ReduceImpl
+impl PartialEq for dyn FuncImpl + '_ {
+    fn eq(&self, other : &Self) -> bool {
+        self.get_name() == other.get_name() &&
+        self.required_arg_types() == other.required_arg_types() &&
+        self.ret_type() == other.ret_type()
+    }
 }
 
-#[enum_dispatch]
-pub trait BinaryArrayOperator : Clone + PartialEq + Hash + Eq + Debug {
+impl Eq for dyn FuncImpl + '_ {}
+
+impl Hash for dyn FuncImpl + '_ {
+    fn hash<H : Hasher>(&self, state : &mut H) {
+        self.get_name().hash(state);
+        self.required_arg_types().hash(state);
+        self.ret_type().hash(state);
+    }
+}
+
+impl Clone for Box<dyn FuncImpl> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
+pub trait BinaryArrayOperator {
     fn act(&self, arg_one : &Array1::<R32>, arg_two : &Array1::<R32>) -> Array1::<R32>;
+    fn get_name(&self) -> String;
+    fn clone_box(&self) -> Box<dyn BinaryArrayOperator>;
 }
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+impl PartialEq for dyn BinaryArrayOperator + '_ {
+    fn eq(&self, other : &Self) -> bool {
+        self.get_name() == other.get_name()
+    }
+}
+
+impl Eq for dyn BinaryArrayOperator + '_ {}
+
+impl Hash for dyn BinaryArrayOperator + '_ {
+    fn hash<H : Hasher>(&self, state : &mut H) {
+        self.get_name().hash(state);
+    }
+}
+
+impl Clone for Box<dyn BinaryArrayOperator> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
 pub struct AddOperator {
 }
 
@@ -72,9 +99,14 @@ impl BinaryArrayOperator for AddOperator {
     fn act(&self, arg_one : &Array1::<R32>, arg_two : &Array1::<R32>) -> Array1::<R32> {
         arg_one + arg_two
     }
+    fn get_name(&self) -> String {
+        String::from("+")
+    }
+    fn clone_box(&self) -> Box<dyn BinaryArrayOperator> {
+        Box::new(AddOperator {})
+    }
 }
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct SubOperator {
 }
 
@@ -82,9 +114,14 @@ impl BinaryArrayOperator for SubOperator {
     fn act(&self, arg_one : &Array1::<R32>, arg_two : &Array1::<R32>) -> Array1::<R32> {
         arg_one - arg_two
     }
+    fn get_name(&self) -> String {
+        String::from("-")
+    }
+    fn clone_box(&self) -> Box<dyn BinaryArrayOperator> {
+        Box::new(SubOperator {})
+    }
 }
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct MulOperator {
 }
 
@@ -92,30 +129,23 @@ impl BinaryArrayOperator for MulOperator {
     fn act(&self, arg_one : &Array1::<R32>, arg_two : &Array1::<R32>) -> Array1::<R32> {
         arg_one * arg_two
     }
+    fn get_name(&self) -> String {
+        String::from("*")
+    }
+    fn clone_box(&self) -> Box<dyn BinaryArrayOperator> {
+        Box::new(MulOperator {})
+    }
 }
 
-
-#[enum_dispatch(BinaryArrayOperator)]
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
-pub enum EnumBinaryArrayOperator {
-    AddOperator, 
-    SubOperator,
-    MulOperator //For now, no "div", because we'd need to deal with nans
-}
-
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+#[derive(Clone)]
 pub struct BinaryFuncImpl {
     pub elem_type : TypeId,
-    pub f : EnumBinaryArrayOperator
+    pub f : Box<dyn BinaryArrayOperator>
 }
 
 impl HasFuncSignature for BinaryFuncImpl {
     fn get_name(&self) -> String {
-        String::from(match (self.f) {
-            EnumBinaryArrayOperator::AddOperator(_) => "+",
-            EnumBinaryArrayOperator::SubOperator(_) => "-",
-            EnumBinaryArrayOperator::MulOperator(_) => "*"
-        })
+        self.f.get_name()
     }
     fn required_arg_types(&self) -> Vec<TypeId> {
         vec![self.elem_type, self.elem_type]
@@ -139,9 +169,11 @@ impl FuncImpl for BinaryFuncImpl {
             panic!();
         }
     }
+    fn clone_box(&self) -> Box<dyn FuncImpl> {
+        Box::new(self.clone())
+    }
 }
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct RotateImpl {
 }
 
@@ -172,9 +204,11 @@ impl FuncImpl for RotateImpl {
             panic!();
         }
     }
+    fn clone_box(&self) -> Box<dyn FuncImpl> {
+        Box::new(RotateImpl {})
+    }
 }
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct SetHeadImpl {
 }
 
@@ -205,9 +239,11 @@ impl FuncImpl for SetHeadImpl {
             panic!();
         }
     }
+    fn clone_box(&self) -> Box<dyn FuncImpl> {
+        Box::new(SetHeadImpl {})
+    }
 }
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct HeadImpl {
 }
 
@@ -234,10 +270,12 @@ impl FuncImpl for HeadImpl {
             panic!();
         }
     }
+    fn clone_box(&self) -> Box<dyn FuncImpl> {
+        Box::new(HeadImpl {})
+    }
 }
 
-
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+#[derive(Clone)]
 pub struct ComposeImpl {
     in_type : TypeId,
     middle_type : TypeId,
@@ -294,9 +332,11 @@ impl FuncImpl for ComposeImpl {
             panic!();
         }
     }
+    fn clone_box(&self) -> Box<dyn FuncImpl> {
+        Box::new(self.clone())
+    }
 }
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct FillImpl {
 }
 
@@ -323,9 +363,12 @@ impl FuncImpl for FillImpl {
             panic!();
         }
     }
+    fn clone_box(&self) -> Box<dyn FuncImpl> {
+        Box::new(FillImpl {})
+    }
 }
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+#[derive(Clone)]
 pub struct ConstImpl {
     pub ret_type : TypeId,
     pub ignored_type : TypeId
@@ -347,9 +390,11 @@ impl FuncImpl for ConstImpl {
         let result_ptr : TermReference = args[0].clone();
         result_ptr
     }
+    fn clone_box(&self) -> Box<dyn FuncImpl> {
+        Box::new(self.clone())
+    }
 }
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct ReduceImpl {
 }
 
@@ -402,9 +447,11 @@ impl FuncImpl for ReduceImpl {
             panic!();
         }
     }
+    fn clone_box(&self) -> Box<dyn FuncImpl> {
+        Box::new(ReduceImpl {})
+    }
 }
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub struct MapImpl {
 }
 
@@ -449,6 +496,9 @@ impl FuncImpl for MapImpl {
         }
 
     }
+    fn clone_box(&self) -> Box<dyn FuncImpl> {
+        Box::new(MapImpl {})
+    }
 }
 
 #[cfg(test)]
@@ -463,7 +513,7 @@ mod tests {
 
         let addition_func = BinaryFuncImpl {
             elem_type : *VECTOR_T,
-            f : EnumBinaryArrayOperator::AddOperator(AddOperator {})
+            f : Box::new(AddOperator {})
         };
 
         let result = addition_func.evaluate(&mut state, args);

@@ -257,7 +257,7 @@ impl InterpreterState {
         }
     }
 
-    pub fn add_init(&mut self, func : EnumFuncImpl) -> TermPointer {
+    pub fn add_init(&mut self, func : Box<dyn FuncImpl>) -> TermPointer {
         let func_type_id : TypeId = func.func_type();
         let type_space : &mut TypeSpace = self.type_spaces.get_mut(&func_type_id).unwrap();
         let result = type_space.add_init(func);
@@ -265,6 +265,15 @@ impl InterpreterState {
         self.new_terms.push(result.clone());
 
         result
+    }
+
+    pub fn add_init_binary_func(&mut self, elem_type : TypeId, f : Box<dyn BinaryArrayOperator>) -> TermPointer {
+        let func_impl = BinaryFuncImpl {
+            elem_type,
+            f
+        };
+
+        self.add_init(Box::new(func_impl))
     }
 
     pub fn new() -> InterpreterState {
@@ -291,23 +300,17 @@ impl InterpreterState {
         
         //Binary functions
         for type_id in [*SCALAR_T, *VECTOR_T].iter() {
-            for op in [EnumBinaryArrayOperator::AddOperator(AddOperator {}),
-                       EnumBinaryArrayOperator::SubOperator(SubOperator {}),
-                       EnumBinaryArrayOperator::MulOperator(MulOperator {})].iter() {
-                let func_impl = BinaryFuncImpl {
-                    elem_type : *type_id,
-                    f : op.clone()
-                };
-                result.add_init(EnumFuncImpl::BinaryFuncImpl(func_impl));
-            }
+            result.add_init_binary_func(*type_id, Box::new(AddOperator {}));
+            result.add_init_binary_func(*type_id, Box::new(SubOperator {}));
+            result.add_init_binary_func(*type_id, Box::new(MulOperator {}));
         }
 
-        result.add_init(EnumFuncImpl::MapImpl(MapImpl {}));
-        result.add_init(EnumFuncImpl::FillImpl(FillImpl {}));
-        result.add_init(EnumFuncImpl::SetHeadImpl(SetHeadImpl {}));
-        result.add_init(EnumFuncImpl::HeadImpl(HeadImpl {}));
-        result.add_init(EnumFuncImpl::RotateImpl(RotateImpl {}));
-        result.add_init(EnumFuncImpl::ReduceImpl(ReduceImpl {}));
+        result.add_init(Box::new(MapImpl {}));
+        result.add_init(Box::new(FillImpl {}));
+        result.add_init(Box::new(SetHeadImpl {}));
+        result.add_init(Box::new(HeadImpl {}));
+        result.add_init(Box::new(RotateImpl {}));
+        result.add_init(Box::new(ReduceImpl {}));
 
         //Constant functions
         for one_id in [*SCALAR_T, *VECTOR_T].iter() {
@@ -316,7 +319,7 @@ impl InterpreterState {
                     ret_type : *one_id,
                     ignored_type : *two_id
                 };
-                result.add_init(EnumFuncImpl::ConstImpl(func_impl));
+                result.add_init(Box::new(func_impl));
             }
         }
         
@@ -325,7 +328,7 @@ impl InterpreterState {
             for two_id in [*SCALAR_T, *VECTOR_T].iter() {
                 for three_id in [*SCALAR_T, *VECTOR_T].iter() {
                     let func_impl = ComposeImpl::new(*one_id, *two_id, *three_id);
-                    result.add_init(EnumFuncImpl::ComposeImpl(func_impl));
+                    result.add_init(Box::new(func_impl));
                 }
             }
         }
