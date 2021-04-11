@@ -1,32 +1,27 @@
 use ndarray::*;
 use std::collections::HashMap;
-use crate::sampled_term_embedding::*;
 use crate::sampled_model_embedding::*;
 use crate::sampled_value_field_state::*;
 use crate::space_info::*;
 use crate::typed_vector::*;
 use crate::type_id::*;
+use crate::context::*;
 
 type ModelKey = usize;
 
-pub struct SampledEmbeddingSpace {
+pub struct SampledEmbeddingSpace<'a> {
     pub type_id : TypeId,
     pub elaborator : Array2<f32>,
-    pub models : HashMap<ModelKey, SampledModelEmbedding>
+    pub models : HashMap<ModelKey, SampledModelEmbedding>,
+    pub ctxt : &'a Context
 }
 
-impl SampledEmbeddingSpace {
+impl<'a> SampledEmbeddingSpace<'a> {
     pub fn has_embedding(&self, model_key : ModelKey) -> bool {
         self.models.contains_key(&model_key)
     }
     pub fn get_embedding(&self, model_key : ModelKey) -> &SampledModelEmbedding {
         self.models.get(&model_key).unwrap()
-    }
-    pub fn get_term_embedding(&self, model_key : ModelKey) -> SampledTermEmbedding {
-        let model_embedding = self.get_embedding(model_key);
-        let sampled_mat = model_embedding.sampled_mat.clone();
-
-        SampledTermEmbedding::FunctionEmbedding(self.type_id, sampled_mat)
     }
 
     pub fn expand_compressed_vector(&self, compressed_vec : &Array1<f32>) -> Array1<f32> {
@@ -35,7 +30,7 @@ impl SampledEmbeddingSpace {
     }
 
     pub fn expand_compressed_function(&self, compressed_vec : &Array1<f32>) -> Array2<f32> {
-        let func_space_info = get_function_space_info(self.type_id);
+        let func_space_info = self.ctxt.get_function_space_info(self.type_id);
         let feat_dims = func_space_info.get_feature_dimensions();
         let out_dims = func_space_info.get_output_dimensions();
 
@@ -92,11 +87,12 @@ impl SampledEmbeddingSpace {
         (best_model_index, best_compressed_vec.unwrap(), best_model_value)
     }
 
-    pub fn new(type_id : TypeId, elaborator : Array2<f32>) -> SampledEmbeddingSpace {
+    pub fn new(type_id : TypeId, elaborator : Array2<f32>, ctxt : &'a Context) -> SampledEmbeddingSpace<'a> {
         SampledEmbeddingSpace {
             type_id,
             elaborator,
-            models : HashMap::new()
+            models : HashMap::new(),
+            ctxt
         }
     }
 }

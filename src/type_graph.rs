@@ -1,36 +1,19 @@
 use crate::type_action::*;
-use lazy_static::*;
 use crate::type_id::*;
 use std::collections::HashSet;
+use crate::context::*;
 
-lazy_static! {
-    static ref GLOBAL_TYPE_GRAPH : TypeGraph = {
-        TypeGraph::build()
-    };
-}
-
-pub struct TypeGraph {
+pub struct TypeGraph<'a> {
     //Indices: from, to, edge index
     edges : Vec<Vec<Vec<TypeAction>>>,
     //Reachability predicates
     reachable : Vec<Vec<bool>>,
     //Immediate successors of nodes
-    successors : Vec<Vec<TypeId>>
+    successors : Vec<Vec<TypeId>>,
+    ctxt : &'a Context
 }
 
-pub fn get_type_actions(src : TypeId, dest : TypeId) -> &'static Vec<TypeAction> {
-    GLOBAL_TYPE_GRAPH.get_actions(src, dest)
-}
-
-pub fn get_type_successors(src : TypeId) -> &'static Vec<TypeId> {
-    GLOBAL_TYPE_GRAPH.get_successors(src)
-}
-
-pub fn is_type_reachable_from(src : TypeId, dest : TypeId) -> bool {
-    GLOBAL_TYPE_GRAPH.is_reachable_from(src, dest)
-}
-
-impl TypeGraph {
+impl<'a> TypeGraph<'a> {
     pub fn get_actions(&self, src : TypeId, dest : TypeId) -> &Vec<TypeAction> {
         &self.edges[src][dest]
     }
@@ -41,20 +24,20 @@ impl TypeGraph {
         self.reachable[src][dest]
     }
 
-    fn floyd_warshall(edges : &Vec<Vec<Vec<TypeAction>>>) -> Vec<Vec<bool>> {
+    fn floyd_warshall(ctxt : &Context, edges : &Vec<Vec<Vec<TypeAction>>>) -> Vec<Vec<bool>> {
         let mut result = Vec::new();
-        for i in 0..total_num_types() {
+        for i in 0..ctxt.get_total_num_types() {
             let mut row = Vec::new();
-            for j in 0..total_num_types() {
+            for j in 0..ctxt.get_total_num_types() {
                 let edge_exists = i == j || edges[i][j].len() > 0;
                 row.push(edge_exists);
             }
             result.push(row);
         }
 
-        for k in 0..total_num_types() {
-            for i in 0..total_num_types() {
-                for j in 0..total_num_types() {
+        for k in 0..ctxt.get_total_num_types() {
+            for i in 0..ctxt.get_total_num_types() {
+                for j in 0..ctxt.get_total_num_types() {
                     result[i][j] |= result[i][k] && result[k][j];
                 }
             }
@@ -63,11 +46,11 @@ impl TypeGraph {
         result
     }
 
-    pub fn successors(edges : &Vec<Vec<Vec<TypeAction>>>) -> Vec<Vec<TypeId>> {
+    pub fn successors(ctxt : &Context, edges : &Vec<Vec<Vec<TypeAction>>>) -> Vec<Vec<TypeId>> {
         let mut result = Vec::new();
-        for source in 0..total_num_types() {
+        for source in 0..ctxt.get_total_num_types() {
             let mut successors = Vec::new();
-            for dest in 0..total_num_types() {
+            for dest in 0..ctxt.get_total_num_types() {
                 if edges[source][dest].len() > 0 {
                     successors.push(dest);
                 }
@@ -77,22 +60,23 @@ impl TypeGraph {
         result
     }
 
-    pub fn build() -> TypeGraph {
+    pub fn build(ctxt : &'a Context) -> TypeGraph<'a> {
         let mut edges = Vec::new();
-        for from_type_id in 0..total_num_types() {
+        for from_type_id in 0..ctxt.get_total_num_types() {
             let mut row = Vec::new();
-            for to_type_id in 0..total_num_types() {
-                let elem = TypeAction::get_actions_for(from_type_id, to_type_id);
+            for to_type_id in 0..ctxt.get_total_num_types() {
+                let elem = TypeAction::get_actions_for(ctxt, from_type_id, to_type_id);
                 row.push(elem);
             }
             edges.push(row);
         }
-        let reachable = TypeGraph::floyd_warshall(&edges);
-        let successors = TypeGraph::successors(&edges);
+        let reachable = TypeGraph::floyd_warshall(ctxt, &edges);
+        let successors = TypeGraph::successors(ctxt, &edges);
         TypeGraph {
             edges,
             reachable,
-            successors
+            successors,
+            ctxt
         }
     }
 }

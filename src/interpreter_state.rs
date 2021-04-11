@@ -8,6 +8,7 @@ use crate::application_chain::*;
 use crate::application_table::*;
 use crate::type_space::*;
 use crate::term::*;
+use crate::context::*;
 use crate::params::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
@@ -16,14 +17,18 @@ use crate::term_application_result::*;
 use crate::func_impl::*;
 use topological_sort::TopologicalSort;
 
-pub struct InterpreterState {
-    pub application_tables : HashMap::<TypeId, ApplicationTable>,
+pub struct InterpreterState<'a> {
+    pub application_tables : HashMap::<TypeId, ApplicationTable<'a>>,
     pub type_spaces : HashMap::<TypeId, TypeSpace>,
     pub new_term_app_results : Vec::<TermApplicationResult>,
-    pub new_terms : Vec::<TermPointer>
+    pub new_terms : Vec::<TermPointer>,
+    pub ctxt : &'a Context
 }
 
-impl InterpreterState {
+impl <'a> InterpreterState<'a> {
+    pub fn get_context(&self) -> &Context {
+        self.ctxt
+    }
 
     pub fn clear_newly_received(&mut self) {
         self.new_term_app_results.clear();
@@ -78,8 +83,8 @@ impl InterpreterState {
             let other_type = other_ref.get_type();
 
             let mut current_is_applicative = false;
-            if (!is_vector_type(current_type)) {
-                let arg_type = get_arg_type_id(current_type);
+            if (!self.ctxt.is_vector_type(current_type)) {
+                let arg_type = self.ctxt.get_arg_type_id(current_type);
                 current_is_applicative = (arg_type == other_type);
             }
 
@@ -91,7 +96,7 @@ impl InterpreterState {
                             arg_ref : other_ref.clone()
                         }
                     },
-                    TermReference::VecRef(_) => { panic!(); }
+                    TermReference::VecRef(_, _) => { panic!(); }
                 }
             } else {
                 match (other_ref) {
@@ -101,7 +106,7 @@ impl InterpreterState {
                             arg_ref : current_ref
                         }
                     },
-                    TermReference::VecRef(_) => { panic!(); }
+                    TermReference::VecRef(_, _) => { panic!(); }
                 }
             };
 
@@ -137,7 +142,7 @@ impl InterpreterState {
                     func_impl : func_impl,
                     args : args_copy
                 };
-                let ret_type_id : TypeId = term_app.get_ret_type();
+                let ret_type_id : TypeId = term_app.get_ret_type(self.ctxt);
                 let ret_ptr = self.store_term(ret_type_id, result);
                 let ret_ref = TermReference::FuncRef(ret_ptr);
                 ret_ref
@@ -157,9 +162,9 @@ impl InterpreterState {
     
     pub fn ensure_every_term_has_an_application(&mut self) {
         let mut topo_sort = TopologicalSort::<TypeId>::new();
-        for i in 0..total_num_types() {
+        for i in 0..self.ctxt.get_total_num_types() {
             let type_id = i as TypeId;
-            if let Type::FuncType(arg_type_id, ret_type_id) = get_type(type_id) {
+            if let Type::FuncType(arg_type_id, ret_type_id) = self.ctxt.get_type(type_id) {
                 topo_sort.add_dependency(type_id, arg_type_id);
                 topo_sort.add_dependency(type_id, ret_type_id);
             }
@@ -168,7 +173,7 @@ impl InterpreterState {
         while (topo_sort.len() > 0) {
             let mut type_ids = topo_sort.pop_all();
             for func_type_id in type_ids.drain(..) {
-                if let Type::FuncType(arg_type_id, _) = get_type(func_type_id) {
+                if let Type::FuncType(arg_type_id, _) = self.ctxt.get_type(func_type_id) {
                     let func_space = self.type_spaces.get(&func_type_id).unwrap();
 
                     for index in 0..func_space.get_num_terms() {
@@ -183,14 +188,14 @@ impl InterpreterState {
                         };
 
                         if (num_existing_app_results == 0) {
-                            let arg_ref = match (get_type(arg_type_id)) {
+                            let arg_ref = match (self.ctxt.get_type(arg_type_id)) {
                                 Type::FuncType(_, _) => {
                                     let arg_space = self.type_spaces.get(&arg_type_id).unwrap();
                                     let arg_ptr = arg_space.draw_random_ptr().unwrap();
                                     TermReference::FuncRef(arg_ptr)
                                 },
                                 Type::VecType(dim) => {
-                                    TermReference::VecRef(Array::zeros((dim,)))
+                                    TermReference::VecRef(arg_type_id, Array::zeros((dim,)))
                                 }
                             };
                             let term_app = TermApplication {
@@ -208,15 +213,13 @@ impl InterpreterState {
 
     fn ensure_every_type_has_a_term(&mut self) {
         let mut type_to_term = HashMap::<TypeId, TermReference>::new();
-        type_to_term.insert(*SCALAR_T, TermReference::VecRef(Array::zeros((1,))));
-        type_to_term.insert(*VECTOR_T, TermReference::VecRef(Array::zeros((DIM,))));
         //Initial population
-        for i in 0..total_num_types() {
+        for i in 0..self.ctxt.get_total_num_types() {
             let type_id = i as TypeId;
-            let kind = get_type(type_id);
+            let kind = self.ctxt.get_type(type_id);
             match (kind) {
                 Type::VecType(n) => {
-                    type_to_term.insert(type_id, TermReference::VecRef(Array::zeros((n,))));
+                    type_to_term.insert(type_id, TermReference::VecRef(type_id, Array::zeros((n,))));
                 },
                 Type::FuncType(_, _) => {
                     let type_space = self.type_spaces.get(&type_id).unwrap();
@@ -229,11 +232,11 @@ impl InterpreterState {
         }
         loop {
             let mut found_something = false;
-            for i in 0..total_num_types() {
+            for i in 0..self.ctxt.get_total_num_types() {
                 let func_type_id = i as TypeId;
 
                 if let Option::Some(func_term) = type_to_term.get(&func_type_id) {
-                    if let Type::FuncType(arg_type_id, ret_type_id) = get_type(func_type_id) {
+                    if let Type::FuncType(arg_type_id, ret_type_id) = self.ctxt.get_type(func_type_id) {
                         if let Option::Some(arg_ref) = type_to_term.get(&arg_type_id) {
                             if (!type_to_term.contains_key(&ret_type_id)) {
                                 if let TermReference::FuncRef(func_ptr) = func_term {
@@ -258,7 +261,7 @@ impl InterpreterState {
     }
 
     pub fn add_init(&mut self, func : Box<dyn FuncImpl>) -> TermPointer {
-        let func_type_id : TypeId = func.func_type();
+        let func_type_id : TypeId = func.func_type(&self.ctxt.type_info_directory);
         let type_space : &mut TypeSpace = self.type_spaces.get_mut(&func_type_id).unwrap();
         let result = type_space.add_init(func);
 
@@ -267,23 +270,14 @@ impl InterpreterState {
         result
     }
 
-    pub fn add_init_binary_func(&mut self, elem_type : TypeId, f : Box<dyn BinaryArrayOperator>) -> TermPointer {
-        let func_impl = BinaryFuncImpl {
-            elem_type,
-            f
-        };
-
-        self.add_init(Box::new(func_impl))
-    }
-
-    pub fn new() -> InterpreterState {
+    pub fn new(ctxt : &'a Context) -> InterpreterState<'a> {
         //Initialize hashmaps for each type in the global type table 
         let mut application_tables = HashMap::<TypeId, ApplicationTable>::new();
         let mut type_spaces = HashMap::<TypeId, TypeSpace>::new();
 
-        for type_id in 0..total_num_types() {
-            if (!is_vector_type(type_id)) {
-                application_tables.insert(type_id, ApplicationTable::new(type_id));
+        for type_id in 0..ctxt.get_total_num_types() {
+            if (!ctxt.is_vector_type(type_id)) {
+                application_tables.insert(type_id, ApplicationTable::new(type_id, ctxt));
                 type_spaces.insert(type_id, TypeSpace::new(type_id));
             }
         }
@@ -292,47 +286,23 @@ impl InterpreterState {
             application_tables,
             type_spaces,
             new_term_app_results : Vec::new(),
-            new_terms : Vec::new()
+            new_terms : Vec::new(),
+            ctxt
         };
 
         //Now populate the type spaces with the known function implementations
         //using TypeSpace#add(PartiallyAppliedTerm)
         
-        //Binary functions
-        for type_id in [*SCALAR_T, *VECTOR_T].iter() {
-            result.add_init_binary_func(*type_id, Box::new(AddOperator {}));
-            result.add_init_binary_func(*type_id, Box::new(SubOperator {}));
-            result.add_init_binary_func(*type_id, Box::new(MulOperator {}));
-        }
-
-        result.add_init(Box::new(MapImpl {}));
-        result.add_init(Box::new(FillImpl {}));
-        result.add_init(Box::new(SetHeadImpl {}));
-        result.add_init(Box::new(HeadImpl {}));
-        result.add_init(Box::new(RotateImpl {}));
-        result.add_init(Box::new(ReduceImpl {}));
-
-        //Constant functions
-        for one_id in [*SCALAR_T, *VECTOR_T].iter() {
-            for two_id in [*SCALAR_T, *VECTOR_T].iter() {
-                let func_impl = ConstImpl {
-                    ret_type : *one_id,
-                    ignored_type : *two_id
-                };
-                result.add_init(Box::new(func_impl));
-            }
-        }
-        
-        //Function composition
-        for one_id in [*SCALAR_T, *VECTOR_T].iter() {
-            for two_id in [*SCALAR_T, *VECTOR_T].iter() {
-                for three_id in [*SCALAR_T, *VECTOR_T].iter() {
-                    let func_impl = ComposeImpl::new(*one_id, *two_id, *three_id);
-                    result.add_init(Box::new(func_impl));
+        //TODO: Add primitives
+        for type_id in 0..ctxt.get_total_num_types() {
+            if (!ctxt.is_vector_type(type_id)) {
+                let primitive_type_space = ctxt.primitive_directory.primitive_type_spaces.get(&type_id).unwrap();
+                for term in primitive_type_space.terms.iter() {
+                    result.add_init(term.clone());
                 }
             }
         }
-
+       
         result.ensure_every_type_has_a_term();
         result.ensure_every_term_has_an_application();
 

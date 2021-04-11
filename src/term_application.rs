@@ -1,4 +1,5 @@
 use crate::term_pointer::*;
+use crate::context::*;
 use crate::term_reference::*;
 use crate::type_id::*;
 use std::cmp::*;
@@ -14,13 +15,13 @@ pub struct TermApplication {
 }
 
 impl TermApplication {
-    pub fn get_arg_type(&self) -> TypeId {
-        let (arg_type, _) = self.get_func_type_pair();
+    pub fn get_arg_type(&self, ctxt : &Context) -> TypeId {
+        let (arg_type, _) = self.get_func_type_pair(ctxt);
         arg_type
     }
 
-    pub fn get_ret_type(&self) -> TypeId {
-        let (_, ret_type) = self.get_func_type_pair();
+    pub fn get_ret_type(&self, ctxt : &Context) -> TypeId {
+        let (_, ret_type) = self.get_func_type_pair(ctxt);
         ret_type
     }
 
@@ -28,9 +29,9 @@ impl TermApplication {
         self.func_ptr.type_id
     }
 
-    fn get_func_type_pair(&self) -> (TypeId, TypeId) {
+    fn get_func_type_pair(&self, ctxt : &Context) -> (TypeId, TypeId) {
         let func_id : TypeId = self.get_func_type();
-        let func_type : Type = get_type(func_id);
+        let func_type : Type = ctxt.get_type(func_id);
         if let Type::FuncType(arg_id, ret_id) = func_type {
             (arg_id, ret_id)
         } else {

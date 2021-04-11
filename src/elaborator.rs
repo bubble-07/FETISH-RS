@@ -13,16 +13,18 @@ use crate::func_schmear::*;
 use crate::sigma_points::*;
 use crate::model::*;
 use crate::prior_specification::*;
+use crate::context::*;
 use std::collections::HashMap;
 
 //Learned "opposite" of the sketcher for a given type
 
 type ModelKey = usize;
 
-pub struct Elaborator {
+pub struct Elaborator<'a> {
     pub type_id : TypeId,
     pub model : NormalInverseWishart, //Model is from projected vectors to orthog basis of kernel space of projection
-    pub updates : HashMap::<ModelKey, Vec<DataPoint>>
+    pub updates : HashMap::<ModelKey, Vec<DataPoint>>,
+    pub ctxt : &'a Context
 }
 
 struct ElaboratorPrior {
@@ -44,11 +46,11 @@ impl PriorSpecification for ElaboratorPrior {
     }
 }
 
-impl Elaborator {
+impl<'a> Elaborator<'a> {
     //Before calling, need to check that there is a sketcher, and it has a kernel.
     //There's no point in constructing one of these otherwise
-    pub fn new(type_id : TypeId) -> Elaborator {
-        let feature_space_info = get_feature_space_info(type_id);
+    pub fn new(type_id : TypeId, ctxt : &'a Context) -> Elaborator<'a> {
+        let feature_space_info = ctxt.get_feature_space_info(type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
         let sketched_dimension = sketcher.get_output_dimension();
         let kernel_mat = sketcher.get_kernel_matrix().as_ref().unwrap();
@@ -61,12 +63,13 @@ impl Elaborator {
         Elaborator {
             type_id,
             model,
-            updates : HashMap::new()
+            updates : HashMap::new(),
+            ctxt
         }
     }
 
     pub fn get_mean(&self) -> Array2<f32> {
-        let feature_space_info = get_feature_space_info(self.type_id);
+        let feature_space_info = self.ctxt.get_feature_space_info(self.type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
         let kernel_mat = sketcher.get_kernel_matrix().as_ref().unwrap();
         let expansion_mat = sketcher.get_expansion_matrix();
@@ -79,7 +82,7 @@ impl Elaborator {
     }
 
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
-        let feature_space_info = get_feature_space_info(self.type_id);
+        let feature_space_info = self.ctxt.get_feature_space_info(self.type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
         let kernel_mat = sketcher.get_kernel_matrix().as_ref().unwrap();
         let expansion_mat = sketcher.get_expansion_matrix();
@@ -97,7 +100,7 @@ impl Elaborator {
     }
 
     pub fn get_expansion_func_schmear(&self) -> FuncSchmear {
-        let feature_space_info = get_feature_space_info(self.type_id);
+        let feature_space_info = self.ctxt.get_feature_space_info(self.type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
         let expansion_mat = sketcher.get_expansion_matrix();
 
@@ -134,7 +137,7 @@ impl Elaborator {
         self.updates.contains_key(update_key)
     }
     pub fn update_data(&mut self, update_key : ModelKey, data_update : &Model) {
-        let feature_space_info = get_feature_space_info(self.type_id);
+        let feature_space_info = self.ctxt.get_feature_space_info(self.type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
         let kernel_mat = &sketcher.get_kernel_matrix().as_ref().unwrap();
 

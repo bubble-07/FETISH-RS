@@ -11,16 +11,20 @@ use crate::type_id::*;
 use crate::space_info::*;
 use crate::sampled_value_field::*;
 use crate::value_field::*;
+use crate::context::Context;
 use argmin::prelude::*;
 
-pub struct ValueFieldMaximumSolver {
+pub struct ValueFieldMaximumSolver<'a> {
     pub func_mat : Array2<f32>,
-    pub value_field : SampledValueField,
+    pub value_field : SampledValueField<'a>,
     pub func_type_id : TypeId
 }
 
-impl ValueFieldMaximumSolver {
-    pub fn get_compressed_vector_with_max_value<'a>(&self, compressed_vecs : &'a Vec<Array1<f32>>) -> &'a Array1<f32> { 
+impl<'a> ValueFieldMaximumSolver<'a> {
+    fn get_context(&self) -> &Context {
+        self.value_field.get_context()
+    }
+    pub fn get_compressed_vector_with_max_value<'b>(&self, compressed_vecs : &'b Vec<Array1<f32>>) -> &'b Array1<f32> { 
         let mut max_value = f32::NEG_INFINITY;
         let mut result = &compressed_vecs[0];
         for compressed_vec in compressed_vecs {
@@ -42,14 +46,14 @@ impl ValueFieldMaximumSolver {
     }
 
     fn get_value(&self, x_compressed : &Array1<f32>) -> f32 {
-        let func_space_info = get_function_space_info(self.get_function_type_id());
+        let func_space_info = self.get_context().get_function_space_info(self.get_function_type_id());
         let y_compressed = func_space_info.apply(&self.func_mat, x_compressed);
 
         self.value_field.get_value_for_compressed_vector(&y_compressed)
     }
 
     pub fn get_value_gradient(&self, x_compressed : &Array1<f32>) -> Array1<f32> {
-        let func_space_info = get_function_space_info(self.get_function_type_id());
+        let func_space_info = self.get_context().get_function_space_info(self.get_function_type_id());
         let y_compressed = func_space_info.apply(&self.func_mat, x_compressed);
 
         let func_jacobian = func_space_info.jacobian(&self.func_mat, x_compressed);
@@ -72,7 +76,7 @@ impl ValueFieldMaximumSolver {
     }
 }
 
-impl ArgminOp for ValueFieldMaximumSolver {
+impl<'a> ArgminOp for ValueFieldMaximumSolver<'a> {
     type Param = Array1<f32>;
     type Output = f32;
     type Hessian = ();

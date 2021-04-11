@@ -2,6 +2,7 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
+use crate::context::*;
 use crate::space_info::*;
 use crate::term_model::*;
 use crate::type_id::*;
@@ -19,10 +20,6 @@ use crate::model::*;
 use crate::normal_inverse_wishart::*;
 use crate::term_reference::*;
 use crate::array_utils::*;
-
-pub fn term_ref(in_array : Array1<f32>) -> TermReference {
-    TermReference::VecRef(to_noisy(&in_array))
-}
 
 pub fn random_scalar() -> f32 {
     let mut rng = rand::thread_rng();
@@ -65,21 +62,21 @@ pub fn random_normal_inverse_wishart(feature_dimensions : usize, out_dimensions 
 }
 //Yields a pair of models (func, arg), of type (in_dimensions -> middle_dimensions) ->
 //out_dimensions
-pub fn random_model_app(func_type_id : TypeId) -> (Model, Model) {
-    let arg_type_id = get_arg_type_id(func_type_id);
-    let arg_model = random_model(arg_type_id);
-    let func_model = random_model(func_type_id);
+pub fn random_model_app<'a>(ctxt : &'a Context, func_type_id : TypeId) -> (Model<'a>, Model<'a>) {
+    let arg_type_id = ctxt.get_arg_type_id(func_type_id);
+    let arg_model = random_model(ctxt, arg_type_id);
+    let func_model = random_model(ctxt, func_type_id);
     (func_model, arg_model)
 }
 
-pub fn random_model(type_id : TypeId) -> Model {
-    let arg_type_id = get_arg_type_id(type_id);
-    let ret_type_id = get_ret_type_id(type_id);
+pub fn random_model<'a>(ctxt : &'a Context, type_id : TypeId) -> Model {
+    let arg_type_id = ctxt.get_arg_type_id(type_id);
+    let ret_type_id = ctxt.get_ret_type_id(type_id);
 
     let prior_specification = TermModelPriorSpecification { };
 
-    let mut result = Model::new(&prior_specification, arg_type_id, ret_type_id);
-    let func_space_info = get_function_space_info(type_id);
+    let mut result = Model::new(&prior_specification, arg_type_id, ret_type_id, ctxt);
+    let func_space_info = ctxt.get_function_space_info(type_id);
     result.data = random_normal_inverse_wishart(func_space_info.get_feature_dimensions(), 
                                                 func_space_info.get_output_dimensions());
     result 
@@ -159,7 +156,7 @@ pub fn assert_equal_vectors_to_within(one : &Array1<f32>, two : &Array1<f32>, wi
 }
 
 pub fn assert_equal_vector_term(actual : TermReference, expected : Array1<f32>) {
-    if let TermReference::VecRef(vec) = actual {
+    if let TermReference::VecRef(_, vec) = actual {
         assert_equal_vectors(&from_noisy(&vec), &expected);
     } else {
         panic!();

@@ -11,26 +11,30 @@ use crate::term_application::*;
 use crate::value_field_state::*;
 use crate::sampled_embedder_state::*;
 use crate::space_info::*;
+use crate::array_utils::*;
+use crate::context::*;
 
-pub struct FunctionOptimumState {
-    pub function_spaces : HashMap::<TypeId, FunctionOptimumSpace>
+pub struct FunctionOptimumState<'a> {
+    pub function_spaces : HashMap::<TypeId, FunctionOptimumSpace<'a>>,
+    pub ctxt : &'a Context
 }
 
-impl FunctionOptimumState {
-    pub fn new() -> FunctionOptimumState {
+impl<'a> FunctionOptimumState<'a> {
+    pub fn new(ctxt : &'a Context) -> FunctionOptimumState<'a> {
         let mut function_spaces = HashMap::new();
-        for func_type_id in 0..total_num_types() {
-            if (!is_vector_type(func_type_id)) {
-                let arg_type = get_arg_type_id(func_type_id);
-                let ret_type = get_ret_type_id(func_type_id);
-                if (is_vector_type(arg_type) && !is_vector_type(ret_type)) {
-                    let function_optimum_space = FunctionOptimumSpace::new(func_type_id);
+        for func_type_id in 0..ctxt.get_total_num_types() {
+            if (!ctxt.is_vector_type(func_type_id)) {
+                let arg_type = ctxt.get_arg_type_id(func_type_id);
+                let ret_type = ctxt.get_ret_type_id(func_type_id);
+                if (ctxt.is_vector_type(arg_type) && !ctxt.is_vector_type(ret_type)) {
+                    let function_optimum_space = FunctionOptimumSpace::new(func_type_id, ctxt);
                     function_spaces.insert(func_type_id, function_optimum_space); 
                 } 
             }
         }
         FunctionOptimumState {
-            function_spaces
+            function_spaces,
+            ctxt
         }
     }
     pub fn get_best_vector_to_pass(&self, compressed_func_vector : &TypedVector, 
@@ -39,10 +43,10 @@ impl FunctionOptimumState {
                                    -> (Array1<f32>, TypedVector, f32) {
 
         let func_type_id = compressed_func_vector.type_id;
-        let arg_type_id = get_arg_type_id(func_type_id);
-        let ret_type_id = get_ret_type_id(func_type_id);
+        let arg_type_id = self.ctxt.get_arg_type_id(func_type_id);
+        let ret_type_id = self.ctxt.get_ret_type_id(func_type_id);
 
-        let arg_feat_space = get_feature_space_info(arg_type_id);
+        let arg_feat_space = self.ctxt.get_feature_space_info(arg_type_id);
 
         let func_optimum_space = self.function_spaces.get(&func_type_id).unwrap();
         let best_arg_vector = func_optimum_space.estimate_optimal_vector_for_compressed_func(
@@ -66,6 +70,7 @@ impl FunctionOptimumState {
         let mut best_value = f32::NEG_INFINITY;
 
         for (func_type_id, function_space) in self.function_spaces.iter_mut() {
+            let arg_type_id = self.ctxt.get_arg_type_id(*func_type_id);
             let sampled_embeddings = sampled_embedder_state.embedding_spaces.get(func_type_id).unwrap();
 
             let (func_index, value) = function_space.update(sampled_embeddings, value_field_state);
@@ -76,7 +81,7 @@ impl FunctionOptimumState {
                     type_id : *func_type_id
                 };
                 let arg_vec = function_space.get_optimal_vector(func_index);
-                let arg_ref = TermReference::from(arg_vec);
+                let arg_ref = TermReference::VecRef(arg_type_id, to_noisy(arg_vec));
                 let term_app = TermApplication {
                     func_ptr,
                     arg_ref

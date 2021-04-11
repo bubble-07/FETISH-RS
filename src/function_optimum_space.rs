@@ -15,13 +15,16 @@ use argmin::prelude::*;
 use argmin::solver::gradientdescent::SteepestDescent;
 use argmin::solver::linesearch::MoreThuenteLineSearch;
 
+use crate::context::*;
+
 type ModelKey = usize;
 
-pub struct FunctionOptimumSpace {
+pub struct FunctionOptimumSpace<'a> {
     pub func_type_id : TypeId,
-    pub optimal_input_mapping : Model,
+    pub optimal_input_mapping : Model<'a>,
     pub optimal_input_mapping_sampler : NormalInverseWishartSampler,
-    pub optimal_input_vectors : HashMap<ModelKey, Array1<f32>>
+    pub optimal_input_vectors : HashMap<ModelKey, Array1<f32>>,
+    pub ctxt : &'a Context
 }
 
 struct FunctionOptimumPriorSpecification {
@@ -41,23 +44,23 @@ impl PriorSpecification for FunctionOptimumPriorSpecification {
     }
 }
 
-impl FunctionOptimumSpace {
+impl <'a> FunctionOptimumSpace<'a> {
     pub fn estimate_optimal_vector_for_compressed_func(&self, compressed_func : &Array1<f32>) -> Array1<f32> {
         let mut rng = rand::thread_rng();
         let optimal_input_mapping_sample = self.optimal_input_mapping_sampler.sample(&mut rng);
 
-        let func_feat_info = get_feature_space_info(self.func_type_id);
+        let func_feat_info = self.ctxt.get_feature_space_info(self.func_type_id);
         let func_feats = func_feat_info.get_features(compressed_func);
         let optimal_input_vec = optimal_input_mapping_sample.dot(&func_feats);
 
         optimal_input_vec
     }
 
-    pub fn new(func_type_id : TypeId) -> FunctionOptimumSpace {
+    pub fn new(func_type_id : TypeId, ctxt : &'a Context) -> FunctionOptimumSpace {
 
         let prior_specification = FunctionOptimumPriorSpecification { };
 
-        let optimal_input_mapping = Model::new(&prior_specification, func_type_id, get_arg_type_id(func_type_id));
+        let optimal_input_mapping = Model::new(&prior_specification, func_type_id, ctxt.get_arg_type_id(func_type_id), ctxt);
         let optimal_input_mapping_sampler = NormalInverseWishartSampler::new(&optimal_input_mapping.data);
 
         let optimal_input_vectors = HashMap::new();
@@ -66,7 +69,8 @@ impl FunctionOptimumSpace {
             func_type_id,
             optimal_input_mapping,
             optimal_input_mapping_sampler,
-            optimal_input_vectors
+            optimal_input_vectors,
+            ctxt
         }
     }
     pub fn get_optimal_vector(&self, model_key : ModelKey) -> &Array1<f32> {
@@ -77,9 +81,9 @@ impl FunctionOptimumSpace {
         let mut best_index = 0;
         let mut best_value = f32::NEG_INFINITY;
 
-        let func_space_info = get_function_space_info(self.func_type_id);
-        let func_feat_info = get_feature_space_info(self.func_type_id);
-        let ret_type = get_ret_type_id(self.func_type_id);
+        let func_space_info = self.ctxt.get_function_space_info(self.func_type_id);
+        let func_feat_info = self.ctxt.get_feature_space_info(self.func_type_id);
+        let ret_type = self.ctxt.get_ret_type_id(self.func_type_id);
 
         let mut rng = rand::thread_rng();
         let value_field = value_field_state.get_value_field(ret_type);

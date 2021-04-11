@@ -3,6 +3,10 @@
 #![allow(unused_imports)]
 #![allow(unused_parens)]
 
+mod displayable_with_context;
+mod primitive_type_space;
+mod primitive_directory;
+mod context;
 mod compressed_inv_schmear;
 mod sampled_value_field_state;
 mod sampled_value_field;
@@ -31,7 +35,6 @@ mod sqrtm;
 mod data_points;
 mod rand_utils;
 mod term_model;
-mod sampled_term_embedding;
 mod sampled_embedder_state;
 mod sampled_embedding_space;
 mod data_update;
@@ -74,7 +77,6 @@ mod type_space;
 mod optimizer_state;
 mod displayable_with_state;
 
-extern crate lazy_static;
 extern crate ndarray;
 extern crate ndarray_linalg;
 extern crate pretty_env_logger;
@@ -84,6 +86,7 @@ use ndarray::*;
 use crate::displayable_with_state::*;
 use rand::prelude::*;
 use crate::optimizer_state::*;
+use crate::context::*;
 
 fn f(x : f32) -> f32 {
     2.0 * x + 1.0
@@ -114,8 +117,11 @@ fn main() {
         data_points.push(tuple);
     }
 
+    info!("Building context");
+    let context = get_default_context();
+
     info!("Creating optimizer");
-    let mut optimizer_state = OptimizerState::new(data_points);
+    let mut optimizer_state = OptimizerState::new(data_points, &context);
     info!("Initializing optimizer");
     optimizer_state.init_step();
     info!("Running optimizer");

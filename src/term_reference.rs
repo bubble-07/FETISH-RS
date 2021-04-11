@@ -13,21 +13,15 @@ use noisy_float::prelude::*;
 #[derive(Clone, PartialEq, Hash, Eq, Debug)]
 pub enum TermReference {
     FuncRef(TermPointer),
-    VecRef(Array1<R32>)
+    VecRef(TypeId, Array1<R32>)
 }
 
 impl TermReference {
     pub fn get_type(&self) -> TypeId {
         match (&self) {
             TermReference::FuncRef(func_ptr) => func_ptr.type_id,
-            TermReference::VecRef(vec) => get_type_id(&Type::VecType(vec.shape()[0]))
+            TermReference::VecRef(type_id, _) => *type_id
         }
-    }
-}
-
-impl From<&Array1<f32>> for TermReference {
-    fn from(vec : &Array1<f32>) -> Self {
-        TermReference::VecRef(to_noisy(vec))
     }
 }
 
@@ -35,7 +29,7 @@ impl DisplayableWithState for TermReference {
     fn display(&self, state : &InterpreterState) -> String {
         match (self) {
             TermReference::FuncRef(ptr) => ptr.display(state),
-            TermReference::VecRef(vec) => vec.to_string()
+            TermReference::VecRef(_, vec) => vec.to_string()
         }
     }
 }

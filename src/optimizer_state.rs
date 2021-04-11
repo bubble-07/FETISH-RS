@@ -4,6 +4,7 @@ extern crate ndarray_linalg;
 use ndarray::*;
 
 use rand::prelude::*;
+use crate::context::*;
 use crate::array_utils::*;
 use crate::typed_vector::*;
 use crate::sampled_embedder_state::*;
@@ -30,15 +31,19 @@ use crate::function_optimum_state::*;
 
 extern crate pretty_env_logger;
 
-pub struct OptimizerState {
-    pub interpreter_and_embedder_state : InterpreterAndEmbedderState,
-    pub value_field_state : ValueFieldState,
-    pub func_opt_state : FunctionOptimumState,
+pub struct OptimizerState<'a> {
+    pub interpreter_and_embedder_state : InterpreterAndEmbedderState<'a>,
+    pub value_field_state : ValueFieldState<'a>,
+    pub func_opt_state : FunctionOptimumState<'a>,
     pub target_type_id : TypeId,
-    data_points : Vec::<(Array1<f32>, Array1<f32>)>
+    data_points : Vec::<(Array1<f32>, Array1<f32>)>,
+    pub type_graph : TypeGraph<'a>
 }
 
-impl OptimizerState {
+impl <'a> OptimizerState<'a> {
+    fn get_context(&self) -> &Context {
+        self.interpreter_and_embedder_state.get_context()
+    }
 
     pub fn get_target_type_id(&self) -> TypeId {
         self.target_type_id
@@ -84,7 +89,7 @@ impl OptimizerState {
 
         match (result_ref) {
             TermReference::FuncRef(func_ptr) => Option::Some(func_ptr),
-            TermReference::VecRef(_) => Option::None
+            TermReference::VecRef(_, _) => Option::None
         }
     }
 
@@ -105,12 +110,11 @@ impl OptimizerState {
                 (func_ref, next_compressed_vec, value)
             },
             TypeAction::Passing(arg_type_id) => {
-                if (is_vector_type(*arg_type_id)) {
-                    println!("Current func type: {}", get_type(current_compressed_vec.type_id));
+                if (self.get_context().is_vector_type(*arg_type_id)) {
                     let (arg_vec, next_compressed_vec, value) = 
                         self.func_opt_state.get_best_vector_to_pass(current_compressed_vec,
                                                     sampled_value_field_state, sampled_embedder_state);
-                    let arg_ref = TermReference::VecRef(to_noisy(&arg_vec));
+                    let arg_ref = TermReference::VecRef(*arg_type_id, to_noisy(&arg_vec));
                     (arg_ref, next_compressed_vec, value)
                 } else {
                     let (arg_ptr, next_compressed_vec, value) =
@@ -134,10 +138,10 @@ impl OptimizerState {
         let mut best_term = Option::None;
         let mut best_vec = Option::None;
 
-        let successor_types =  get_type_successors(current_type_id);
+        let successor_types =  self.type_graph.get_successors(current_type_id);
         for successor_type in successor_types.iter() {
-            if is_type_reachable_from(*successor_type, target_type_id) {
-                let type_actions = get_type_actions(current_type_id, *successor_type);
+            if self.type_graph.is_reachable_from(*successor_type, target_type_id) {
+                let type_actions = self.type_graph.get_actions(current_type_id, *successor_type);
                 for type_action in type_actions.iter() {
                     let (term, vec, value) = self.find_best_next_with_transition(sampled_embedder_state,
                                                   sampled_value_field_state,
@@ -160,20 +164,20 @@ impl OptimizerState {
         let current_type_id = current_compressed_vec.type_id;
         let target_type_id = self.get_target_type_id();
 
-        let successor_types = get_type_successors(current_type_id);
+        let successor_types = self.type_graph.get_successors(current_type_id);
     
         let mut rng = rand::thread_rng();
 
         let mut random_usize : usize = rng.gen();
         let mut successor_ind = random_usize % successor_types.len();
-        while (!is_type_reachable_from(successor_types[successor_ind], target_type_id)) {
+        while (!self.type_graph.is_reachable_from(successor_types[successor_ind], target_type_id)) {
             random_usize = rng.gen();
             successor_ind = random_usize % successor_types.len();
         }
 
         let successor_type = successor_types[successor_ind];
 
-        let type_actions = get_type_actions(current_type_id, successor_type);
+        let type_actions = self.type_graph.get_actions(current_type_id, successor_type);
 
         random_usize = rng.gen();
         let action_ind = random_usize % type_actions.len();
@@ -256,28 +260,29 @@ impl OptimizerState {
         self.interpreter_and_embedder_state.init_step();
     }
 
-    pub fn new(data_points : Vec::<(Array1<f32>, Array1<f32>)>) -> OptimizerState {
+    pub fn new(data_points : Vec::<(Array1<f32>, Array1<f32>)>, ctxt : &'a Context) -> OptimizerState<'a> {
 
         //Step 1: find the embedding of the target term
 
         if (data_points.is_empty()) {
             panic!(); 
         }
+        info!("Readying interpreter state");
+        let interpreter_and_embedder_state = InterpreterAndEmbedderState::new(ctxt);
+
         info!("Readying types");
         let in_dimensions : usize = data_points[0].0.shape()[0];
         let out_dimensions : usize = data_points[0].1.shape()[0];
 
-        let in_type_id : TypeId = get_type_id(&Type::VecType(in_dimensions));
-        let out_type_id : TypeId = get_type_id(&Type::VecType(out_dimensions));
+        let in_type_id : TypeId = ctxt.get_type_id(&Type::VecType(in_dimensions));
+        let out_type_id : TypeId = ctxt.get_type_id(&Type::VecType(out_dimensions));
 
-        info!("Readying interpreter state");
-        let interpreter_and_embedder_state = InterpreterAndEmbedderState::new();
 
         info!("Readying target");
 
         let prior_specification = TermModelPriorSpecification { };
         
-        let mut target_model : Model = Model::new(&prior_specification, in_type_id, out_type_id);
+        let mut target_model : Model = Model::new(&prior_specification, in_type_id, out_type_id, ctxt);
 
         for (in_vec, out_vec) in data_points.iter() {
             let data_point = DataPoint {
@@ -291,16 +296,19 @@ impl OptimizerState {
         let target = target_model.get_schmeared_hole().rescale_spread(TARGET_INV_SCHMEAR_SCALE_FAC);
         let target_type_id = target.type_id;
 
-        let value_field_state = ValueFieldState::new(target);
+        let value_field_state = ValueFieldState::new(target, ctxt);
 
-        let func_opt_state = FunctionOptimumState::new();
+        let func_opt_state = FunctionOptimumState::new(ctxt);
+
+        let type_graph = TypeGraph::build(ctxt);
 
         OptimizerState {
             interpreter_and_embedder_state,
             value_field_state,
             func_opt_state,
             target_type_id,
-            data_points
+            data_points,
+            type_graph
         }
     }
 }

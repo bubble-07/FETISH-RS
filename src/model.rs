@@ -5,6 +5,7 @@ use ndarray::*;
 
 use std::ops;
 
+use crate::context::*;
 use crate::schmeared_hole::*;
 use crate::prior_specification::*;
 use crate::type_id::*;
@@ -19,10 +20,11 @@ use crate::space_info::*;
 use rand::prelude::*;
 
 #[derive(Clone)]
-pub struct Model {
+pub struct Model<'a> {
     pub arg_type_id : TypeId,
     pub ret_type_id : TypeId,
     pub data : NormalInverseWishart,
+    pub ctxt : &'a Context
 }
 
 pub fn to_features(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_vec : &Array1<f32>) -> Array1<f32> {
@@ -59,17 +61,20 @@ pub fn to_jacobian(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_ve
     stack(Axis(0), &comp_views).unwrap()
 }
 
-impl Model {
+impl <'a> Model<'a> {
     pub fn get_total_dims(&self) -> usize {
         self.data.get_total_dims()
     }
 }
 
 
-impl Model {
+impl <'a> Model<'a> {
+    pub fn get_context(&self) -> &'a Context {
+        self.ctxt 
+    }
     pub fn get_type_id(&self) -> TypeId {
         let kind = Type::FuncType(self.arg_type_id, self.ret_type_id);
-        get_type_id(&kind)
+        self.ctxt.get_type_id(&kind)
     }
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
         self.data.sample(rng)
@@ -90,7 +95,7 @@ impl Model {
     }
 
     pub fn eval(&self, in_vec: &Array1<f32>) -> Array1<f32> {
-        let func_space_info = build_function_space_info(self.arg_type_id, self.ret_type_id);
+        let func_space_info = self.ctxt.build_function_space_info(self.arg_type_id, self.ret_type_id);
         let feats = func_space_info.in_feat_info.get_features(in_vec);
         self.data.eval(&feats)
     }
@@ -107,50 +112,52 @@ impl Model {
     }
 }
 
-impl ops::AddAssign<DataPoint> for Model {
+impl <'a> ops::AddAssign<DataPoint> for Model<'a> {
     fn add_assign(&mut self, other: DataPoint) {
-        let func_space_info = build_function_space_info(self.arg_type_id, self.ret_type_id);
+        let func_space_info = self.ctxt.build_function_space_info(self.arg_type_id, self.ret_type_id);
         self.data += &func_space_info.get_data(other);
     }
 }
 
-impl ops::AddAssign<DataPoints> for Model {
+impl <'a> ops::AddAssign<DataPoints> for Model<'a> {
     fn add_assign(&mut self, other : DataPoints) {
-        let func_space_info = build_function_space_info(self.arg_type_id, self.ret_type_id);
+        let func_space_info = self.ctxt.build_function_space_info(self.arg_type_id, self.ret_type_id);
         self.data.update_datapoints(&func_space_info.get_data_points(other));
     }
 }
 
-impl ops::SubAssign<DataPoint> for Model {
+impl <'a> ops::SubAssign<DataPoint> for Model<'a> {
     fn sub_assign(&mut self, other: DataPoint) {
-        let func_space_info = build_function_space_info(self.arg_type_id, self.ret_type_id);
+        let func_space_info = self.ctxt.build_function_space_info(self.arg_type_id, self.ret_type_id);
         self.data -= &func_space_info.get_data(other);
     }
 }
 
-impl ops::AddAssign<&NormalInverseWishart> for Model {
+impl <'a> ops::AddAssign<&NormalInverseWishart> for Model<'a> {
     fn add_assign(&mut self, other : &NormalInverseWishart) {
         self.data += other;
     }
 }
 
-impl ops::SubAssign<&NormalInverseWishart> for Model {
+impl <'a> ops::SubAssign<&NormalInverseWishart> for Model<'a> {
     fn sub_assign(&mut self, other : &NormalInverseWishart) {
         self.data -= other;
     }
 }
 
-impl Model {
+impl <'a> Model<'a> {
     pub fn new(prior_spec : &dyn PriorSpecification,
-               arg_type_id : TypeId, ret_type_id : TypeId) -> Model {
+               arg_type_id : TypeId, ret_type_id : TypeId,
+               ctxt : &'a Context) -> Model<'a> {
 
-        let func_space_info = build_function_space_info(arg_type_id, ret_type_id);
+        let func_space_info = ctxt.build_function_space_info(arg_type_id, ret_type_id);
         let data = NormalInverseWishart::from_space_info(prior_spec, &func_space_info);
     
         Model {
             arg_type_id,
             ret_type_id,
-            data
+            data,
+            ctxt
         }
     }
 }

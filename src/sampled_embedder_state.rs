@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use crate::space_info::*;
 use crate::term_pointer::*;
 use crate::type_id::*;
-use crate::sampled_term_embedding::*;
 use crate::term_reference::*;
 use crate::array_utils::*;
 use crate::interpreter_state::*;
@@ -12,12 +11,14 @@ use crate::sampled_model_embedding::*;
 use crate::term_application::*;
 use crate::typed_vector::*;
 use crate::sampled_value_field_state::*;
+use crate::context::*;
 
-pub struct SampledEmbedderState {
-    pub embedding_spaces : HashMap::<TypeId, SampledEmbeddingSpace>
+pub struct SampledEmbedderState<'a> {
+    pub embedding_spaces : HashMap::<TypeId, SampledEmbeddingSpace<'a>>,
+    pub ctxt : &'a Context
 }
 
-impl SampledEmbedderState {
+impl<'a> SampledEmbedderState<'a> {
     pub fn has_embedding(&self, term_ptr : &TermPointer) -> bool {
         let space = self.embedding_spaces.get(&term_ptr.type_id).unwrap();
         space.has_embedding(term_ptr.index)
@@ -40,9 +41,9 @@ impl SampledEmbedderState {
         let mut best_application = Option::None;
         
         for func_type_id in self.embedding_spaces.keys() {
-            let arg_type_id = get_arg_type_id(*func_type_id);
-            let ret_type_id = get_ret_type_id(*func_type_id);
-            if (!is_vector_type(arg_type_id) && !is_vector_type(ret_type_id)) {
+            let arg_type_id = self.ctxt.get_arg_type_id(*func_type_id);
+            let ret_type_id = self.ctxt.get_ret_type_id(*func_type_id);
+            if (!self.ctxt.is_vector_type(arg_type_id) && !self.ctxt.is_vector_type(ret_type_id)) {
                 let func_embedding_space = self.embedding_spaces.get(func_type_id).unwrap();
 
                 let application_table = interpreter_state.application_tables.get(func_type_id).unwrap();
@@ -83,8 +84,8 @@ impl SampledEmbedderState {
     pub fn get_best_term_to_apply(&self, compressed_arg_vector : &TypedVector,
                                          func_type_id : TypeId, value_field_state : &SampledValueFieldState)
                                   -> (TermPointer, TypedVector, f32) {
-        let ret_type_id = get_ret_type_id(func_type_id);
-        let arg_feat_space = get_feature_space_info(compressed_arg_vector.type_id);
+        let ret_type_id = self.ctxt.get_ret_type_id(func_type_id);
+        let arg_feat_space = self.ctxt.get_feature_space_info(compressed_arg_vector.type_id);
         let featurized_arg_vector = arg_feat_space.get_features(&compressed_arg_vector.vec);
         let func_embedding_space = self.embedding_spaces.get(&func_type_id).unwrap();
         let (func_index, ret_vec, value) = func_embedding_space.get_best_term_index_to_apply_with_value(
@@ -101,8 +102,8 @@ impl SampledEmbedderState {
                                         value_field_state : &SampledValueFieldState)
                                 -> (TermPointer, TypedVector, f32) {
         let func_mat = self.expand_compressed_function(compressed_func_vector);
-        let arg_type = get_arg_type_id(compressed_func_vector.type_id);
-        let ret_type = get_ret_type_id(compressed_func_vector.type_id);
+        let arg_type = self.ctxt.get_arg_type_id(compressed_func_vector.type_id);
+        let ret_type = self.ctxt.get_ret_type_id(compressed_func_vector.type_id);
         let arg_embedding_space = self.embedding_spaces.get(&arg_type).unwrap();
         let (arg_index, ret_compressed_vec, value) = arg_embedding_space.get_best_term_index_to_pass_with_value(
                                                  &func_mat, ret_type, value_field_state);
@@ -116,14 +117,14 @@ impl SampledEmbedderState {
 
     pub fn evaluate_term_application(&self, term_application : &TermApplication) -> TypedVector {
         let func_type_id = term_application.func_ptr.type_id;
-        let ret_type_id = get_ret_type_id(func_type_id);
+        let ret_type_id = self.ctxt.get_ret_type_id(func_type_id);
         
-        let func_space_info = get_function_space_info(func_type_id);
+        let func_space_info = self.ctxt.get_function_space_info(func_type_id);
         let func_embedding_space = self.embedding_spaces.get(&func_type_id).unwrap();
         let func_mat = &func_embedding_space.get_embedding(term_application.func_ptr.index).sampled_mat;
 
         let arg_vec = match (&term_application.arg_ref) {
-            TermReference::VecRef(vec) => from_noisy(vec),
+            TermReference::VecRef(_, vec) => from_noisy(vec),
             TermReference::FuncRef(arg_ptr) => {
                 let arg_embedding_space = self.embedding_spaces.get(&arg_ptr.type_id).unwrap();
                 arg_embedding_space.get_embedding(arg_ptr.index).sampled_compressed_vec.clone()
@@ -134,16 +135,6 @@ impl SampledEmbedderState {
         TypedVector {
             vec : ret_vec,
             type_id : ret_type_id
-        }
-    }
-
-    pub fn get_term_embedding(&self, term_ref : &TermReference) -> SampledTermEmbedding {
-        match (term_ref) {
-            TermReference::VecRef(vec) => SampledTermEmbedding::VectorEmbedding(from_noisy(vec)),
-            TermReference::FuncRef(term_ptr) => {
-                let space = self.embedding_spaces.get(&term_ptr.type_id).unwrap();
-                space.get_term_embedding(term_ptr.index)
-            }
         }
     }
 }

@@ -3,6 +3,7 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 
+use crate::context::*;
 use rand::prelude::*;
 use crate::func_schmear::*;
 use crate::sampled_model_embedding::*;
@@ -23,13 +24,14 @@ use std::collections::HashMap;
 
 type ModelKey = usize;
 
-pub struct ModelSpace {
+pub struct ModelSpace<'a> {
     pub type_id : TypeId,
-    pub elaborator : Elaborator,
-    pub models : HashMap<ModelKey, TermModel>
+    pub elaborator : Elaborator<'a>,
+    pub models : HashMap<ModelKey, TermModel<'a>>,
+    pub ctxt : &'a Context
 }
 
-impl ModelSpace {
+impl <'a> ModelSpace<'a> {
     pub fn get_random_model_key(&self, rng : &mut ThreadRng) -> ModelKey {
         let num_entries = self.models.len();
         let rand_usize : usize = rng.gen();
@@ -44,13 +46,13 @@ impl ModelSpace {
         panic!();
     }
 
-    pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbeddingSpace {
+    pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbeddingSpace<'a> {
         //We do this for speed, but also because the variation should
         //already mostly be captured in the values for the embeddings
         //of various models. In light of that, this is taken as the MLE
         let elaborator = self.elaborator.get_mean();
 
-        let mut result = SampledEmbeddingSpace::new(self.type_id, elaborator);
+        let mut result = SampledEmbeddingSpace::new(self.type_id, elaborator, self.ctxt);
         for (key, model) in self.models.iter() {
             let sample = SampledModelEmbedding::new(&model.model, rng);
             result.models.insert(*key, sample);
@@ -60,7 +62,7 @@ impl ModelSpace {
 
     pub fn schmear_to_prior(&self, embedder_state : &EmbedderState, elaborator_func_schmear : &FuncSchmear,
                         func_ptr : &TermPointer, in_schmear : &Schmear) -> NormalInverseWishart {
-        let func_space_info = get_function_space_info(self.type_id);
+        let func_space_info = self.ctxt.get_function_space_info(self.type_id);
         let s = func_space_info.get_feature_dimensions();
         let t = func_space_info.get_output_dimensions();
 
@@ -95,25 +97,26 @@ impl ModelSpace {
         NormalInverseWishart::new(mean, in_precision, big_v, little_v)
     }
     pub fn add_model(&mut self, model_key : ModelKey) {
-        let model = TermModel::new(self.type_id);
+        let model = TermModel::new(self.type_id, self.ctxt);
         self.models.insert(model_key, model);
     }
     
-    pub fn get_model_mut(&mut self, model_key : ModelKey) -> &mut TermModel {
+    pub fn get_model_mut(&mut self, model_key : ModelKey) -> &mut TermModel<'a> {
         self.models.get_mut(&model_key).unwrap()
     }
-    pub fn get_model(&self, model_key : ModelKey) -> &TermModel {
+    pub fn get_model(&self, model_key : ModelKey) -> &TermModel<'a> {
         self.models.get(&model_key).unwrap()
     }
     pub fn has_model(&self, model_key : ModelKey) -> bool {
         self.models.contains_key(&model_key)
     }
 
-    pub fn new(type_id : TypeId) -> ModelSpace {
+    pub fn new(type_id : TypeId, ctxt : &'a Context) -> ModelSpace<'a> {
         ModelSpace {
             models : HashMap::new(),
-            elaborator : Elaborator::new(type_id),
-            type_id
+            elaborator : Elaborator::new(type_id, ctxt),
+            type_id,
+            ctxt
         }
     }
 }

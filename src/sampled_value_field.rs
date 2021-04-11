@@ -2,6 +2,7 @@ use ndarray::*;
 use ndarray_rand::rand_distr::StandardNormal;
 use ndarray_rand::RandomExt;
 use crate::value_field::*;
+use crate::context::*;
 use crate::compressed_inv_schmear::*;
 use crate::type_id::*;
 use crate::normal_inverse_wishart::*;
@@ -11,14 +12,19 @@ use crate::term_model::*;
 use crate::schmeared_hole::*;
 use crate::space_info::*;
 use crate::inverse_schmear::*;
+use crate::displayable_with_context::*;
 
 #[derive(Clone)]
-pub struct SampledValueField {
-    pub value_field : ValueField,
-    pub compressed_prior_inv_schmear : CompressedInverseSchmear
+pub struct SampledValueField<'a> {
+    pub value_field : ValueField<'a>,
+    pub compressed_prior_inv_schmear : CompressedInverseSchmear,
 }
 
-impl SampledValueField {
+impl<'a> SampledValueField<'a> {
+    pub fn get_context(&self) -> &Context {
+        self.value_field.get_context()
+    }
+
     pub fn get_feat_vec_coefs(&self) -> &Array1<f32> {
         &self.value_field.feat_vec_coefs
     }
@@ -49,7 +55,7 @@ impl SampledValueField {
 
     pub fn get_value_for_compressed_vector(&self, compressed_vec : &Array1<f32>) -> f32 {
         let type_id = self.get_type_id();
-        let feature_space_info = get_feature_space_info(type_id);
+        let feature_space_info = self.get_context().get_feature_space_info(type_id);
         let feat_vec = feature_space_info.get_features(compressed_vec);
 
         let additional_value = self.get_dot_product_from_feat_vec(&feat_vec);
@@ -59,7 +65,9 @@ impl SampledValueField {
         let result = additional_value - schmear_sq_dist;
 
         if (!result.is_finite()) {
-            error!("Non-finite value for type {} and vec {}", get_type(type_id), compressed_vec);
+            error!("Non-finite value for type {} and vec {}", 
+                self.get_context().get_type(type_id).display(self.get_context()), 
+                compressed_vec);
         }
         result
     }

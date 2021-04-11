@@ -2,27 +2,30 @@ use crate::type_id::*;
 use crate::term_application::*;
 use crate::term_application_result::*;
 use crate::term_pointer::*;
+use crate::context::*;
 use crate::term_reference::*;
 use std::collections::HashMap;
 use multimap::MultiMap;
 
-pub struct ApplicationTable {
+pub struct ApplicationTable<'a> {
     func_type_id : TypeId,
     table : HashMap::<TermApplication, TermReference>,
     result_to_application_map :  MultiMap::<TermReference, TermApplicationResult>,
     arg_to_application_map : MultiMap::<TermReference, TermApplicationResult>,
-    func_to_application_map : MultiMap::<TermPointer, TermApplicationResult>
+    func_to_application_map : MultiMap::<TermPointer, TermApplicationResult>,
+    ctxt : &'a Context
 }
 
-impl ApplicationTable {
-    pub fn new(func_type_id : TypeId) -> ApplicationTable {
-        if (!is_vector_type(func_type_id)) {
+impl <'a> ApplicationTable<'a> {
+    pub fn new(func_type_id : TypeId, ctxt : &'a Context) -> ApplicationTable<'a> {
+        if (!ctxt.is_vector_type(func_type_id)) {
             ApplicationTable {
                 func_type_id,
                 table : HashMap::new(),
                 result_to_application_map : MultiMap::new(),
                 arg_to_application_map : MultiMap::new(),
-                func_to_application_map : MultiMap::new()
+                func_to_application_map : MultiMap::new(),
+                ctxt
             }
         } else {
             panic!();

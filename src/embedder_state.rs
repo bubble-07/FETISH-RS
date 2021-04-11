@@ -21,39 +21,43 @@ use crate::func_inverse_schmear::*;
 use crate::normal_inverse_wishart::*;
 use crate::elaborator::*;
 use topological_sort::TopologicalSort;
+use crate::context::*;
 
 extern crate pretty_env_logger;
 
-pub struct EmbedderState {
-    pub model_spaces : HashMap::<TypeId, ModelSpace>
+pub struct EmbedderState<'a> {
+    pub model_spaces : HashMap::<TypeId, ModelSpace<'a>>,
+    pub ctxt : &'a Context
 }
 
-impl EmbedderState {
+impl<'a> EmbedderState<'a> {
 
-    pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbedderState {
+    pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbedderState<'a> {
         let mut embedding_spaces = HashMap::new();
         for (type_id, model_space) in self.model_spaces.iter() {
             let sampled_embedding_space = model_space.sample(rng); 
             embedding_spaces.insert(*type_id, sampled_embedding_space);
         }
         SampledEmbedderState {
-            embedding_spaces
+            embedding_spaces,
+            ctxt : self.ctxt
         }
     }
 
-    pub fn new() -> EmbedderState {
+    pub fn new(ctxt : &'a Context) -> EmbedderState<'a> {
         info!("Readying embedder state");
 
-        let mut model_spaces = HashMap::<TypeId, ModelSpace>::new();
-        for func_type_id in 0..total_num_types() {
-            if (!is_vector_type(func_type_id)) {
-                let model_space = ModelSpace::new(func_type_id);
+        let mut model_spaces = HashMap::new();
+        for func_type_id in 0..ctxt.get_total_num_types() {
+            if (!ctxt.is_vector_type(func_type_id)) {
+                let model_space = ModelSpace::new(func_type_id, ctxt);
                 model_spaces.insert(func_type_id, model_space);
             }
         }
 
         EmbedderState {
-            model_spaces
+            model_spaces,
+            ctxt
         }
     }
 
@@ -106,7 +110,7 @@ impl EmbedderState {
         self.model_spaces.get(&term_ptr.type_id).unwrap()
     }
 
-    pub fn get_mut_embedding(&mut self, term_ptr : TermPointer) -> &mut TermModel {
+    pub fn get_mut_embedding(&mut self, term_ptr : TermPointer) -> &mut TermModel<'a> {
         let space : &mut ModelSpace = self.model_spaces.get_mut(&term_ptr.type_id).unwrap();
         space.get_model_mut(term_ptr.index)
     }
@@ -129,7 +133,7 @@ impl EmbedderState {
     fn get_compressed_schmear_from_ptr(&self, term_ptr : &TermPointer) -> Schmear {
         let type_id = term_ptr.type_id;
         let func_schmear = self.get_schmear_from_ptr(term_ptr);
-        let func_feat_info = get_feature_space_info(type_id);
+        let func_feat_info = self.ctxt.get_feature_space_info(type_id);
         let projection_mat = func_feat_info.get_projection_matrix();
         let result = func_schmear.compress(&projection_mat);
         result
@@ -138,7 +142,7 @@ impl EmbedderState {
     fn get_compressed_schmear_from_ref(&self, term_ref : &TermReference) -> Schmear {
         match term_ref {
             TermReference::FuncRef(func_ptr) => self.get_compressed_schmear_from_ptr(&func_ptr),
-            TermReference::VecRef(vec) => Schmear::from_vector(&vec)
+            TermReference::VecRef(_, vec) => Schmear::from_vector(&vec)
         }
     }
 
@@ -181,7 +185,7 @@ impl EmbedderState {
             let elem = stack.pop().unwrap();
             let ret_ref = elem.get_ret_ref();
 
-            ret_type_set.insert(elem.get_ret_type());
+            ret_type_set.insert(elem.get_ret_type(self.ctxt));
 
             if let TermReference::FuncRef(ret_func_ptr) = ret_ref {
                 let applications = interpreter_state.get_app_results_with_func(&ret_func_ptr); 
@@ -201,7 +205,7 @@ impl EmbedderState {
         info!("Obtaining elaborator func schmears");
         let mut elaborator_func_schmears = HashMap::new();
         for type_id in ret_type_set.drain() {
-            if (!is_vector_type(type_id)) {
+            if (!self.ctxt.is_vector_type(type_id)) {
                 let model_space = self.model_spaces.get(&type_id).unwrap();
                 let elaborator = &model_space.elaborator;
                 let elaborator_func_schmear = elaborator.get_expansion_func_schmear();
@@ -213,7 +217,7 @@ impl EmbedderState {
         while (!topo_sort.is_empty()) {
             let mut to_process = topo_sort.pop_all();
             for elem in to_process.drain(..) {
-                let out_type = elem.get_ret_type();
+                let out_type = elem.get_ret_type(self.ctxt);
                 let elaborator_func_schmear = elaborator_func_schmears.get(&out_type).unwrap();
                 self.propagate_prior(elem, elaborator_func_schmear);
             }
@@ -297,9 +301,9 @@ impl EmbedderState {
         let func_schmear = self.get_prior_propagation_func_schmear(&term_app_res);
       
         //Get the model space for the func type
-        let ret_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_ret_type()).unwrap();
+        let ret_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_ret_type(self.ctxt)).unwrap();
 
-        let func_space_info = get_function_space_info(term_app_res.get_func_type());
+        let func_space_info = self.ctxt.get_function_space_info(term_app_res.get_func_type());
 
         trace!("Propagating prior for space of size {}->{}", func_space_info.get_feature_dimensions(), 
                                                              func_space_info.get_output_dimensions());
@@ -336,8 +340,8 @@ impl EmbedderState {
         trace!("Propagating data for space of size {}->{}", arg_mean.shape()[0],
                                                             ret_schmear.mean.shape()[0]);
 
-        let out_type = term_app_res.get_ret_type();
-        let data_update = if (is_vector_type(out_type)) {
+        let out_type = term_app_res.get_ret_type(self.ctxt);
+        let data_update = if (self.ctxt.is_vector_type(out_type)) {
             let ret_mean = ret_schmear.mean;
             construct_vector_data_update(arg_mean, ret_mean)
         } else {

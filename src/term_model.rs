@@ -13,6 +13,7 @@ use crate::term_reference::*;
 use crate::func_schmear::*;
 use crate::prior_specification::*;
 use crate::func_inverse_schmear::*;
+use crate::context::*;
 
 use rand::prelude::*;
 
@@ -20,8 +21,8 @@ use std::collections::HashMap;
 use crate::model::*;
 
 #[derive(Clone)]
-pub struct TermModel {
-    pub model : Model,
+pub struct TermModel<'a> {
+    pub model : Model<'a>,
     prior_updates : HashMap::<TermApplication, NormalInverseWishart>,
     pub data_updates : HashMap::<TermReference, DataUpdate>
 }
@@ -44,7 +45,7 @@ impl PriorSpecification for TermModelPriorSpecification {
     }
 }
 
-impl TermModel {
+impl <'a> TermModel<'a> {
     pub fn get_total_dims(&self) -> usize {
         self.model.get_total_dims()
     }
@@ -67,7 +68,7 @@ impl TermModel {
     }
 
     pub fn get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
-        let func_space_info = get_function_space_info(self.model.get_type_id());
+        let func_space_info = self.model.ctxt.get_function_space_info(self.model.get_type_id());
         func_space_info.in_feat_info.get_features(in_vec)
     }
 
@@ -79,7 +80,7 @@ impl TermModel {
         self.data_updates.contains_key(update_key)
     }
     pub fn update_data(&mut self, update_key : TermReference, data_update : DataUpdate) {
-        let func_space_info = get_function_space_info(self.model.get_type_id());
+        let func_space_info = self.model.ctxt.get_function_space_info(self.model.get_type_id());
         let feat_update = data_update.featurize(&func_space_info);
         self.model.data += &feat_update;
         self.data_updates.insert(update_key, feat_update);
@@ -100,15 +101,15 @@ impl TermModel {
         self.model -= &distr;
     }
 
-    pub fn new(type_id : TypeId) -> TermModel {
+    pub fn new(type_id : TypeId, ctxt : &'a Context) -> TermModel<'a> {
         let prior_updates : HashMap::<TermApplication, NormalInverseWishart> = HashMap::new();
         let data_updates : HashMap::<TermReference, DataUpdate> = HashMap::new();
-        let arg_type_id = get_arg_type_id(type_id);
-        let ret_type_id = get_ret_type_id(type_id);
+        let arg_type_id = ctxt.get_arg_type_id(type_id);
+        let ret_type_id = ctxt.get_ret_type_id(type_id);
 
         let prior_specification = TermModelPriorSpecification {};
 
-        let model = Model::new(&prior_specification, arg_type_id, ret_type_id);
+        let model = Model::new(&prior_specification, arg_type_id, ret_type_id, ctxt);
         TermModel {
             model : model,
             prior_updates : prior_updates,

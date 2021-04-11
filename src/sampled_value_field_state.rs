@@ -8,17 +8,19 @@ use crate::type_id::*;
 use crate::space_info::*;
 use crate::value_field::*;
 use crate::typed_vector::*;
+use crate::context::*;
 
-pub struct SampledValueFieldState {
-    pub sampled_value_fields : HashMap<TypeId, SampledValueField>
+pub struct SampledValueFieldState<'a> {
+    pub sampled_value_fields : HashMap<TypeId, SampledValueField<'a>>,
+    pub ctxt : &'a Context
 }
 
-impl SampledValueFieldState {
+impl<'a> SampledValueFieldState<'a> {
     pub fn get_value_field(&self, type_id : TypeId) -> &SampledValueField {
         self.sampled_value_fields.get(&type_id).unwrap()
     }
 
-    pub fn get_value_field_mut(&mut self, type_id : TypeId) -> &mut SampledValueField {
+    pub fn get_value_field_mut(&mut self, type_id : TypeId) -> &mut SampledValueField<'a> {
         self.sampled_value_fields.get_mut(&type_id).unwrap()
     }
 
@@ -51,11 +53,8 @@ impl SampledValueFieldState {
 
     //Assumes that we're dealing with base type vectors
     pub fn apply_constraint(&mut self, func_vec : &TypedVector, arg_vec : &TypedVector, ret_vec : &TypedVector) {
-        let func_feat_info = get_feature_space_info(func_vec.type_id);
-        let ret_feat_info = get_feature_space_info(ret_vec.type_id);
-
-        let func_feat_vec = func_vec.get_features_from_base(func_feat_info);
-        let ret_feat_vec = ret_vec.get_features_from_base(ret_feat_info);
+        let func_feat_vec = func_vec.get_features_from_base(&self.ctxt);
+        let ret_feat_vec = ret_vec.get_features_from_base(&self.ctxt);
 
         let mut bonus = 0.0f32;
         let func_value_field = self.get_value_field(func_vec.type_id);
@@ -64,11 +63,10 @@ impl SampledValueFieldState {
         bonus += func_value_field.get_schmear_sq_dist_from_full_vec(&func_vec.vec);
         bonus -= ret_value_field.get_schmear_sq_dist_from_full_vec(&ret_vec.vec);
 
-        if (is_vector_type(arg_vec.type_id)) {
+        if (self.ctxt.is_vector_type(arg_vec.type_id)) {
             self.apply_vector_arg_feat_constraint(GAMMA, LAMBDA, &func_feat_vec, &ret_feat_vec, bonus);
         } else {
-            let arg_feat_info = get_feature_space_info(arg_vec.type_id);
-            let arg_feat_vec = arg_vec.get_features_from_base(arg_feat_info);
+            let arg_feat_vec = arg_vec.get_features_from_base(&self.ctxt);
 
             let arg_value_field = self.get_value_field(arg_vec.type_id);
             bonus += arg_value_field.get_schmear_sq_dist_from_full_vec(&arg_vec.vec);

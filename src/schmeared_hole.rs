@@ -3,6 +3,8 @@ use crate::term_reference::*;
 use crate::type_id::*;
 use crate::sampled_embedder_state::*;
 use crate::inverse_schmear::*;
+use crate::context::*;
+use crate::array_utils::*;
 
 #[derive(Clone)]
 pub struct SchmearedHole {
@@ -19,8 +21,8 @@ impl SchmearedHole {
         }
     }
     pub fn get_closest_term(&self, embedder_state : &SampledEmbedderState) -> (TermReference, f32) {
-        if (is_vector_type(self.type_id)) {
-            (TermReference::from(&self.inv_schmear.mean), 0.0f32)
+        if (embedder_state.ctxt.is_vector_type(self.type_id)) {
+            (TermReference::VecRef(self.type_id, to_noisy(&self.inv_schmear.mean)), 0.0f32)
         } else {
             let embedding_space = embedder_state.embedding_spaces.get(&self.type_id).unwrap();
             let mut best_dist = f32::INFINITY;

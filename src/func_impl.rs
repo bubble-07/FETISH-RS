@@ -24,14 +24,14 @@ pub trait HasFuncSignature {
         expected_num == args.len()
     }
 
-    fn func_type(&self) -> TypeId {
+    fn func_type(&self, type_info_directory : &TypeInfoDirectory) -> TypeId {
         let mut reverse_arg_types : Vec<TypeId> = self.required_arg_types();
         reverse_arg_types.reverse();
 
         let mut result : TypeId = self.ret_type();
         for arg_type_id in reverse_arg_types.drain(..) {
             let result_type : Type = Type::FuncType(arg_type_id, result);
-            result = get_type_id(&result_type);
+            result = type_info_directory.get(&result_type);
         }
         result
     }
@@ -157,10 +157,10 @@ impl HasFuncSignature for BinaryFuncImpl {
 
 impl FuncImpl for BinaryFuncImpl {
     fn evaluate(&self, _state : &mut InterpreterState, args : Vec::<TermReference>) -> TermReference {
-        if let TermReference::VecRef(arg_one_vec) = &args[0] {
-            if let TermReference::VecRef(arg_two_vec) = &args[1] {
+        if let TermReference::VecRef(_, arg_one_vec) = &args[0] {
+            if let TermReference::VecRef(_, arg_two_vec) = &args[1] {
                 let result_vec = self.f.act(&arg_one_vec, &arg_two_vec);
-                let result_ref = TermReference::VecRef(result_vec);
+                let result_ref = TermReference::VecRef(self.elem_type, result_vec);
                 result_ref
             } else {
                 panic!();
@@ -174,7 +174,9 @@ impl FuncImpl for BinaryFuncImpl {
     }
 }
 
+#[derive(Clone)]
 pub struct RotateImpl {
+    pub vector_type : TypeId
 }
 
 impl HasFuncSignature for RotateImpl {
@@ -182,34 +184,37 @@ impl HasFuncSignature for RotateImpl {
         String::from("rotate")
     }
     fn required_arg_types(&self) -> Vec<TypeId> {
-        vec![*VECTOR_T]
+        vec![self.vector_type]
     }
     fn ret_type(&self) -> TypeId {
-        *VECTOR_T
+        self.vector_type
     }
 }
 
 impl FuncImpl for RotateImpl {
     fn evaluate(&self, _state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
-        if let TermReference::VecRef(arg_vec) = &args[0] {
+        if let TermReference::VecRef(vector_type, arg_vec) = &args[0] {
             let n = arg_vec.len();
             let arg_vec_head : R32 = arg_vec[[0,]];
             let mut result_vec : Array1::<R32> = Array::from_elem((n,), arg_vec_head);
             for i in 1..n {
                 result_vec[[i-1,]] = arg_vec[[i,]];
             }
-            let result : TermReference = TermReference::VecRef(result_vec);
+            let result : TermReference = TermReference::VecRef(*vector_type, result_vec);
             result
         } else {
             panic!();
         }
     }
     fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(RotateImpl {})
+        Box::new(self.clone())
     }
 }
 
+#[derive(Clone)]
 pub struct SetHeadImpl {
+    pub vector_type : TypeId,
+    pub scalar_type : TypeId
 }
 
 impl HasFuncSignature for SetHeadImpl {
@@ -217,20 +222,20 @@ impl HasFuncSignature for SetHeadImpl {
         String::from("setHead")
     }
     fn required_arg_types(&self) -> Vec<TypeId> {
-        vec![*VECTOR_T, *SCALAR_T]
+        vec![self.vector_type, self.scalar_type]
     }
     fn ret_type(&self) -> TypeId {
-        *VECTOR_T
+        self.vector_type
     }
 }
 impl FuncImpl for SetHeadImpl {
     fn evaluate(&self, _state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
-        if let TermReference::VecRef(arg_vec) = &args[0] {
-            if let TermReference::VecRef(val_vec) = &args[1] {
+        if let TermReference::VecRef(vector_type, arg_vec) = &args[0] {
+            if let TermReference::VecRef(_, val_vec) = &args[1] {
                 let val : R32 = val_vec[[0,]];
                 let mut result_vec : Array1<R32> = arg_vec.clone();
                 result_vec[[0,]] = val;
-                let result = TermReference::VecRef(result_vec);
+                let result = TermReference::VecRef(*vector_type, result_vec);
                 result
             } else {
                 panic!();
@@ -240,11 +245,14 @@ impl FuncImpl for SetHeadImpl {
         }
     }
     fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(SetHeadImpl {})
+        Box::new(self.clone())
     }
 }
 
+#[derive(Clone)]
 pub struct HeadImpl {
+    pub vector_type : TypeId,
+    pub scalar_type : TypeId
 }
 
 impl HasFuncSignature for HeadImpl {
@@ -252,26 +260,26 @@ impl HasFuncSignature for HeadImpl {
         String::from("head")
     }
     fn required_arg_types(&self) -> Vec<TypeId> {
-        vec![*VECTOR_T]
+        vec![self.vector_type]
     }
     fn ret_type(&self) -> TypeId {
-        *SCALAR_T
+        self.scalar_type
     }
 }
 impl FuncImpl for HeadImpl {
     fn evaluate(&self, _state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
-        if let TermReference::VecRef(arg_vec) = &args[0] {
+        if let TermReference::VecRef(_, arg_vec) = &args[0] {
             let ret_val : R32 = arg_vec[[0,]];
             let result_array : Array1::<R32> = Array::from_elem((1,), ret_val);
 
-            let result = TermReference::VecRef(result_array);
+            let result = TermReference::VecRef(self.scalar_type, result_array);
             result
         } else {
             panic!();
         }
     }
     fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(HeadImpl {})
+        Box::new(self.clone())
     }
 }
 
@@ -285,9 +293,10 @@ pub struct ComposeImpl {
 }
 
 impl ComposeImpl {
-    pub fn new(in_type : TypeId, middle_type : TypeId, ret_type : TypeId) -> ComposeImpl {
-        let func_one : TypeId = get_type_id(&Type::FuncType(middle_type, ret_type));
-        let func_two : TypeId = get_type_id(&Type::FuncType(in_type, middle_type));
+    pub fn new(type_info_directory : &TypeInfoDirectory, 
+               in_type : TypeId, middle_type : TypeId, ret_type : TypeId) -> ComposeImpl {
+        let func_one : TypeId = type_info_directory.get(&Type::FuncType(middle_type, ret_type));
+        let func_two : TypeId = type_info_directory.get(&Type::FuncType(in_type, middle_type));
         ComposeImpl {
             in_type,
             middle_type,
@@ -337,7 +346,10 @@ impl FuncImpl for ComposeImpl {
     }
 }
 
+#[derive(Clone)]
 pub struct FillImpl {
+    pub scalar_type : TypeId,
+    pub vector_type : TypeId
 }
 
 impl HasFuncSignature for FillImpl {
@@ -345,26 +357,28 @@ impl HasFuncSignature for FillImpl {
         String::from("fill")
     }
     fn required_arg_types(&self) -> Vec<TypeId> {
-        vec![*SCALAR_T]
+        vec![self.scalar_type]
     }
     fn ret_type(&self) -> TypeId {
-        *VECTOR_T
+        self.vector_type
     }
 }
 impl FuncImpl for FillImpl {
-    fn evaluate(&self, _state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
-        if let TermReference::VecRef(arg_vec) = &args[0] {
-            let arg_val : R32 = arg_vec[[0,]];
-            let ret_val : Array1::<R32> = Array::from_elem((DIM,), arg_val);
+    fn evaluate(&self, state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
+        let dim = state.get_context().get_dimension(self.vector_type);
 
-            let result = TermReference::VecRef(ret_val);
+        if let TermReference::VecRef(_, arg_vec) = &args[0] {
+            let arg_val : R32 = arg_vec[[0,]];
+            let ret_val : Array1::<R32> = Array::from_elem((dim,), arg_val);
+
+            let result = TermReference::VecRef(self.vector_type, ret_val);
             result
         } else {
             panic!();
         }
     }
     fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(FillImpl {})
+        Box::new(self.clone())
     }
 }
 
@@ -395,7 +409,11 @@ impl FuncImpl for ConstImpl {
     }
 }
 
+#[derive(Clone)]
 pub struct ReduceImpl {
+    pub binary_scalar_func_type : TypeId,
+    pub scalar_type : TypeId,
+    pub vector_type : TypeId
 }
 
 impl HasFuncSignature for ReduceImpl {
@@ -403,23 +421,25 @@ impl HasFuncSignature for ReduceImpl {
         String::from("reduce")
     }
     fn required_arg_types(&self) -> Vec<TypeId> {
-        vec![*BINARY_SCALAR_FUNC_T, *SCALAR_T, *VECTOR_T]
+        vec![self.binary_scalar_func_type, self.scalar_type, self.vector_type]
     }
     fn ret_type(&self) -> TypeId {
-        *SCALAR_T
+        self.scalar_type
     }
 }
 
 impl FuncImpl for ReduceImpl {
     fn evaluate(&self, state : &mut InterpreterState, args : Vec<TermReference>) -> TermReference {
+        let dim = state.get_context().get_dimension(self.vector_type);
+
         let mut accum_ref : TermReference = args[1].clone();
         if let TermReference::FuncRef(func_ptr) = &args[0] {
-            if let TermReference::VecRef(vec) = &args[2] {
-                for i in 0..DIM {
+            if let TermReference::VecRef(_, vec) = &args[2] {
+                for i in 0..dim {
                     //First, put the scalar term at this position into a term ref
                     let val : R32 = vec[[i,]];
                     let val_vec : Array1::<R32> = Array::from_elem((1,), val);
-                    let val_ref = TermReference::VecRef(val_vec);
+                    let val_ref = TermReference::VecRef(self.scalar_type, val_vec);
                      
                     let term_app_one = TermApplication {
                         func_ptr : func_ptr.clone(),
@@ -448,11 +468,15 @@ impl FuncImpl for ReduceImpl {
         }
     }
     fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(ReduceImpl {})
+        Box::new(self.clone())
     }
 }
 
+#[derive(Clone)]
 pub struct MapImpl {
+    pub scalar_type : TypeId,
+    pub unary_scalar_func_type : TypeId,
+    pub vector_type : TypeId
 }
 
 impl HasFuncSignature for MapImpl {
@@ -460,33 +484,33 @@ impl HasFuncSignature for MapImpl {
         String::from("map")
     }
     fn required_arg_types(&self) -> Vec<TypeId> {
-        vec![*UNARY_SCALAR_FUNC_T, *VECTOR_T]
+        vec![self.unary_scalar_func_type, self.vector_type]
     }
     fn ret_type(&self) -> TypeId {
-        *VECTOR_T
+        self.vector_type
     }
 }
 
 impl FuncImpl for MapImpl {
     fn evaluate(&self, state : &mut InterpreterState, args : Vec::<TermReference>) -> TermReference {
         if let TermReference::FuncRef(func_ptr) = &args[0] {
-            if let TermReference::VecRef(arg_vec) = &args[1] {
+            if let TermReference::VecRef(_, arg_vec) = &args[1] {
                 let n = arg_vec.len();
                 let mut result : Array1<R32> = Array::from_elem((n,), R32::new(0.0)); 
                 for i in 0..n {
                     let boxed_scalar : Array1<R32> = Array::from_elem((1,), arg_vec[i]);
-                    let arg_ref = TermReference::VecRef(boxed_scalar);
+                    let arg_ref = TermReference::VecRef(self.scalar_type, boxed_scalar);
 
                     let term_app = TermApplication {
                         func_ptr : func_ptr.clone(),
                         arg_ref : arg_ref
                     };
                     let result_ref = state.evaluate(&term_app);
-                    if let TermReference::VecRef(result_scalar_vec) = result_ref {
+                    if let TermReference::VecRef(_, result_scalar_vec) = result_ref {
                         result[[i,]] = result_scalar_vec[[0,]];
                     }
                 }
-                let result_ref = TermReference::VecRef(result);
+                let result_ref = TermReference::VecRef(self.vector_type, result);
                 result_ref
             } else {
                 panic!();
@@ -497,7 +521,7 @@ impl FuncImpl for MapImpl {
 
     }
     fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(MapImpl {})
+        Box::new(self.clone())
     }
 }
 
