@@ -137,43 +137,36 @@ impl <'a> InterpreterState<'a> {
     pub fn evaluate(&mut self, term_app : &TermApplication) -> TermReference {
         let func_type_id : TypeId = term_app.get_func_type();
 
-        let application_table : &ApplicationTable = self.application_tables.get(&func_type_id).unwrap();
+        let func_term : PartiallyAppliedTerm = self.get(term_app.func_ptr);
+        let arg_ref : TermReference = term_app.arg_ref.clone();
 
-        if (application_table.has_computed(&term_app)) {
-            let result : TermReference = application_table.get_computed(&term_app);
-            result
+        let func_impl = self.ctxt.get_primitive(func_term.func_ptr);
+        let mut args_copy = func_term.args.clone();
+
+        args_copy.push(arg_ref);
+
+        let result_ref : TermReference = if (func_impl.ready_to_evaluate(&args_copy)) {
+            func_impl.evaluate(self, args_copy)
         } else {
-            let func_term : PartiallyAppliedTerm = self.get(term_app.func_ptr);
-            let arg_ref : TermReference = term_app.arg_ref.clone();
-
-            let func_impl = self.ctxt.get_primitive(func_term.func_ptr);
-            let mut args_copy = func_term.args.clone();
-
-            args_copy.push(arg_ref);
-
-            let result_ref : TermReference = if (func_impl.ready_to_evaluate(&args_copy)) {
-                func_impl.evaluate(self, args_copy)
-            } else {
-                let result = PartiallyAppliedTerm {
-                    func_ptr : func_term.func_ptr.clone(),
-                    args : args_copy
-                };
-                let ret_type_id : TypeId = term_app.get_ret_type(self.ctxt);
-                let ret_ptr = self.store_term(ret_type_id, result);
-                let ret_ref = TermReference::FuncRef(TermPointer::from(ret_ptr));
-                ret_ref
+            let result = PartiallyAppliedTerm {
+                func_ptr : func_term.func_ptr.clone(),
+                args : args_copy
             };
-            let application_table : &mut ApplicationTable = self.application_tables.get_mut(&func_type_id).unwrap();
+            let ret_type_id : TypeId = term_app.get_ret_type(self.ctxt);
+            let ret_ptr = self.store_term(ret_type_id, result);
+            let ret_ref = TermReference::FuncRef(TermPointer::from(ret_ptr));
+            ret_ref
+        };
+        let application_table : &mut ApplicationTable = self.application_tables.get_mut(&func_type_id).unwrap();
 
-            let term_app_result = TermApplicationResult {
-                term_app : term_app.clone(),
-                result_ref : result_ref.clone()
-            };
-            self.new_term_app_results.push(term_app_result);
+        let term_app_result = TermApplicationResult {
+            term_app : term_app.clone(),
+            result_ref : result_ref.clone()
+        };
+        self.new_term_app_results.push(term_app_result);
 
-            application_table.link(term_app.clone(), result_ref.clone());
-            result_ref
-        }
+        application_table.link(term_app.clone(), result_ref.clone());
+        result_ref
     }
 
     pub fn new(ctxt : &'a Context) -> InterpreterState<'a> {

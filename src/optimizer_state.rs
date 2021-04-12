@@ -242,8 +242,7 @@ impl <'a> OptimizerState<'a> {
                                             sampled_value_field_state : &SampledValueFieldState)
                                  -> TermApplication {
         let (nonvec_app, nonvec_value) = 
-            sampled_embedder_state.get_best_nonvector_application_with_value(&self.interpreter_and_embedder_state.interpreter_state,
-                                                                             sampled_value_field_state);
+            sampled_embedder_state.get_best_nonvector_application_with_value(sampled_value_field_state);
         let (vec_app, vec_value) = self.func_opt_state.update(sampled_embedder_state, sampled_value_field_state);
         if (vec_value > nonvec_value) {
             vec_app

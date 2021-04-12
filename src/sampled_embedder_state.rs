@@ -35,8 +35,7 @@ impl<'a> SampledEmbedderState<'a> {
         result
     }
 
-    pub fn get_best_nonvector_application_with_value(&self, interpreter_state : &InterpreterState,
-                                                            value_field_state : &SampledValueFieldState) 
+    pub fn get_best_nonvector_application_with_value(&self, value_field_state : &SampledValueFieldState) 
                                                   -> (TermApplication, f32) {
         let mut best_value = f32::NEG_INFINITY;
         let mut best_application = Option::None;
@@ -46,8 +45,6 @@ impl<'a> SampledEmbedderState<'a> {
             let ret_type_id = self.ctxt.get_ret_type_id(*func_type_id);
             if (!self.ctxt.is_vector_type(arg_type_id) && !self.ctxt.is_vector_type(ret_type_id)) {
                 let func_embedding_space = self.embedding_spaces.get(func_type_id).unwrap();
-
-                let application_table = interpreter_state.application_tables.get(func_type_id).unwrap();
 
                 for func_index in func_embedding_space.models.keys() {
                     let func_ptr = TermPointer {
@@ -68,14 +65,12 @@ impl<'a> SampledEmbedderState<'a> {
                             arg_ref
                         };
 
-                        if (!application_table.has_computed(&term_app)) {
-                            let ret_typed_vec = self.evaluate_term_application(&term_app);
-                            
-                            let value = value_field_state.get_value_for_compressed_vector(&ret_typed_vec);
-                            if (value > best_value) {
-                                best_value = value;
-                                best_application = Option::Some(term_app);
-                            }
+                        let ret_typed_vec = self.evaluate_term_application(&term_app);
+                        
+                        let value = value_field_state.get_value_for_compressed_vector(&ret_typed_vec);
+                        if (value > best_value) {
+                            best_value = value;
+                            best_application = Option::Some(term_app);
                         }
                     }
                 }

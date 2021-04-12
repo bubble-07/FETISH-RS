@@ -7,9 +7,12 @@ use crate::term_reference::*;
 use std::collections::HashMap;
 use multimap::MultiMap;
 
+///For a given function type `A -> B`, stores
+///current information about [`TermApplicationResult`]s
+///for that function type with several easily-queryable views.
 pub struct ApplicationTable<'a> {
     func_type_id : TypeId,
-    table : HashMap::<TermApplication, TermReference>,
+    table : MultiMap::<TermApplication, TermReference>,
     result_to_application_map :  MultiMap::<TermReference, TermApplicationResult>,
     arg_to_application_map : MultiMap::<TermReference, TermApplicationResult>,
     func_to_application_map : MultiMap::<TermPointer, TermApplicationResult>,
@@ -17,11 +20,13 @@ pub struct ApplicationTable<'a> {
 }
 
 impl <'a> ApplicationTable<'a> {
+    ///Constructs an initially-empty [`ApplicationTable`] for the given
+    ///function [`TypeId`] in the given [`Context`].
     pub fn new(func_type_id : TypeId, ctxt : &'a Context) -> ApplicationTable<'a> {
         if (!ctxt.is_vector_type(func_type_id)) {
             ApplicationTable {
                 func_type_id,
-                table : HashMap::new(),
+                table : MultiMap::new(),
                 result_to_application_map : MultiMap::new(),
                 arg_to_application_map : MultiMap::new(),
                 func_to_application_map : MultiMap::new(),
@@ -32,12 +37,11 @@ impl <'a> ApplicationTable<'a> {
         }
     }
 
-    pub fn has_computed(&self, term_app : &TermApplication) -> bool {
-        self.table.contains_key(term_app)
-    }
-
-    pub fn get_computed(&self, term_app : &TermApplication) -> TermReference {
-        self.table.get(term_app).unwrap().clone()
+    pub fn get_results_from_application(&self, term_app : &TermApplication) -> Vec<TermReference> {
+        match (self.table.get_vec(term_app)) {
+            Option::Some(vec) => vec.clone(),
+            Option::None => Vec::new()
+        }
     }
 
     pub fn get_app_results_with_arg(&self, arg : &TermReference) -> Vec<TermApplicationResult> {
