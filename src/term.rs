@@ -4,25 +4,20 @@ use std::cmp::*;
 use std::fmt::*;
 use std::hash::*;
 use crate::displayable_with_state::*;
+use crate::displayable_with_context::*;
 use crate::interpreter_state::*;
+use crate::primitive_term_pointer::*;
 
-#[derive(Clone, Hash, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub struct PartiallyAppliedTerm {
-    pub func_impl : Box<dyn FuncImpl>,
+    pub func_ptr : PrimitiveTermPointer,
     pub args : Vec<TermReference> 
-}
-
-impl PartialEq for PartiallyAppliedTerm {
-    fn eq(&self, other : &Self) -> bool {
-        &self.func_impl == &other.func_impl &&
-        &self.args == &other.args
-    }
 }
 
 impl DisplayableWithState for PartiallyAppliedTerm {
     fn display(&self, state : &InterpreterState) -> String {
         let mut result = String::from(""); 
-        let func_formatted : String = self.func_impl.get_name();
+        let func_formatted : String = self.func_ptr.display(state.get_context());
         result.push_str(&func_formatted);
         result.push_str("("); 
 
@@ -42,9 +37,9 @@ impl DisplayableWithState for PartiallyAppliedTerm {
 }
 
 impl PartiallyAppliedTerm {
-    pub fn new(func_impl : Box<dyn FuncImpl>) -> PartiallyAppliedTerm {
+    pub fn new(func_ptr : PrimitiveTermPointer) -> PartiallyAppliedTerm {
         PartiallyAppliedTerm {
-            func_impl,
+            func_ptr,
             args : Vec::new()
         }
     }

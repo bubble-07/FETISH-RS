@@ -5,7 +5,7 @@ use crate::term_reference::*;
 use crate::type_id::*;
 use crate::context::*;
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+#[derive(Clone, PartialEq, Hash, Eq)]
 pub struct TermApplicationResult {
     pub term_app : TermApplication,
     pub result_ref : TermReference

@@ -11,6 +11,7 @@ use crate::sampled_model_embedding::*;
 use crate::term_application::*;
 use crate::typed_vector::*;
 use crate::sampled_value_field_state::*;
+use crate::displayable_with_state::*;
 use crate::context::*;
 
 pub struct SampledEmbedderState<'a> {
@@ -54,7 +55,9 @@ impl<'a> SampledEmbedderState<'a> {
                         index : *func_index
                     };
 
-                    for arg_index in func_embedding_space.models.keys() {
+                    let arg_embedding_space = self.embedding_spaces.get(&arg_type_id).unwrap();
+
+                    for arg_index in arg_embedding_space.models.keys() {
                         let arg_ptr = TermPointer {
                             type_id : arg_type_id,
                             index : *arg_index

@@ -39,7 +39,6 @@ pub trait HasFuncSignature {
 
 pub trait FuncImpl : HasFuncSignature {
     fn evaluate(&self, state : &mut InterpreterState, args : Vec::<TermReference>) -> TermReference;
-    fn clone_box(&self) -> Box<dyn FuncImpl>;
 }
 
 impl PartialEq for dyn FuncImpl + '_ {
@@ -60,16 +59,9 @@ impl Hash for dyn FuncImpl + '_ {
     }
 }
 
-impl Clone for Box<dyn FuncImpl> {
-    fn clone(&self) -> Self {
-        self.clone_box()
-    }
-}
-
 pub trait BinaryArrayOperator {
     fn act(&self, arg_one : &Array1::<R32>, arg_two : &Array1::<R32>) -> Array1::<R32>;
     fn get_name(&self) -> String;
-    fn clone_box(&self) -> Box<dyn BinaryArrayOperator>;
 }
 
 impl PartialEq for dyn BinaryArrayOperator + '_ {
@@ -86,12 +78,6 @@ impl Hash for dyn BinaryArrayOperator + '_ {
     }
 }
 
-impl Clone for Box<dyn BinaryArrayOperator> {
-    fn clone(&self) -> Self {
-        self.clone_box()
-    }
-}
-
 pub struct AddOperator {
 }
 
@@ -101,9 +87,6 @@ impl BinaryArrayOperator for AddOperator {
     }
     fn get_name(&self) -> String {
         String::from("+")
-    }
-    fn clone_box(&self) -> Box<dyn BinaryArrayOperator> {
-        Box::new(AddOperator {})
     }
 }
 
@@ -117,9 +100,6 @@ impl BinaryArrayOperator for SubOperator {
     fn get_name(&self) -> String {
         String::from("-")
     }
-    fn clone_box(&self) -> Box<dyn BinaryArrayOperator> {
-        Box::new(SubOperator {})
-    }
 }
 
 pub struct MulOperator {
@@ -132,12 +112,8 @@ impl BinaryArrayOperator for MulOperator {
     fn get_name(&self) -> String {
         String::from("*")
     }
-    fn clone_box(&self) -> Box<dyn BinaryArrayOperator> {
-        Box::new(MulOperator {})
-    }
 }
 
-#[derive(Clone)]
 pub struct BinaryFuncImpl {
     pub elem_type : TypeId,
     pub f : Box<dyn BinaryArrayOperator>
@@ -168,9 +144,6 @@ impl FuncImpl for BinaryFuncImpl {
         } else {
             panic!();
         }
-    }
-    fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(self.clone())
     }
 }
 
@@ -205,9 +178,6 @@ impl FuncImpl for RotateImpl {
         } else {
             panic!();
         }
-    }
-    fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(self.clone())
     }
 }
 
@@ -244,9 +214,6 @@ impl FuncImpl for SetHeadImpl {
             panic!();
         }
     }
-    fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(self.clone())
-    }
 }
 
 #[derive(Clone)]
@@ -277,9 +244,6 @@ impl FuncImpl for HeadImpl {
         } else {
             panic!();
         }
-    }
-    fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(self.clone())
     }
 }
 
@@ -341,9 +305,6 @@ impl FuncImpl for ComposeImpl {
             panic!();
         }
     }
-    fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(self.clone())
-    }
 }
 
 #[derive(Clone)]
@@ -377,9 +338,6 @@ impl FuncImpl for FillImpl {
             panic!();
         }
     }
-    fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(self.clone())
-    }
 }
 
 #[derive(Clone)]
@@ -403,9 +361,6 @@ impl FuncImpl for ConstImpl {
     fn evaluate(&self, _state : &mut InterpreterState, args : Vec::<TermReference>) -> TermReference {
         let result_ptr : TermReference = args[0].clone();
         result_ptr
-    }
-    fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(self.clone())
     }
 }
 
@@ -467,9 +422,6 @@ impl FuncImpl for ReduceImpl {
             panic!();
         }
     }
-    fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(self.clone())
-    }
 }
 
 #[derive(Clone)]
@@ -519,9 +471,6 @@ impl FuncImpl for MapImpl {
             panic!();
         }
 
-    }
-    fn clone_box(&self) -> Box<dyn FuncImpl> {
-        Box::new(self.clone())
     }
 }
 

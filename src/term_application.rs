@@ -8,7 +8,7 @@ use std::hash::*;
 use crate::interpreter_state::*;
 use crate::displayable_with_state::*;
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+#[derive(Clone, PartialEq, Hash, Eq)]
 pub struct TermApplication {
     pub func_ptr : TermPointer,
     pub arg_ref : TermReference

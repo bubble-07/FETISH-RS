@@ -17,12 +17,13 @@ use crate::type_id::*;
 use crate::schmear::*;
 use crate::elaborator::*;
 use crate::sampled_embedding_space::*;
+use crate::term_index::*;
 
 extern crate pretty_env_logger;
 
 use std::collections::HashMap;
 
-type ModelKey = usize;
+type ModelKey = TermIndex;
 
 pub struct ModelSpace<'a> {
     pub type_id : TypeId,
@@ -32,20 +33,6 @@ pub struct ModelSpace<'a> {
 }
 
 impl <'a> ModelSpace<'a> {
-    pub fn get_random_model_key(&self, rng : &mut ThreadRng) -> ModelKey {
-        let num_entries = self.models.len();
-        let rand_usize : usize = rng.gen();
-        let entry_index = rand_usize % num_entries;
-        let mut i = 0;
-        for model_key in self.models.keys() {
-            if (i == entry_index) {
-                return *model_key;
-            }
-            i += 1;
-        }
-        panic!();
-    }
-
     pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbeddingSpace<'a> {
         //We do this for speed, but also because the variation should
         //already mostly be captured in the values for the embeddings

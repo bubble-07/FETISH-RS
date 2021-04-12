@@ -6,8 +6,9 @@ use crate::space_info::*;
 use crate::typed_vector::*;
 use crate::type_id::*;
 use crate::context::*;
+use crate::term_index::*;
 
-type ModelKey = usize;
+type ModelKey = TermIndex;
 
 pub struct SampledEmbeddingSpace<'a> {
     pub type_id : TypeId,
@@ -41,8 +42,8 @@ impl<'a> SampledEmbeddingSpace<'a> {
 
     pub fn get_best_term_index_to_pass_with_value(&self, func_mat : &Array2<f32>, ret_type : TypeId,
                                             value_field_state : &SampledValueFieldState)
-                                         -> (usize, TypedVector, f32) {
-        let mut best_arg_index = 0;
+                                         -> (TermIndex, TypedVector, f32) {
+        let mut best_arg_index = Option::None;
         let mut best_ret_vec = Option::None;
         let mut best_arg_value = f32::NEG_INFINITY;
 
@@ -57,16 +58,16 @@ impl<'a> SampledEmbeddingSpace<'a> {
             if (value > best_arg_value || best_ret_vec.is_none()) {
                 best_arg_value = value;
                 best_ret_vec = Option::Some(typed_ret_vec);
-                best_arg_index = *arg_index;
+                best_arg_index = Option::Some(*arg_index);
             }
         }
-        (best_arg_index, best_ret_vec.unwrap(), best_arg_value)
+        (best_arg_index.unwrap(), best_ret_vec.unwrap(), best_arg_value)
     }
 
     pub fn get_best_term_index_to_apply_with_value(&self, featurized_arg_vector : &Array1<f32>, 
                                          ret_type : TypeId, value_field_state : &SampledValueFieldState) 
-                                         -> (usize, TypedVector, f32) {
-        let mut best_model_index = 0;
+                                         -> (TermIndex, TypedVector, f32) {
+        let mut best_model_index = Option::None;
         let mut best_compressed_vec = Option::None;
         let mut best_model_value = f32::NEG_INFINITY;
 
@@ -81,10 +82,10 @@ impl<'a> SampledEmbeddingSpace<'a> {
             if (value > best_model_value || best_compressed_vec.is_none()) {
                 best_model_value = value;
                 best_compressed_vec = Option::Some(typed_ret_vec);
-                best_model_index = *model_index;
+                best_model_index = Option::Some(*model_index);
             }
         }
-        (best_model_index, best_compressed_vec.unwrap(), best_model_value)
+        (best_model_index.unwrap(), best_compressed_vec.unwrap(), best_model_value)
     }
 
     pub fn new(type_id : TypeId, elaborator : Array2<f32>, ctxt : &'a Context) -> SampledEmbeddingSpace<'a> {

@@ -3,6 +3,9 @@
 #![allow(unused_imports)]
 #![allow(unused_parens)]
 
+mod nonprimitive_term_pointer;
+mod primitive_term_pointer;
+mod term_index;
 mod displayable_with_context;
 mod primitive_type_space;
 mod primitive_directory;

@@ -3,10 +3,12 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use std::collections::HashMap;
+use crate::nonprimitive_term_pointer::*;
 use crate::type_id::*;
 use crate::application_chain::*;
 use crate::application_table::*;
 use crate::type_space::*;
+use crate::term_index::*;
 use crate::term::*;
 use crate::context::*;
 use crate::params::*;
@@ -14,6 +16,7 @@ use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::term_application::*;
 use crate::term_application_result::*;
+use crate::primitive_term_pointer::*;
 use crate::func_impl::*;
 use topological_sort::TopologicalSort;
 
@@ -21,7 +24,7 @@ pub struct InterpreterState<'a> {
     pub application_tables : HashMap::<TypeId, ApplicationTable<'a>>,
     pub type_spaces : HashMap::<TypeId, TypeSpace>,
     pub new_term_app_results : Vec::<TermApplicationResult>,
-    pub new_terms : Vec::<TermPointer>,
+    pub new_terms : Vec::<NonPrimitiveTermPointer>,
     pub ctxt : &'a Context
 }
 
@@ -35,7 +38,7 @@ impl <'a> InterpreterState<'a> {
         self.new_terms.clear();
     }
 
-    pub fn store_term(&mut self, type_id : TypeId, term : PartiallyAppliedTerm) -> TermPointer {
+    pub fn store_term(&mut self, type_id : TypeId, term : PartiallyAppliedTerm) -> NonPrimitiveTermPointer {
         let type_space : &mut TypeSpace = self.type_spaces.get_mut(&type_id).unwrap();
         let result = type_space.add(term);
 
@@ -43,7 +46,23 @@ impl <'a> InterpreterState<'a> {
         result
     }
 
-    pub fn get(&self, term_ptr : &TermPointer) -> &PartiallyAppliedTerm {
+    pub fn get(&self, term_ptr : &TermPointer) -> PartiallyAppliedTerm {
+        match (term_ptr.index) {
+            TermIndex::Primitive(index) => {
+                let primitive_ptr = PrimitiveTermPointer {
+                    type_id : term_ptr.type_id,
+                    index : index
+                };
+                let result = PartiallyAppliedTerm::new(primitive_ptr);
+                result
+            },
+            TermIndex::NonPrimitive(index) => {
+                self.type_spaces.get(&term_ptr.type_id).unwrap().get(index).clone()
+            }
+        }
+    }
+
+    pub fn get_nonprimitive(&self, term_ptr : &NonPrimitiveTermPointer) -> &PartiallyAppliedTerm {
         self.type_spaces.get(&term_ptr.type_id).unwrap().get(term_ptr.index)
     }
 
@@ -124,13 +143,10 @@ impl <'a> InterpreterState<'a> {
             let result : TermReference = application_table.get_computed(&term_app);
             result
         } else {
-            let func_term : PartiallyAppliedTerm = {
-                let func_space : &TypeSpace = self.type_spaces.get(&func_type_id).unwrap();
-                func_space.get(term_app.func_ptr.index).clone()
-            };
+            let func_term : PartiallyAppliedTerm = self.get(&term_app.func_ptr);
             let arg_ref : TermReference = term_app.arg_ref.clone();
 
-            let func_impl = func_term.func_impl;
+            let func_impl = self.ctxt.get_primitive(&func_term.func_ptr);
             let mut args_copy = func_term.args.clone();
 
             args_copy.push(arg_ref);
@@ -139,12 +155,12 @@ impl <'a> InterpreterState<'a> {
                 func_impl.evaluate(self, args_copy)
             } else {
                 let result = PartiallyAppliedTerm {
-                    func_impl : func_impl,
+                    func_ptr : func_term.func_ptr.clone(),
                     args : args_copy
                 };
                 let ret_type_id : TypeId = term_app.get_ret_type(self.ctxt);
                 let ret_ptr = self.store_term(ret_type_id, result);
-                let ret_ref = TermReference::FuncRef(ret_ptr);
+                let ret_ref = TermReference::FuncRef(TermPointer::from(ret_ptr));
                 ret_ref
             };
             let application_table : &mut ApplicationTable = self.application_tables.get_mut(&func_type_id).unwrap();
@@ -159,116 +175,6 @@ impl <'a> InterpreterState<'a> {
             result_ref
         }
     }
-    
-    pub fn ensure_every_term_has_an_application(&mut self) {
-        let mut topo_sort = TopologicalSort::<TypeId>::new();
-        for i in 0..self.ctxt.get_total_num_types() {
-            let type_id = i as TypeId;
-            if let Type::FuncType(arg_type_id, ret_type_id) = self.ctxt.get_type(type_id) {
-                topo_sort.add_dependency(type_id, arg_type_id);
-                topo_sort.add_dependency(type_id, ret_type_id);
-            }
-        }
-
-        while (topo_sort.len() > 0) {
-            let mut type_ids = topo_sort.pop_all();
-            for func_type_id in type_ids.drain(..) {
-                if let Type::FuncType(arg_type_id, _) = self.ctxt.get_type(func_type_id) {
-                    let func_space = self.type_spaces.get(&func_type_id).unwrap();
-
-                    for index in 0..func_space.get_num_terms() {
-                        let func_ptr = TermPointer {
-                            type_id : func_type_id,
-                            index
-                        };
-                        let num_existing_app_results = {
-                            let app_table = self.application_tables.get(&func_type_id).unwrap();
-                            let existing_app_results = app_table.get_app_results_with_func(&func_ptr);  
-                            existing_app_results.len()
-                        };
-
-                        if (num_existing_app_results == 0) {
-                            let arg_ref = match (self.ctxt.get_type(arg_type_id)) {
-                                Type::FuncType(_, _) => {
-                                    let arg_space = self.type_spaces.get(&arg_type_id).unwrap();
-                                    let arg_ptr = arg_space.draw_random_ptr().unwrap();
-                                    TermReference::FuncRef(arg_ptr)
-                                },
-                                Type::VecType(dim) => {
-                                    TermReference::VecRef(arg_type_id, Array::zeros((dim,)))
-                                }
-                            };
-                            let term_app = TermApplication {
-                                func_ptr : func_ptr.clone(),
-                                arg_ref : arg_ref
-                            };
-
-                            self.evaluate(&term_app);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fn ensure_every_type_has_a_term(&mut self) {
-        let mut type_to_term = HashMap::<TypeId, TermReference>::new();
-        //Initial population
-        for i in 0..self.ctxt.get_total_num_types() {
-            let type_id = i as TypeId;
-            let kind = self.ctxt.get_type(type_id);
-            match (kind) {
-                Type::VecType(n) => {
-                    type_to_term.insert(type_id, TermReference::VecRef(type_id, Array::zeros((n,))));
-                },
-                Type::FuncType(_, _) => {
-                    let type_space = self.type_spaces.get(&type_id).unwrap();
-                    let maybe_func_ptr = type_space.draw_random_ptr();
-                    if let Option::Some(func_ptr) = maybe_func_ptr {
-                        type_to_term.insert(type_id, TermReference::FuncRef(func_ptr));
-                    }
-                }
-            }
-        }
-        loop {
-            let mut found_something = false;
-            for i in 0..self.ctxt.get_total_num_types() {
-                let func_type_id = i as TypeId;
-
-                if let Option::Some(func_term) = type_to_term.get(&func_type_id) {
-                    if let Type::FuncType(arg_type_id, ret_type_id) = self.ctxt.get_type(func_type_id) {
-                        if let Option::Some(arg_ref) = type_to_term.get(&arg_type_id) {
-                            if (!type_to_term.contains_key(&ret_type_id)) {
-                                if let TermReference::FuncRef(func_ptr) = func_term {
-                                    let application = TermApplication {
-                                        func_ptr : func_ptr.clone(),
-                                        arg_ref : arg_ref.clone()
-                                    };
-                                    let result_ref = self.evaluate(&application);
-                                    type_to_term.insert(ret_type_id, result_ref);
-
-                                    found_something = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if (!found_something) {
-                break;
-            }
-        }
-    }
-
-    pub fn add_init(&mut self, func : Box<dyn FuncImpl>) -> TermPointer {
-        let func_type_id : TypeId = func.func_type(&self.ctxt.type_info_directory);
-        let type_space : &mut TypeSpace = self.type_spaces.get_mut(&func_type_id).unwrap();
-        let result = type_space.add_init(func);
-
-        self.new_terms.push(result.clone());
-
-        result
-    }
 
     pub fn new(ctxt : &'a Context) -> InterpreterState<'a> {
         //Initialize hashmaps for each type in the global type table 
@@ -282,29 +188,13 @@ impl <'a> InterpreterState<'a> {
             }
         }
 
-        let mut result = InterpreterState {
+        let result = InterpreterState {
             application_tables,
             type_spaces,
             new_term_app_results : Vec::new(),
             new_terms : Vec::new(),
             ctxt
         };
-
-        //Now populate the type spaces with the known function implementations
-        //using TypeSpace#add(PartiallyAppliedTerm)
-        
-        //TODO: Add primitives
-        for type_id in 0..ctxt.get_total_num_types() {
-            if (!ctxt.is_vector_type(type_id)) {
-                let primitive_type_space = ctxt.primitive_directory.primitive_type_spaces.get(&type_id).unwrap();
-                for term in primitive_type_space.terms.iter() {
-                    result.add_init(term.clone());
-                }
-            }
-        }
-       
-        result.ensure_every_type_has_a_term();
-        result.ensure_every_term_has_an_application();
 
         result
     }

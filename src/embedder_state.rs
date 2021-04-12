@@ -8,6 +8,7 @@ use std::collections::HashSet;
 use std::collections::HashMap;
 use crate::sampled_embedder_state::*;
 use crate::data_update::*;
+use crate::term_index::*;
 use crate::interpreter_state::*;
 use crate::type_id::*;
 use crate::term_pointer::*;
@@ -50,7 +51,15 @@ impl<'a> EmbedderState<'a> {
         let mut model_spaces = HashMap::new();
         for func_type_id in 0..ctxt.get_total_num_types() {
             if (!ctxt.is_vector_type(func_type_id)) {
-                let model_space = ModelSpace::new(func_type_id, ctxt);
+                let mut model_space = ModelSpace::new(func_type_id, ctxt);
+
+                //Initialize embeddings for primitive terms
+                let primitive_type_space = ctxt.primitive_directory
+                                               .primitive_type_spaces.get(&func_type_id).unwrap();
+                for term_index in 0..primitive_type_space.terms.len() {
+                    model_space.add_model(TermIndex::Primitive(term_index));
+                }
+
                 model_spaces.insert(func_type_id, model_space);
             }
         }
@@ -61,17 +70,18 @@ impl<'a> EmbedderState<'a> {
         }
     }
 
-    pub fn init_embeddings(&mut self, interpreter_state : &InterpreterState) {
+    pub fn init_embeddings_for_new_terms(&mut self, interpreter_state : &InterpreterState) {
         trace!("Initializing embeddings for {} new terms", interpreter_state.new_terms.len());
-        for term_ptr in interpreter_state.new_terms.iter() {
-            if (!self.has_embedding(term_ptr)) {
-                self.init_embedding(term_ptr.clone());
+        for nonprimitive_term_ptr in interpreter_state.new_terms.iter() {
+            let term_ptr = TermPointer::from(nonprimitive_term_ptr.clone());
+            if (!self.has_embedding(&term_ptr)) {
+                self.init_embedding(term_ptr);
             }
         }
     }
 
     pub fn bayesian_update_step(&mut self, interpreter_state : &InterpreterState) {
-        self.init_embeddings(interpreter_state);
+        self.init_embeddings_for_new_terms(interpreter_state);
 
         let mut data_updated_terms : HashSet<TermPointer> = HashSet::new();
         let mut prior_updated_terms : HashSet<TermPointer> = HashSet::new();

@@ -10,7 +10,7 @@ use crate::displayable_with_state::*;
 use crate::interpreter_state::*;
 use noisy_float::prelude::*;
 
-#[derive(Clone, PartialEq, Hash, Eq, Debug)]
+#[derive(Clone, PartialEq, Hash, Eq)]
 pub enum TermReference {
     FuncRef(TermPointer),
     VecRef(TypeId, Array1<R32>)

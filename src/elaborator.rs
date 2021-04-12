@@ -15,10 +15,11 @@ use crate::model::*;
 use crate::prior_specification::*;
 use crate::context::*;
 use std::collections::HashMap;
+use crate::term_index::*;
 
 //Learned "opposite" of the sketcher for a given type
 
-type ModelKey = usize;
+type ModelKey = TermIndex;
 
 pub struct Elaborator<'a> {
     pub type_id : TypeId,

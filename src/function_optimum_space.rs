@@ -2,6 +2,7 @@ use ndarray::*;
 use std::collections::HashMap;
 use crate::model::*;
 use crate::normal_inverse_wishart_sampler::*;
+use crate::term_index::*;
 use crate::params::*;
 use crate::value_field_maximum_solver::*;
 use crate::type_id::*;
@@ -16,8 +17,9 @@ use argmin::solver::gradientdescent::SteepestDescent;
 use argmin::solver::linesearch::MoreThuenteLineSearch;
 
 use crate::context::*;
+use crate::term_index::*;
 
-type ModelKey = usize;
+type ModelKey = TermIndex;
 
 pub struct FunctionOptimumSpace<'a> {
     pub func_type_id : TypeId,
@@ -77,8 +79,8 @@ impl <'a> FunctionOptimumSpace<'a> {
         self.optimal_input_vectors.get(&model_key).unwrap()
     }
     pub fn update(&mut self, sampled_embeddings : &SampledEmbeddingSpace, 
-                             value_field_state : &SampledValueFieldState) -> (usize, f32) {
-        let mut best_index = 0;
+                             value_field_state : &SampledValueFieldState) -> (TermIndex, f32) {
+        let mut best_index = Option::None;
         let mut best_value = f32::NEG_INFINITY;
 
         let func_space_info = self.ctxt.get_function_space_info(self.func_type_id);
@@ -139,9 +141,9 @@ impl <'a> FunctionOptimumSpace<'a> {
 
             let final_vector = match (maybe_result) {
                 Ok(result) => {
-                    if (-result.state.cost > best_value) {
+                    if (-result.state.cost >= best_value || best_index.is_none()) {
                         best_value = -result.state.cost;
-                        best_index = *model_key;
+                        best_index = Option::Some(*model_key);
                     }
                     result.state.param
                 },
@@ -166,6 +168,6 @@ impl <'a> FunctionOptimumSpace<'a> {
         self.optimal_input_mapping += data_points;
         self.optimal_input_mapping_sampler = NormalInverseWishartSampler::new(&self.optimal_input_mapping.data);
 
-        (best_index, best_value)
+        (best_index.unwrap(), best_value)
     }
 }

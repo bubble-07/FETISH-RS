@@ -1,9 +1,11 @@
 use crate::type_graph::*;
 use crate::type_id::*;
 use crate::space_info::*;
+use crate::func_impl::*;
 use crate::function_space_info::*;
 use crate::feature_space_info::*;
 use crate::primitive_directory::*;
+use crate::primitive_term_pointer::*;
 
 pub struct Context {
     pub type_info_directory : TypeInfoDirectory,
@@ -24,6 +26,9 @@ pub fn get_default_context() -> Context {
 
 impl Context {
     //Primitive information
+    pub fn get_primitive(&self, primitive_term_pointer : &PrimitiveTermPointer) -> &dyn FuncImpl {
+        self.primitive_directory.get_primitive(primitive_term_pointer)
+    }
 
     //Space information
     pub fn get_feature_space_info(&self, type_id : TypeId) -> &FeatureSpaceInfo {
