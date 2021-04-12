@@ -74,7 +74,7 @@ impl<'a> EmbedderState<'a> {
         trace!("Initializing embeddings for {} new terms", interpreter_state.new_terms.len());
         for nonprimitive_term_ptr in interpreter_state.new_terms.iter() {
             let term_ptr = TermPointer::from(nonprimitive_term_ptr.clone());
-            if (!self.has_embedding(&term_ptr)) {
+            if (!self.has_embedding(term_ptr)) {
                 self.init_embedding(term_ptr);
             }
         }
@@ -106,17 +106,17 @@ impl<'a> EmbedderState<'a> {
         self.update_elaborators(all_updated_terms);
     }
 
-    pub fn has_embedding(&self, term_ptr : &TermPointer) -> bool {
+    pub fn has_embedding(&self, term_ptr : TermPointer) -> bool {
         let space : &ModelSpace = self.model_spaces.get(&term_ptr.type_id).unwrap();
         space.has_model(term_ptr.index)
     }
 
-    pub fn get_embedding(&self, term_ptr : &TermPointer) -> &TermModel {
+    pub fn get_embedding(&self, term_ptr : TermPointer) -> &TermModel {
         let space = self.get_model_space(term_ptr);
         space.get_model(term_ptr.index)
     }
 
-    pub fn get_model_space(&self, term_ptr : &TermPointer) -> &ModelSpace {
+    pub fn get_model_space(&self, term_ptr : TermPointer) -> &ModelSpace {
         self.model_spaces.get(&term_ptr.type_id).unwrap()
     }
 
@@ -130,17 +130,17 @@ impl<'a> EmbedderState<'a> {
         space.add_model(term_ptr.index)
     }
 
-    fn get_schmear_from_ptr(&self, term_ptr : &TermPointer) -> FuncSchmear {
+    fn get_schmear_from_ptr(&self, term_ptr : TermPointer) -> FuncSchmear {
         let embedding : &TermModel = self.get_embedding(term_ptr);
         embedding.get_schmear()
     }
 
-    fn get_inverse_schmear_from_ptr(&self, term_ptr : &TermPointer) -> FuncInverseSchmear {
+    fn get_inverse_schmear_from_ptr(&self, term_ptr : TermPointer) -> FuncInverseSchmear {
         let embedding : &TermModel = self.get_embedding(term_ptr);
         embedding.get_inverse_schmear()
     }
 
-    fn get_compressed_schmear_from_ptr(&self, term_ptr : &TermPointer) -> Schmear {
+    fn get_compressed_schmear_from_ptr(&self, term_ptr : TermPointer) -> Schmear {
         let type_id = term_ptr.type_id;
         let func_schmear = self.get_schmear_from_ptr(term_ptr);
         let func_feat_info = self.ctxt.get_feature_space_info(type_id);
@@ -151,7 +151,7 @@ impl<'a> EmbedderState<'a> {
 
     fn get_compressed_schmear_from_ref(&self, term_ref : &TermReference) -> Schmear {
         match term_ref {
-            TermReference::FuncRef(func_ptr) => self.get_compressed_schmear_from_ptr(&func_ptr),
+            TermReference::FuncRef(func_ptr) => self.get_compressed_schmear_from_ptr(*func_ptr),
             TermReference::VecRef(_, vec) => Schmear::from_vector(vec.view())
         }
     }
@@ -179,7 +179,7 @@ impl<'a> EmbedderState<'a> {
         let mut stack = Vec::<TermApplicationResult>::new();
 
         for func_ptr in to_propagate {
-            let applications = interpreter_state.get_app_results_with_func(func_ptr);
+            let applications = interpreter_state.get_app_results_with_func(*func_ptr);
             for application in applications {
                 if let TermReference::FuncRef(_) = application.get_ret_ref() {
                     if (self.has_nontrivial_prior_update(&application)) {
@@ -198,7 +198,7 @@ impl<'a> EmbedderState<'a> {
             ret_type_set.insert(elem.get_ret_type(self.ctxt));
 
             if let TermReference::FuncRef(ret_func_ptr) = ret_ref {
-                let applications = interpreter_state.get_app_results_with_func(&ret_func_ptr); 
+                let applications = interpreter_state.get_app_results_with_func(ret_func_ptr); 
                 for application in applications {
                     if let TermReference::FuncRef(_) = application.get_ret_ref() {
                         if (self.has_nontrivial_prior_update(&application)) {
@@ -277,7 +277,7 @@ impl<'a> EmbedderState<'a> {
     }
 
     fn get_prior_propagation_func_schmear(&self, term_app_res : &TermApplicationResult) -> FuncSchmear {
-        let func_model = self.get_embedding(&term_app_res.get_func_ptr());
+        let func_model = self.get_embedding(term_app_res.get_func_ptr());
         //If the model for the function has any data update involving
         //the argument, we need to consider the model with it removed
         let arg_ref = &term_app_res.get_arg_ref();
@@ -294,7 +294,7 @@ impl<'a> EmbedderState<'a> {
     }
 
     fn has_nontrivial_prior_update(&self, term_app_res : &TermApplicationResult) -> bool {
-        let func_model = self.get_embedding(&term_app_res.get_func_ptr());
+        let func_model = self.get_embedding(term_app_res.get_func_ptr());
         let arg_ref = &term_app_res.get_arg_ref();
         let mut num_data_updates = func_model.data_updates.len();
         if (func_model.has_data(arg_ref)) {
@@ -324,7 +324,7 @@ impl<'a> EmbedderState<'a> {
 
         if let TermReference::FuncRef(ret_ptr) = term_app_res.get_ret_ref() {
             let out_prior : NormalInverseWishart = ret_space.schmear_to_prior(&self, elaborator_func_schmear,
-                                                                              &ret_ptr, &out_schmear);
+                                                                              ret_ptr, &out_schmear);
             //Actually perform the update
             let ret_embedding : &mut TermModel = self.get_mut_embedding(ret_ptr);
             if (ret_embedding.has_prior(&term_app_res.term_app)) {

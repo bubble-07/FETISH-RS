@@ -48,7 +48,7 @@ impl <'a> ModelSpace<'a> {
     }
 
     pub fn schmear_to_prior(&self, embedder_state : &EmbedderState, elaborator_func_schmear : &FuncSchmear,
-                        func_ptr : &TermPointer, in_schmear : &Schmear) -> NormalInverseWishart {
+                        func_ptr : TermPointer, in_schmear : &Schmear) -> NormalInverseWishart {
         let func_space_info = self.ctxt.get_function_space_info(self.type_id);
         let s = func_space_info.get_feature_dimensions();
         let t = func_space_info.get_output_dimensions();

@@ -83,7 +83,7 @@ pub fn get_default_primitive_directory(type_info_directory : &TypeInfoDirectory)
 
 impl PrimitiveDirectory {
 
-    pub fn get_primitive(&self, primitive_term_pointer : &PrimitiveTermPointer) -> &dyn FuncImpl {
+    pub fn get_primitive(&self, primitive_term_pointer : PrimitiveTermPointer) -> &dyn FuncImpl {
         let primitive_type_space = self.primitive_type_spaces.get(&primitive_term_pointer.type_id).unwrap();
         let term = &primitive_type_space.terms[primitive_term_pointer.index];
         term.as_ref()

@@ -3,7 +3,7 @@ use crate::type_id::*;
 use crate::displayable_with_context::*;
 use crate::context::*;
 
-#[derive(Clone, PartialEq, Hash, Eq)]
+#[derive(Copy, Clone, PartialEq, Hash, Eq)]
 pub struct PrimitiveTermPointer {
     pub type_id : TypeId,
     pub index : usize
@@ -11,7 +11,7 @@ pub struct PrimitiveTermPointer {
 
 impl DisplayableWithContext for PrimitiveTermPointer {
     fn display(&self, ctxt : &Context) -> String {
-        let primitive = ctxt.get_primitive(&self);
+        let primitive = ctxt.get_primitive(*self);
         primitive.get_name()
     }
 }

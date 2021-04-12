@@ -46,7 +46,7 @@ impl <'a> InterpreterState<'a> {
         result
     }
 
-    pub fn get(&self, term_ptr : &TermPointer) -> PartiallyAppliedTerm {
+    pub fn get(&self, term_ptr : TermPointer) -> PartiallyAppliedTerm {
         match (term_ptr.index) {
             TermIndex::Primitive(index) => {
                 let primitive_ptr = PrimitiveTermPointer {
@@ -62,7 +62,7 @@ impl <'a> InterpreterState<'a> {
         }
     }
 
-    pub fn get_nonprimitive(&self, term_ptr : &NonPrimitiveTermPointer) -> &PartiallyAppliedTerm {
+    pub fn get_nonprimitive(&self, term_ptr : NonPrimitiveTermPointer) -> &PartiallyAppliedTerm {
         self.type_spaces.get(&term_ptr.type_id).unwrap().get(term_ptr.index)
     }
 
@@ -75,7 +75,7 @@ impl <'a> InterpreterState<'a> {
         result
     }
 
-    pub fn get_app_results_with_func(&self, func : &TermPointer) -> Vec<TermApplicationResult> {
+    pub fn get_app_results_with_func(&self, func : TermPointer) -> Vec<TermApplicationResult> {
         let mut result : Vec<TermApplicationResult> = Vec::new();
         for table in self.application_tables.values() {
             let mut temp = table.get_app_results_with_func(func);
@@ -143,10 +143,10 @@ impl <'a> InterpreterState<'a> {
             let result : TermReference = application_table.get_computed(&term_app);
             result
         } else {
-            let func_term : PartiallyAppliedTerm = self.get(&term_app.func_ptr);
+            let func_term : PartiallyAppliedTerm = self.get(term_app.func_ptr);
             let arg_ref : TermReference = term_app.arg_ref.clone();
 
-            let func_impl = self.ctxt.get_primitive(&func_term.func_ptr);
+            let func_impl = self.ctxt.get_primitive(func_term.func_ptr);
             let mut args_copy = func_term.args.clone();
 
             args_copy.push(arg_ref);

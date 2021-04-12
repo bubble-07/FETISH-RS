@@ -62,7 +62,7 @@ impl<'a> InterpreterAndEmbedderState<'a> {
     pub fn get_new_constraints(&self, sampled_embedder_state : &SampledEmbedderState) -> ConstraintCollection {
         let mut constraints = Vec::new();
         for term_app_result in &self.interpreter_state.new_term_app_results {
-            let func_ptr = &term_app_result.term_app.func_ptr;
+            let func_ptr = term_app_result.term_app.func_ptr;
             let func_type_id = func_ptr.type_id;
 
             let result_ref = &term_app_result.result_ref;
@@ -76,9 +76,9 @@ impl<'a> InterpreterAndEmbedderState<'a> {
                 let arg_vec = match (arg_ref) {
                     TermReference::VecRef(_, vec) => from_noisy(vec.view()),
                     TermReference::FuncRef(func_ptr) => 
-                        sampled_embedder_state.get_model_embedding(func_ptr).sampled_vec.clone()
+                        sampled_embedder_state.get_model_embedding(*func_ptr).sampled_vec.clone()
                 };
-                let ret_vec = sampled_embedder_state.get_model_embedding(result_ptr).sampled_vec.clone();
+                let ret_vec = sampled_embedder_state.get_model_embedding(*result_ptr).sampled_vec.clone();
 
                 let vector_application_result = VectorApplicationResult {
                     func_type_id,

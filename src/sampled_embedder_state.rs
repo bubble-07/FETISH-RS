@@ -20,11 +20,11 @@ pub struct SampledEmbedderState<'a> {
 }
 
 impl<'a> SampledEmbedderState<'a> {
-    pub fn has_embedding(&self, term_ptr : &TermPointer) -> bool {
+    pub fn has_embedding(&self, term_ptr : TermPointer) -> bool {
         let space = self.embedding_spaces.get(&term_ptr.type_id).unwrap();
         space.has_embedding(term_ptr.index)
     }
-    pub fn get_model_embedding(&self, term_ptr : &TermPointer) -> &SampledModelEmbedding {
+    pub fn get_model_embedding(&self, term_ptr : TermPointer) -> &SampledModelEmbedding {
         let space = self.embedding_spaces.get(&term_ptr.type_id).unwrap();
         space.get_embedding(term_ptr.index)
     }

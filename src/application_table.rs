@@ -47,8 +47,8 @@ impl <'a> ApplicationTable<'a> {
         }
     }
 
-    pub fn get_app_results_with_func(&self, func : &TermPointer) -> Vec<TermApplicationResult> {
-        match (self.func_to_application_map.get_vec(func)) {
+    pub fn get_app_results_with_func(&self, func : TermPointer) -> Vec<TermApplicationResult> {
+        match (self.func_to_application_map.get_vec(&func)) {
             Option::Some(vec) => vec.clone(),
             Option::None => Vec::new()
         }

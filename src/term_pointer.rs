@@ -8,7 +8,7 @@ use crate::term_index::*;
 use crate::primitive_term_pointer::*;
 use crate::nonprimitive_term_pointer::*;
 
-#[derive(Clone, PartialEq, Hash, Eq)]
+#[derive(Copy, Clone, PartialEq, Hash, Eq)]
 pub struct TermPointer {
     pub type_id : TypeId,
     pub index : TermIndex
@@ -16,7 +16,7 @@ pub struct TermPointer {
 
 impl DisplayableWithState for TermPointer {
     fn display(&self, state : &InterpreterState) -> String {
-        let term = state.get(self);
+        let term = state.get(*self);
         term.display(state)
     }
 }

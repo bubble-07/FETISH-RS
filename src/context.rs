@@ -26,7 +26,7 @@ pub fn get_default_context() -> Context {
 
 impl Context {
     //Primitive information
-    pub fn get_primitive(&self, primitive_term_pointer : &PrimitiveTermPointer) -> &dyn FuncImpl {
+    pub fn get_primitive(&self, primitive_term_pointer : PrimitiveTermPointer) -> &dyn FuncImpl {
         self.primitive_directory.get_primitive(primitive_term_pointer)
     }
 
