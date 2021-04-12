@@ -20,9 +20,9 @@ impl InverseSchmear {
     ///yields the [`CompressedInverseSchmear`] representing the quadratic
     ///form `x -> (u - Mx)^T P (u - Mx)`, where `u` and `P` are this [`InverseSchmear`]'s
     ///mean vector and precision matrix, respectively
-    pub fn compress(&self, expansion_mat : &Array2<f32>) -> CompressedInverseSchmear {
+    pub fn compress(&self, expansion_mat : ArrayView2<f32>) -> CompressedInverseSchmear {
         let m_t_lambda = expansion_mat.t().dot(&self.precision);
-        let Q = m_t_lambda.dot(expansion_mat);
+        let Q = m_t_lambda.dot(&expansion_mat);
         let z = m_t_lambda.dot(&self.mean);
 
         let u_t_lambda_u = self.mean.dot(&self.precision).dot(&self.mean);
@@ -59,19 +59,19 @@ impl InverseSchmear {
     ///Computes the squared Mahalanobis distance
     ///`(u - x)^T P (u - x)` of the argument, where `u` and `P` are this [`InverseSchmear`]'s
     ///mean vector and precision matrix, respectively, and `x` is the passed vector.
-    pub fn sq_mahalanobis_dist(&self, vec : &Array1<f32>) -> f32 {
-        let diff = vec - &self.mean;
+    pub fn sq_mahalanobis_dist(&self, vec : ArrayView1<f32>) -> f32 {
+        let diff = &vec - &self.mean;
         let precision_diff = self.precision.dot(&diff);
         let result : f32 = diff.dot(&precision_diff);
         result
     }
 
     ///Creates a [`InverseSchmear`] with the given mean and an all-zero precision matrix.
-    pub fn zero_precision_from_vec(vec : &Array1<f32>) -> InverseSchmear {
+    pub fn zero_precision_from_vec(vec : Array1<f32>) -> InverseSchmear {
         let n = vec.len();
         let precision = Array::zeros((n, n));
         InverseSchmear {
-            mean : vec.clone(),
+            mean : vec,
             precision
         }
      }

@@ -25,12 +25,12 @@ impl<'a> SampledEmbeddingSpace<'a> {
         self.models.get(&model_key).unwrap()
     }
 
-    pub fn expand_compressed_vector(&self, compressed_vec : &Array1<f32>) -> Array1<f32> {
-        let elaborated_vec = self.elaborator.dot(compressed_vec);
+    pub fn expand_compressed_vector(&self, compressed_vec : ArrayView1<f32>) -> Array1<f32> {
+        let elaborated_vec = self.elaborator.dot(&compressed_vec);
         elaborated_vec
     }
 
-    pub fn expand_compressed_function(&self, compressed_vec : &Array1<f32>) -> Array2<f32> {
+    pub fn expand_compressed_function(&self, compressed_vec : ArrayView1<f32>) -> Array2<f32> {
         let func_space_info = self.ctxt.get_function_space_info(self.type_id);
         let feat_dims = func_space_info.get_feature_dimensions();
         let out_dims = func_space_info.get_output_dimensions();
@@ -40,7 +40,7 @@ impl<'a> SampledEmbeddingSpace<'a> {
         result
     }
 
-    pub fn get_best_term_index_to_pass_with_value(&self, func_mat : &Array2<f32>, ret_type : TypeId,
+    pub fn get_best_term_index_to_pass_with_value(&self, func_mat : ArrayView2<f32>, ret_type : TypeId,
                                             value_field_state : &SampledValueFieldState)
                                          -> (TermIndex, TypedVector, f32) {
         let mut best_arg_index = Option::None;
@@ -64,7 +64,7 @@ impl<'a> SampledEmbeddingSpace<'a> {
         (best_arg_index.unwrap(), best_ret_vec.unwrap(), best_arg_value)
     }
 
-    pub fn get_best_term_index_to_apply_with_value(&self, featurized_arg_vector : &Array1<f32>, 
+    pub fn get_best_term_index_to_apply_with_value(&self, featurized_arg_vector : ArrayView1<f32>, 
                                          ret_type : TypeId, value_field_state : &SampledValueFieldState) 
                                          -> (TermIndex, TypedVector, f32) {
         let mut best_model_index = Option::None;
@@ -73,7 +73,7 @@ impl<'a> SampledEmbeddingSpace<'a> {
 
         for (model_index, model) in self.models.iter() {
             let mat = &model.sampled_mat;
-            let compressed_ret_vec = mat.dot(featurized_arg_vector);
+            let compressed_ret_vec = mat.dot(&featurized_arg_vector);
             let typed_ret_vec = TypedVector {
                 vec : compressed_ret_vec,
                 type_id : ret_type

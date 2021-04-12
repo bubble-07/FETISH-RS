@@ -36,13 +36,13 @@ pub struct NormalInverseWishart {
     pub s : usize
 }
 
-pub fn mean_to_array(mean : &Array2<f32>) -> Array1<f32> {
+pub fn mean_to_array(mean : ArrayView2<f32>) -> Array1<f32> {
     let t = mean.shape()[0];
     let s = mean.shape()[1];
     let n = t * s;
 
     let mut mean_copy = Array::zeros((t, s));
-    mean_copy.assign(mean);
+    mean_copy.assign(&mean);
 
     mean_copy.into_shape((n,)).unwrap()
 }
@@ -81,7 +81,7 @@ impl NormalInverseWishart {
     }
 
     pub fn get_mean_as_vec(&self) -> Array1::<f32> {
-        mean_to_array(&self.mean)
+        mean_to_array(self.mean.view())
     }
     pub fn get_mean(&self) -> Array2<f32> {
         self.mean.clone()
@@ -114,8 +114,8 @@ impl NormalInverseWishart {
         FuncScatterTensor::from_in_and_out_scatter(self.sigma.clone(), big_v_scaled)
     }
 
-    pub fn eval(&self, in_vec : &Array1<f32>) -> Array1<f32> {
-        self.mean.dot(in_vec)
+    pub fn eval(&self, in_vec : ArrayView1<f32>) -> Array1<f32> {
+        self.mean.dot(&in_vec)
     }
 }
 
@@ -232,16 +232,16 @@ impl NormalInverseWishart {
         let w = data_point.weight * s;
 
         let mut out_precision = self.precision.clone();
-        sherman_morrison_update(&mut out_precision, &mut self.sigma, w, x);
+        sherman_morrison_update(&mut out_precision, &mut self.sigma, w, x.view());
 
-        self.precision_u += &(w * outer(y, x));
+        self.precision_u += &(w * outer(y.view(), x.view()));
 
         let out_mean = self.precision_u.dot(&self.sigma);
 
         self.little_v += w;
 
-        let update_mean = (1.0f32 / x_norm_sq) * outer(y, x);
-        let update_precision = w * outer(x, x);
+        let update_mean = (1.0f32 / x_norm_sq) * outer(y.view(), x.view());
+        let update_precision = w * outer(x.view(), x.view());
 
         let initial_mean_diff = &out_mean - &self.mean;
         let update_mean_diff = &out_mean - &update_mean;

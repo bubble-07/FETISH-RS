@@ -34,9 +34,9 @@ impl FeatureSpaceInfo {
             Option::Some(sketch) => sketch.get_output_dimension()
         }
     }
-    pub fn sketch(&self, mean : &Array1<f32>) -> Array1<f32> {
+    pub fn sketch(&self, mean : ArrayView1<f32>) -> Array1<f32> {
         match (&self.sketcher) {
-            Option::None => mean.clone(),
+            Option::None => mean.to_owned(),
             Option::Some(sketch) => sketch.sketch(mean)
         }
     }
@@ -47,20 +47,20 @@ impl FeatureSpaceInfo {
             Option::Some(sketch) => sketch.compress_schmear(schmear)
         }
     }
-    pub fn get_feature_jacobian(&self, in_vec: &Array1<f32>) -> Array2<f32> {
+    pub fn get_feature_jacobian(&self, in_vec: ArrayView1<f32>) -> Array2<f32> {
         to_jacobian(&self.feature_collections, in_vec)
     }
 
-    pub fn get_features_from_base(&self, in_vec : &Array1<f32>) -> Array1<f32> {
+    pub fn get_features_from_base(&self, in_vec : ArrayView1<f32>) -> Array1<f32> {
         let sketched = self.sketch(in_vec);
-        self.get_features(&sketched)
+        self.get_features(sketched.view())
     }
 
-    pub fn get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
+    pub fn get_features(&self, in_vec : ArrayView1<f32>) -> Array1<f32> {
         to_features(&self.feature_collections, in_vec)
     }
 
-    pub fn get_features_mat(&self, in_mat : &Array2<f32>) -> Array2<f32> {
+    pub fn get_features_mat(&self, in_mat : ArrayView2<f32>) -> Array2<f32> {
         to_features_mat(&self.feature_collections, in_mat)
     }
 

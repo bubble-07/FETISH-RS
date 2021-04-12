@@ -50,9 +50,9 @@ impl<'a> FunctionOptimumState<'a> {
 
         let func_optimum_space = self.function_spaces.get(&func_type_id).unwrap();
         let best_arg_vector = func_optimum_space.estimate_optimal_vector_for_compressed_func(
-                                                 &compressed_func_vector.vec);
+                                                 compressed_func_vector.vec.view());
 
-        let best_feat_vector = arg_feat_space.get_features(&best_arg_vector);
+        let best_feat_vector = arg_feat_space.get_features(best_arg_vector.view());
         let func_mat = sampled_embedder_state.expand_compressed_function(compressed_func_vector);
         let ret_vec = func_mat.dot(&best_feat_vector);
         let ret_typed_vec = TypedVector {
@@ -81,7 +81,7 @@ impl<'a> FunctionOptimumState<'a> {
                     type_id : *func_type_id
                 };
                 let arg_vec = function_space.get_optimal_vector(func_index);
-                let arg_ref = TermReference::VecRef(arg_type_id, to_noisy(arg_vec));
+                let arg_ref = TermReference::VecRef(arg_type_id, to_noisy(arg_vec.view()));
                 let term_app = TermApplication {
                     func_ptr,
                     arg_ref

@@ -58,7 +58,7 @@ impl<'a> ValueFieldState<'a> {
     pub fn get_value_for_full_vector(&self, typed_vector : &TypedVector) -> f32 {
         let type_id = typed_vector.type_id;
         let value_field = self.get_value_field(type_id);
-        let result = value_field.get_value_for_full_vector(&typed_vector.vec);
+        let result = value_field.get_value_for_full_vector(typed_vector.vec.view());
         result
     }
 

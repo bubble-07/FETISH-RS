@@ -28,7 +28,7 @@ impl<'a> ValueFieldMaximumSolver<'a> {
         let mut max_value = f32::NEG_INFINITY;
         let mut result = &compressed_vecs[0];
         for compressed_vec in compressed_vecs {
-            let value = self.get_value(compressed_vec);
+            let value = self.get_value(compressed_vec.view());
             if (value > max_value) {
                 max_value = value;
                 result = compressed_vec;
@@ -45,19 +45,19 @@ impl<'a> ValueFieldMaximumSolver<'a> {
         self.value_field.get_type_id()
     }
 
-    fn get_value(&self, x_compressed : &Array1<f32>) -> f32 {
+    fn get_value(&self, x_compressed : ArrayView1<f32>) -> f32 {
         let func_space_info = self.get_context().get_function_space_info(self.get_function_type_id());
-        let y_compressed = func_space_info.apply(&self.func_mat, x_compressed);
+        let y_compressed = func_space_info.apply(self.func_mat.view(), x_compressed);
 
-        self.value_field.get_value_for_compressed_vector(&y_compressed)
+        self.value_field.get_value_for_compressed_vector(y_compressed.view())
     }
 
-    pub fn get_value_gradient(&self, x_compressed : &Array1<f32>) -> Array1<f32> {
+    pub fn get_value_gradient(&self, x_compressed : ArrayView1<f32>) -> Array1<f32> {
         let func_space_info = self.get_context().get_function_space_info(self.get_function_type_id());
-        let y_compressed = func_space_info.apply(&self.func_mat, x_compressed);
+        let y_compressed = func_space_info.apply(self.func_mat.view(), x_compressed);
 
-        let func_jacobian = func_space_info.jacobian(&self.func_mat, x_compressed);
-        let out_feat_jacobian = func_space_info.out_feat_info.get_feature_jacobian(&y_compressed);
+        let func_jacobian = func_space_info.jacobian(self.func_mat.view(), x_compressed);
+        let out_feat_jacobian = func_space_info.out_feat_info.get_feature_jacobian(y_compressed.view());
 
         let feat_vec_coefs = self.value_field.get_feat_vec_coefs();
         let value_field_grad = feat_vec_coefs.dot(&out_feat_jacobian).dot(&func_jacobian);
@@ -84,7 +84,7 @@ impl<'a> ArgminOp for ValueFieldMaximumSolver<'a> {
     type Float = f32;
 
     fn apply(&self, x_compressed : &Self::Param) -> Result<Self::Output, Error> {
-        let neg_result = self.get_value(x_compressed);
+        let neg_result = self.get_value(x_compressed.view());
         let result = -neg_result;
         if (result.is_finite()) {
             Ok(result)
@@ -94,9 +94,9 @@ impl<'a> ArgminOp for ValueFieldMaximumSolver<'a> {
     }
 
     fn gradient(&self, x_compressed : &Self::Param) -> Result<Self::Param, Error> {
-        let mut neg_result = self.get_value_gradient(x_compressed);
+        let mut neg_result = self.get_value_gradient(x_compressed.view());
         neg_result *= -1.0f32;
-        if (all_finite(&neg_result)) {
+        if (all_finite(neg_result.view())) {
             Ok(neg_result)
         } else {
             Err(anyhow!("Non-finite gradient {} for vector {}", neg_result, x_compressed))

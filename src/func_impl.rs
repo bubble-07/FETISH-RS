@@ -60,7 +60,7 @@ impl Hash for dyn FuncImpl + '_ {
 }
 
 pub trait BinaryArrayOperator {
-    fn act(&self, arg_one : &Array1::<R32>, arg_two : &Array1::<R32>) -> Array1::<R32>;
+    fn act(&self, arg_one : ArrayView1::<R32>, arg_two : ArrayView1::<R32>) -> Array1::<R32>;
     fn get_name(&self) -> String;
 }
 
@@ -82,8 +82,8 @@ pub struct AddOperator {
 }
 
 impl BinaryArrayOperator for AddOperator {
-    fn act(&self, arg_one : &Array1::<R32>, arg_two : &Array1::<R32>) -> Array1::<R32> {
-        arg_one + arg_two
+    fn act(&self, arg_one : ArrayView1::<R32>, arg_two : ArrayView1::<R32>) -> Array1::<R32> {
+        &arg_one + &arg_two
     }
     fn get_name(&self) -> String {
         String::from("+")
@@ -94,8 +94,8 @@ pub struct SubOperator {
 }
 
 impl BinaryArrayOperator for SubOperator {
-    fn act(&self, arg_one : &Array1::<R32>, arg_two : &Array1::<R32>) -> Array1::<R32> {
-        arg_one - arg_two
+    fn act(&self, arg_one : ArrayView1::<R32>, arg_two : ArrayView1::<R32>) -> Array1::<R32> {
+        &arg_one - &arg_two
     }
     fn get_name(&self) -> String {
         String::from("-")
@@ -106,8 +106,8 @@ pub struct MulOperator {
 }
 
 impl BinaryArrayOperator for MulOperator {
-    fn act(&self, arg_one : &Array1::<R32>, arg_two : &Array1::<R32>) -> Array1::<R32> {
-        arg_one * arg_two
+    fn act(&self, arg_one : ArrayView1::<R32>, arg_two : ArrayView1::<R32>) -> Array1::<R32> {
+        &arg_one * &arg_two
     }
     fn get_name(&self) -> String {
         String::from("*")
@@ -135,7 +135,7 @@ impl FuncImpl for BinaryFuncImpl {
     fn evaluate(&self, _state : &mut InterpreterState, args : Vec::<TermReference>) -> TermReference {
         if let TermReference::VecRef(_, arg_one_vec) = &args[0] {
             if let TermReference::VecRef(_, arg_two_vec) = &args[1] {
-                let result_vec = self.f.act(&arg_one_vec, &arg_two_vec);
+                let result_vec = self.f.act(arg_one_vec.view(), arg_two_vec.view());
                 let result_ref = TermReference::VecRef(self.elem_type, result_vec);
                 result_ref
             } else {

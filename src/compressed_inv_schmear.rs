@@ -15,7 +15,7 @@ pub struct CompressedInverseSchmear {
 }
 
 impl CompressedInverseSchmear {
-    pub fn sq_mahalanobis_dist(&self, vec : &Array1<f32>) -> f32 {
+    pub fn sq_mahalanobis_dist(&self, vec : ArrayView1<f32>) -> f32 {
         let schmear_distance = self.inv_schmear.sq_mahalanobis_dist(vec);
         schmear_distance + self.extra_sq_distance
     }

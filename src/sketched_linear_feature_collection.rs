@@ -43,14 +43,14 @@ impl FeatureCollection for SketchedLinearFeatureCollection {
         self.out_dimensions + 1
     }
 
-    fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32> {
-        let projected = self.projection_mat.dot(in_vec);
+    fn get_features(&self, in_vec: ArrayView1<f32>) -> Array1<f32> {
+        let projected = self.projection_mat.dot(&in_vec);
         let single_ones = Array::ones((1,));
         let result = stack(Axis(0), &[projected.view(), single_ones.view()]).unwrap();
         self.alpha * result
     }
 
-    fn get_jacobian(&self, _in_vec : &Array1<f32>) -> Array2<f32> {
+    fn get_jacobian(&self, _in_vec : ArrayView1<f32>) -> Array2<f32> {
         //The jacobian is given by the projection mat plus the part about cconcatenating
         //the constant 1 [derivative zero w.r.t all vars]
         let zero_row = Array::zeros((1,self.in_dimensions));

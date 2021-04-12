@@ -41,7 +41,7 @@ impl CountSketch {
         self.out_dims
     }
 
-    pub fn sketch(&self, v: &Array1<f32>) -> Array1<f32> {
+    pub fn sketch(&self, v: ArrayView1<f32>) -> Array1<f32> {
         let mut result = Array::zeros((self.out_dims,));
         for i in 0..self.in_dims {
             let index = self.indices[i];

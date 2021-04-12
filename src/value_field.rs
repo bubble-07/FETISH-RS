@@ -25,7 +25,7 @@ impl <'a> ValueField<'a> {
         self.ctxt
     }
     pub fn sample(&self, sampled_embedding_space : &SampledEmbeddingSpace<'a>) -> SampledValueField<'a> {
-        let elaborator = &sampled_embedding_space.elaborator;
+        let elaborator = sampled_embedding_space.elaborator.view();
         let full_prior_inv_schmear = &self.full_prior_schmear.inv_schmear;
         let compressed_prior_inv_schmear = full_prior_inv_schmear.compress(elaborator);
 
@@ -44,20 +44,20 @@ impl <'a> ValueField<'a> {
     }
 
     //Operates on feature vec
-    pub fn get_dot_product_from_feat_vec(&self, feat_vec : &Array1<f32>) -> f32 {
-        self.feat_vec_coefs.dot(feat_vec) 
+    pub fn get_dot_product_from_feat_vec(&self, feat_vec : ArrayView1<f32>) -> f32 {
+        self.feat_vec_coefs.dot(&feat_vec) 
     }
-    pub fn get_schmear_sq_dist_from_full_vec(&self, full_vec : &Array1<f32>) -> f32 {
+    pub fn get_schmear_sq_dist_from_full_vec(&self, full_vec : ArrayView1<f32>) -> f32 {
         self.full_prior_schmear.inv_schmear.sq_mahalanobis_dist(full_vec)
     }
 
     //Deals in full vectors
-    pub fn get_value_for_full_vector(&self, full_vec : &Array1<f32>) -> f32 {
+    pub fn get_value_for_full_vector(&self, full_vec : ArrayView1<f32>) -> f32 {
         let type_id = self.get_type_id();
         let feature_space_info = self.ctxt.get_feature_space_info(type_id);
         let feat_vec = feature_space_info.get_features_from_base(full_vec);
 
-        let additional_value = self.get_dot_product_from_feat_vec(&feat_vec);
+        let additional_value = self.get_dot_product_from_feat_vec(feat_vec.view());
         
         let schmear_sq_dist = self.get_schmear_sq_dist_from_full_vec(full_vec);
 

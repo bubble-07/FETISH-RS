@@ -145,14 +145,14 @@ impl<'a> EmbedderState<'a> {
         let func_schmear = self.get_schmear_from_ptr(term_ptr);
         let func_feat_info = self.ctxt.get_feature_space_info(type_id);
         let projection_mat = func_feat_info.get_projection_matrix();
-        let result = func_schmear.compress(&projection_mat);
+        let result = func_schmear.compress(projection_mat.view());
         result
     }
 
     fn get_compressed_schmear_from_ref(&self, term_ref : &TermReference) -> Schmear {
         match term_ref {
             TermReference::FuncRef(func_ptr) => self.get_compressed_schmear_from_ptr(&func_ptr),
-            TermReference::VecRef(_, vec) => Schmear::from_vector(&vec)
+            TermReference::VecRef(_, vec) => Schmear::from_vector(vec.view())
         }
     }
 

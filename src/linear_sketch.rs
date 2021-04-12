@@ -47,11 +47,11 @@ impl LinearSketch {
         schmear.transform(&self.projection_mat)
     }
 
-    pub fn sketch(&self, vec : &Array1<f32>) -> Array1<f32> {
-        self.projection_mat.dot(vec)
+    pub fn sketch(&self, vec : ArrayView1<f32>) -> Array1<f32> {
+        self.projection_mat.dot(&vec)
     }
-    pub fn expand(&self, mean : &Array1<f32>) -> Array1<f32> {
-        self.projection_mat_pinv.dot(mean)
+    pub fn expand(&self, mean : ArrayView1<f32>) -> Array1<f32> {
+        self.projection_mat_pinv.dot(&mean)
     }
 
     pub fn get_projection_matrix(&self) -> &Array2<f32> {

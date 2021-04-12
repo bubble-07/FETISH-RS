@@ -33,32 +33,32 @@ impl<'a> SampledValueField<'a> {
         self.value_field.get_type_id()
     }
 
-    pub fn update_coefs(&mut self, delta : &Array1<f32>) {
-        self.value_field.feat_vec_coefs += delta;
+    pub fn update_coefs(&mut self, delta : ArrayView1<f32>) {
+        self.value_field.feat_vec_coefs += &delta;
     }
 
-    pub fn get_dot_product_from_feat_vec(&self, feat_vec : &Array1<f32>) -> f32 {
+    pub fn get_dot_product_from_feat_vec(&self, feat_vec : ArrayView1<f32>) -> f32 {
         self.value_field.get_dot_product_from_feat_vec(feat_vec)
     }
 
-    pub fn get_schmear_sq_dist_from_compressed_vec(&self, compressed_vec : &Array1<f32>) -> f32 {
+    pub fn get_schmear_sq_dist_from_compressed_vec(&self, compressed_vec : ArrayView1<f32>) -> f32 {
         self.compressed_prior_inv_schmear.sq_mahalanobis_dist(compressed_vec)
     }
 
-    pub fn get_schmear_sq_dist_from_full_vec(&self, full_vec : &Array1<f32>) -> f32 {
+    pub fn get_schmear_sq_dist_from_full_vec(&self, full_vec : ArrayView1<f32>) -> f32 {
         self.value_field.get_schmear_sq_dist_from_full_vec(full_vec)
     }
     
-    pub fn get_value_for_full_vector(&self, full_vec : &Array1<f32>) -> f32 {
+    pub fn get_value_for_full_vector(&self, full_vec : ArrayView1<f32>) -> f32 {
         self.value_field.get_value_for_full_vector(full_vec)
     }
 
-    pub fn get_value_for_compressed_vector(&self, compressed_vec : &Array1<f32>) -> f32 {
+    pub fn get_value_for_compressed_vector(&self, compressed_vec : ArrayView1<f32>) -> f32 {
         let type_id = self.get_type_id();
         let feature_space_info = self.get_context().get_feature_space_info(type_id);
         let feat_vec = feature_space_info.get_features(compressed_vec);
 
-        let additional_value = self.get_dot_product_from_feat_vec(&feat_vec);
+        let additional_value = self.get_dot_product_from_feat_vec(feat_vec.view());
 
         let schmear_sq_dist = self.get_schmear_sq_dist_from_compressed_vec(compressed_vec);
 

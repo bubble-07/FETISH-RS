@@ -146,8 +146,8 @@ impl<'a> Elaborator<'a> {
 
         let mut data_updates = Vec::new();
 
-        let sketched = sketcher.sketch(&func_mean);
-        let expanded = sketcher.expand(&sketched);
+        let sketched = sketcher.sketch(func_mean.view());
+        let expanded = sketcher.expand(sketched.view());
         let diff = func_mean - &expanded;
         let diff_in_kernel_basis = kernel_mat.t().dot(&diff);
 

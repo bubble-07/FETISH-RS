@@ -27,7 +27,7 @@ pub struct Model<'a> {
     pub ctxt : &'a Context
 }
 
-pub fn to_features(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_vec : &Array1<f32>) -> Array1<f32> {
+pub fn to_features(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_vec : ArrayView1<f32>) -> Array1<f32> {
     let comps = feature_collections.iter()
                                    .map(|coll| coll.get_features(in_vec))
                                    .collect::<Vec<_>>();
@@ -38,7 +38,7 @@ pub fn to_features(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_ve
     stack(Axis(0), &comp_views).unwrap()
 }
 
-pub fn to_features_mat(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_mat : &Array2<f32>)
+pub fn to_features_mat(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_mat : ArrayView2<f32>)
                       -> Array2<f32> {
     let comps = feature_collections.iter()
                                    .map(|coll| coll.get_features_mat(in_mat))
@@ -49,7 +49,7 @@ pub fn to_features_mat(feature_collections : &Vec<Box<dyn FeatureCollection>>, i
     stack(Axis(1), &comp_views).unwrap()
 }
 
-pub fn to_jacobian(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_vec : &Array1<f32>) -> Array2<f32> {
+pub fn to_jacobian(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_vec : ArrayView1<f32>) -> Array2<f32> {
     let comps = feature_collections.iter()
                                    .map(|coll| coll.get_jacobian(in_vec))
                                    .collect::<Vec<_>>();
@@ -94,10 +94,10 @@ impl <'a> Model<'a> {
         self.data.get_schmear()
     }
 
-    pub fn eval(&self, in_vec: &Array1<f32>) -> Array1<f32> {
+    pub fn eval(&self, in_vec: ArrayView1<f32>) -> Array1<f32> {
         let func_space_info = self.ctxt.build_function_space_info(self.arg_type_id, self.ret_type_id);
         let feats = func_space_info.in_feat_info.get_features(in_vec);
-        self.data.eval(&feats)
+        self.data.eval(feats.view())
     }
 
     pub fn get_schmeared_hole(&self) -> SchmearedHole {

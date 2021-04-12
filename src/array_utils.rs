@@ -4,7 +4,7 @@ extern crate ndarray_linalg;
 use ndarray::*;
 use noisy_float::prelude::*;
 
-pub fn from_noisy(vec : &Array1<R32>) -> Array1<f32> {
+pub fn from_noisy(vec : ArrayView1<R32>) -> Array1<f32> {
     let n = vec.len();
     let mut mean : Array1::<f32> = Array::zeros((n,));
     for i in 0..n {
@@ -13,7 +13,7 @@ pub fn from_noisy(vec : &Array1<R32>) -> Array1<f32> {
     mean
 }
 
-pub fn to_noisy(vec : &Array1<f32>) -> Array1<R32> {
+pub fn to_noisy(vec : ArrayView1<f32>) -> Array1<R32> {
     let n = vec.len();
     let mut result : Array1::<R32> = Array::zeros((n,));
     for i in 0..n {
@@ -22,7 +22,7 @@ pub fn to_noisy(vec : &Array1<f32>) -> Array1<R32> {
     result
 }
 
-pub fn all_finite(vec : &Array1<f32>) -> bool {
+pub fn all_finite(vec : ArrayView1<f32>) -> bool {
     let n = vec.shape()[0];
     for i in 0..n {
         if (!vec[[i,]].is_finite()) {
@@ -32,13 +32,13 @@ pub fn all_finite(vec : &Array1<f32>) -> bool {
     true
 }
 
-pub fn flatten_matrix(mat : &Array2<f32>) -> Array1<f32> {
+pub fn flatten_matrix(mat : ArrayView2<f32>) -> ArrayView1<f32> {
     let full_dim = mat.shape()[0] * mat.shape()[1];
     let reshaped = mat.clone().into_shape((full_dim,)).unwrap();
     reshaped
 }
 
-pub fn max_index_and_value(vec : &ArrayView1<f32>) -> (usize, f32) {
+pub fn max_index_and_value(vec : ArrayView1<f32>) -> (usize, f32) {
     let mut max_index = 0; 
     let mut max_value = vec[[0,]];
     for i in 1..vec.shape()[0] {

@@ -39,7 +39,7 @@ impl Schmear {
 
         let mut covariance = Array::zeros((d, d));
         for vec in vecs.iter() {
-            covariance += &outer(vec, vec);
+            covariance += &outer(vec.view(), vec.view());
         }
         covariance *= one_over_n_minus_one;
         Schmear {
@@ -50,7 +50,7 @@ impl Schmear {
     
     ///Constructs a [`Schmear`] whose mean is the passed vector,
     ///and covariance the zero matrix.
-    pub fn from_vector(vec : &Array1<R32>) -> Schmear {
+    pub fn from_vector(vec : ArrayView1<R32>) -> Schmear {
         let n = vec.len();
         let mean = from_noisy(vec);
         let covariance : Array2::<f32> = Array::zeros((n, n));

@@ -27,14 +27,14 @@ impl<'a> SampledValueFieldState<'a> {
     pub fn get_value_for_full_vector(&self, typed_vector : &TypedVector) -> f32 {
         let type_id = typed_vector.type_id;
         let value_field = self.get_value_field(type_id);
-        let result = value_field.get_value_for_full_vector(&typed_vector.vec);
+        let result = value_field.get_value_for_full_vector(typed_vector.vec.view());
         result
     }
 
     pub fn get_value_for_compressed_vector(&self, typed_vector : &TypedVector) -> f32 {
         let type_id = typed_vector.type_id;
         let value_field = self.get_value_field(type_id);
-        let result = value_field.get_value_for_compressed_vector(&typed_vector.vec);
+        let result = value_field.get_value_for_compressed_vector(typed_vector.vec.view());
         result
     }
 
@@ -60,8 +60,8 @@ impl<'a> SampledValueFieldState<'a> {
         let func_value_field = self.get_value_field(func_vec.type_id);
         let ret_value_field = self.get_value_field(ret_vec.type_id);
         
-        bonus += func_value_field.get_schmear_sq_dist_from_full_vec(&func_vec.vec);
-        bonus -= ret_value_field.get_schmear_sq_dist_from_full_vec(&ret_vec.vec);
+        bonus += func_value_field.get_schmear_sq_dist_from_full_vec(func_vec.vec.view());
+        bonus -= ret_value_field.get_schmear_sq_dist_from_full_vec(ret_vec.vec.view());
 
         if (self.ctxt.is_vector_type(arg_vec.type_id)) {
             self.apply_vector_arg_feat_constraint(GAMMA, LAMBDA, &func_feat_vec, &ret_feat_vec, bonus);
@@ -69,7 +69,7 @@ impl<'a> SampledValueFieldState<'a> {
             let arg_feat_vec = arg_vec.get_features_from_base(&self.ctxt);
 
             let arg_value_field = self.get_value_field(arg_vec.type_id);
-            bonus += arg_value_field.get_schmear_sq_dist_from_full_vec(&arg_vec.vec);
+            bonus += arg_value_field.get_schmear_sq_dist_from_full_vec(arg_vec.vec.view());
 
             self.apply_function_arg_feat_constraint(GAMMA, LAMBDA, &func_feat_vec, &arg_feat_vec,
                                                     &ret_feat_vec, bonus);
@@ -87,8 +87,8 @@ impl<'a> SampledValueFieldState<'a> {
         let func_coef = gamma * &func_vec.vec;
         let ret_coef = -1.0f32 * &ret_vec.vec;
 
-        let func_dot = func_field.get_dot_product_from_feat_vec(&func_coef);
-        let ret_dot = ret_field.get_dot_product_from_feat_vec(&ret_coef);
+        let func_dot = func_field.get_dot_product_from_feat_vec(func_coef.view());
+        let ret_dot = ret_field.get_dot_product_from_feat_vec(ret_coef.view());
         let total_dot = func_dot + ret_dot;
 
         let total_sq_magnitude = func_coef.dot(&func_coef) + ret_coef.dot(&ret_coef);
@@ -98,8 +98,8 @@ impl<'a> SampledValueFieldState<'a> {
         let func_update = coef_update_magnitude * &func_coef;
         let ret_update = coef_update_magnitude * &ret_coef;
 
-        self.get_value_field_mut(func_vec.type_id).update_coefs(&func_update);
-        self.get_value_field_mut(ret_vec.type_id).update_coefs(&ret_update);
+        self.get_value_field_mut(func_vec.type_id).update_coefs(func_update.view());
+        self.get_value_field_mut(ret_vec.type_id).update_coefs(ret_update.view());
     }
     
 
@@ -118,9 +118,9 @@ impl<'a> SampledValueFieldState<'a> {
         let arg_coef = (0.5f32 * gamma) * &arg_vec.vec;
         let ret_coef = -1.0f32 * &ret_vec.vec;
 
-        let func_dot = func_field.get_dot_product_from_feat_vec(&func_coef);
-        let arg_dot = arg_field.get_dot_product_from_feat_vec(&arg_coef);
-        let ret_dot = ret_field.get_dot_product_from_feat_vec(&ret_coef);
+        let func_dot = func_field.get_dot_product_from_feat_vec(func_coef.view());
+        let arg_dot = arg_field.get_dot_product_from_feat_vec(arg_coef.view());
+        let ret_dot = ret_field.get_dot_product_from_feat_vec(ret_coef.view());
         let total_dot = func_dot + arg_dot + ret_dot;
 
         let total_sq_magnitude = func_coef.dot(&func_coef) + arg_coef.dot(&arg_coef) + ret_coef.dot(&ret_coef);
@@ -131,8 +131,8 @@ impl<'a> SampledValueFieldState<'a> {
         let arg_update = coef_update_magnitude * &arg_coef;
         let ret_update = coef_update_magnitude * &ret_coef;
 
-        self.get_value_field_mut(func_vec.type_id).update_coefs(&func_update);
-        self.get_value_field_mut(arg_vec.type_id).update_coefs(&arg_update);
-        self.get_value_field_mut(ret_vec.type_id).update_coefs(&ret_update);
+        self.get_value_field_mut(func_vec.type_id).update_coefs(func_update.view());
+        self.get_value_field_mut(arg_vec.type_id).update_coefs(arg_update.view());
+        self.get_value_field_mut(ret_vec.type_id).update_coefs(ret_update.view());
     }
 }

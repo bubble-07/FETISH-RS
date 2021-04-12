@@ -24,16 +24,16 @@ impl SampledModelEmbedding {
         let sampled_mat = model.sample(rng);
         let func_schmear = model.get_schmear(); 
         let func_inv_schmear = model.get_inverse_schmear();
-        let sampled_vec = flatten_matrix(&sampled_mat);
+        let sampled_vec = flatten_matrix(sampled_mat.view()).to_owned();
 
         let func_feat_info = model.get_context().get_feature_space_info(model.get_type_id());
         let projection_mat = func_feat_info.get_projection_matrix();
 
-        let compressed_schmear = func_schmear.compress(&projection_mat);
+        let compressed_schmear = func_schmear.compress(projection_mat.view());
         let compressed_inv_schmear = compressed_schmear.inverse();
         let sampled_compressed_vec = projection_mat.dot(&sampled_vec);
 
-        let sampled_feat_vec = func_feat_info.get_features(&sampled_compressed_vec);
+        let sampled_feat_vec = func_feat_info.get_features(sampled_compressed_vec.view());
 
         SampledModelEmbedding {
             func_schmear,

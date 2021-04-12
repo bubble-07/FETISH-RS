@@ -29,25 +29,25 @@ impl <'a> FunctionSpaceInfo<'a> {
         self.get_feature_dimensions() * self.get_output_dimensions()
     }
 
-    pub fn jacobian(&self, mat : &Array2<f32>, input : &Array1<f32>) -> Array2<f32> {
+    pub fn jacobian(&self, mat : ArrayView2<f32>, input : ArrayView1<f32>) -> Array2<f32> {
         let feat_jacobian = self.in_feat_info.get_feature_jacobian(input);
         let result = mat.dot(&feat_jacobian);
         result
     }
-    pub fn apply(&self, mat : &Array2<f32>, input : &Array1<f32>) -> Array1<f32> {
+    pub fn apply(&self, mat : ArrayView2<f32>, input : ArrayView1<f32>) -> Array1<f32> {
         let features = self.in_feat_info.get_features(input);
         let result = mat.dot(&features);
         result
     }
     pub fn get_data_points(&self, in_data_points : DataPoints) -> DataPoints {
-        let feat_vecs = self.in_feat_info.get_features_mat(&in_data_points.in_vecs);
+        let feat_vecs = self.in_feat_info.get_features_mat(in_data_points.in_vecs.view());
         DataPoints {
             in_vecs : feat_vecs,
             ..in_data_points
         }
     }
     pub fn get_data(&self, in_data : DataPoint) -> DataPoint {
-        let feat_vec = self.in_feat_info.get_features(&in_data.in_vec);
+        let feat_vec = self.in_feat_info.get_features(in_data.in_vec.view());
 
         DataPoint {
             in_vec : feat_vec,

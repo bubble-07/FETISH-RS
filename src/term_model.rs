@@ -67,12 +67,12 @@ impl <'a> TermModel<'a> {
         self.model.get_schmear()
     }
 
-    pub fn get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
+    pub fn get_features(&self, in_vec : ArrayView1<f32>) -> Array1<f32> {
         let func_space_info = self.model.ctxt.get_function_space_info(self.model.get_type_id());
         func_space_info.in_feat_info.get_features(in_vec)
     }
 
-    pub fn eval(&self, in_vec : &Array1<f32>) -> Array1<f32> {
+    pub fn eval(&self, in_vec : ArrayView1<f32>) -> Array1<f32> {
         self.model.eval(in_vec)
     }
 

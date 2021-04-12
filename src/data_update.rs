@@ -16,7 +16,7 @@ pub struct DataUpdate {
 
 impl DataUpdate {
     pub fn featurize(&self, func_space_info : &FunctionSpaceInfo) -> DataUpdate {
-        let feat_vec = func_space_info.in_feat_info.get_features(&self.in_vec);
+        let feat_vec = func_space_info.in_feat_info.get_features(self.in_vec.view());
         let out_sigma_points = self.out_sigma_points.clone();
         let result = DataUpdate {
             in_vec : feat_vec,

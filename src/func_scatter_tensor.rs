@@ -30,7 +30,7 @@ impl FuncScatterTensor {
     //and given a Lx(n*m) matrix C, compute C * kron(A, B)
     //This has better asymptotic efficiency than the naive method
     //Delivers a result which is Lx(n*m)
-    pub fn flatten_and_multiply(&self, mat : &Array2<f32>) -> Array2<f32> {
+    pub fn flatten_and_multiply(&self, mat : ArrayView2<f32>) -> Array2<f32> {
         let out_dim = self.out_scatter.shape()[0];
         let in_dim = self.in_scatter.shape()[0];
         let ret_dim = mat.shape()[0];
@@ -55,33 +55,33 @@ impl FuncScatterTensor {
 
     //Flattens and compresses by the given Lx(n*m) projection matrix to yield a LxL covariance
     //matrix
-    pub fn compress(&self, mat : &Array2<f32>) -> Array2<f32> {
+    pub fn compress(&self, mat : ArrayView2<f32>) -> Array2<f32> {
         let left_transformed = self.flatten_and_multiply(mat);
         let result = left_transformed.dot(&mat.t());
         result
     }
 
     pub fn flatten(&self) -> Array2<f32> {
-        let result = kron(&self.out_scatter, &self.in_scatter);
+        let result = kron(self.out_scatter.view(), self.in_scatter.view());
         result
     }
 
     ///Transform a t x s mean matrix
-    pub fn transform(&self, mean : &Array2<f32>) -> Array2<f32> {
+    pub fn transform(&self, mean : ArrayView2<f32>) -> Array2<f32> {
         let mean_in_scatter : Array2<f32> = mean.dot(&self.in_scatter);
         let result = self.out_scatter.dot(&mean_in_scatter);
         result
     }
 
     ///Induced inner product on t x s mean matrices
-    pub fn inner_product(&self, mean_one : &Array2<f32>, mean_two : &Array2<f32>) -> f32 {
+    pub fn inner_product(&self, mean_one : ArrayView2<f32>, mean_two : ArrayView2<f32>) -> f32 {
         let transformed = self.transform(mean_two);
-        let result = frob_inner(mean_one, &transformed);
+        let result = frob_inner(mean_one, transformed.view());
         result
     }
 
-    pub fn transform_in_out(&self, in_array : &Array2<f32>) -> Array2<f32> {
-        let in_inner = frob_inner(&self.in_scatter, in_array);
+    pub fn transform_in_out(&self, in_array : ArrayView2<f32>) -> Array2<f32> {
+        let in_inner = frob_inner(self.in_scatter.view(), in_array);
         let mut out = self.out_scatter.clone();
         out *= in_inner;
         out

@@ -114,7 +114,7 @@ impl <'a> OptimizerState<'a> {
                     let (arg_vec, next_compressed_vec, value) = 
                         self.func_opt_state.get_best_vector_to_pass(current_compressed_vec,
                                                     sampled_value_field_state, sampled_embedder_state);
-                    let arg_ref = TermReference::VecRef(*arg_type_id, to_noisy(&arg_vec));
+                    let arg_ref = TermReference::VecRef(*arg_type_id, to_noisy(arg_vec.view()));
                     (arg_ref, next_compressed_vec, value)
                 } else {
                     let (arg_ptr, next_compressed_vec, value) =

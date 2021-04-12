@@ -12,7 +12,7 @@ pub struct TypedVector {
 impl TypedVector {
     pub fn get_features_from_base(&self, ctxt : &Context) -> TypedVector {
         let feat_space_info = ctxt.get_feature_space_info(self.type_id);
-        let vec = feat_space_info.get_features_from_base(&self.vec);
+        let vec = feat_space_info.get_features_from_base(self.vec.view());
         TypedVector {
             type_id : self.type_id,
             vec

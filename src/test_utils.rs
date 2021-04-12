@@ -83,24 +83,24 @@ pub fn random_model<'a>(ctxt : &'a Context, type_id : TypeId) -> Model {
 }
 
 pub fn assert_equal_schmears(one : &Schmear, two : &Schmear) {
-    assert_equal_matrices(&one.covariance, &two.covariance);
-    assert_equal_vectors(&one.mean, &two.mean);
+    assert_equal_matrices(one.covariance.view(), two.covariance.view());
+    assert_equal_vectors(one.mean.view(), two.mean.view());
 }
 
 pub fn assert_equal_inv_schmears(one : &InverseSchmear, two : &InverseSchmear) {
-    assert_equal_matrices(&one.precision, &two.precision);
-    assert_equal_vectors(&one.mean, &two.mean);
+    assert_equal_matrices(one.precision.view(), two.precision.view());
+    assert_equal_vectors(one.mean.view(), two.mean.view());
 }
 
-pub fn relative_frob_norm_error(actual : &Array2<f32>, expected : &Array2<f32>) -> f32 {
+pub fn relative_frob_norm_error(actual : ArrayView2<f32>, expected : ArrayView2<f32>) -> f32 {
     let denominator = expected.opnorm_fro().unwrap();
-    let diff = actual - expected;
+    let diff = &actual - &expected;
     let diff_norm = diff.opnorm_fro().unwrap();
     diff_norm / denominator
 }
 
-pub fn are_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, within : f32, print : bool) -> bool {
-    let diff = one - two;
+pub fn are_equal_matrices_to_within(one : ArrayView2<f32>, two : ArrayView2<f32>, within : f32, print : bool) -> bool {
+    let diff = &one - &two;
     let frob_norm = diff.opnorm_fro().unwrap();
     if (frob_norm > within) {
         if (print) {
@@ -116,24 +116,24 @@ pub fn are_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, with
 }
 
 pub fn assert_equal_distributions_to_within(one : &NormalInverseWishart, two : &NormalInverseWishart, within : f32) {
-    assert_equal_matrices_to_within(&one.mean, &two.mean, within);
-    assert_equal_matrices_to_within(&one.precision, &two.precision, within);
-    assert_equal_matrices_to_within(&one.big_v, &two.big_v, within);
+    assert_equal_matrices_to_within(one.mean.view(), two.mean.view(), within);
+    assert_equal_matrices_to_within(one.precision.view(), two.precision.view(), within);
+    assert_equal_matrices_to_within(one.big_v.view(), two.big_v.view(), within);
     assert_eps_equals_to_within(one.little_v, two.little_v, within);
 }
 
-pub fn assert_equal_matrices_to_within(one : &Array2<f32>, two : &Array2<f32>, within : f32) {
+pub fn assert_equal_matrices_to_within(one : ArrayView2<f32>, two : ArrayView2<f32>, within : f32) {
     if (!are_equal_matrices_to_within(one, two, within, true)) {
         panic!();
     }
 }
 
-pub fn assert_equal_matrices(one : &Array2<f32>, two : &Array2<f32>) {
+pub fn assert_equal_matrices(one : ArrayView2<f32>, two : ArrayView2<f32>) {
     assert_equal_matrices_to_within(one, two, DEFAULT_TEST_THRESH);
 }
 
-pub fn are_equal_vectors_to_within(one : &Array1<f32>, two : &Array1<f32>, within : f32, print : bool) -> bool {
-    let diff = one - two;
+pub fn are_equal_vectors_to_within(one : ArrayView1<f32>, two : ArrayView1<f32>, within : f32, print : bool) -> bool {
+    let diff = &one - &two;
     let sq_norm = diff.dot(&diff);
     let norm = sq_norm.sqrt();
     if (norm > within) {
@@ -149,21 +149,21 @@ pub fn are_equal_vectors_to_within(one : &Array1<f32>, two : &Array1<f32>, withi
     }
 }
 
-pub fn assert_equal_vectors_to_within(one : &Array1<f32>, two : &Array1<f32>, within : f32) {
+pub fn assert_equal_vectors_to_within(one : ArrayView1<f32>, two : ArrayView1<f32>, within : f32) {
     if(!are_equal_vectors_to_within(one, two, within, true)) {
         panic!();
     }
 }
 
-pub fn assert_equal_vector_term(actual : TermReference, expected : Array1<f32>) {
+pub fn assert_equal_vector_term(actual : TermReference, expected : ArrayView1<f32>) {
     if let TermReference::VecRef(_, vec) = actual {
-        assert_equal_vectors(&from_noisy(&vec), &expected);
+        assert_equal_vectors(from_noisy(vec.view()).view(), expected);
     } else {
         panic!();
     }
 }
 
-pub fn assert_equal_vectors(one : &Array1<f32>, two : &Array1<f32>) {
+pub fn assert_equal_vectors(one : ArrayView1<f32>, two : ArrayView1<f32>) {
     assert_equal_vectors_to_within(one, two, DEFAULT_TEST_THRESH);
 }
 
@@ -241,8 +241,8 @@ pub fn random_func_schmear(t : usize, s : usize) -> FuncSchmear {
     result
 }
 
-pub fn empirical_gradient<F>(f : F, x : &Array1<f32>) -> Array1<f32>
-    where F : Fn(&Array1<f32>) -> f32 {
+pub fn empirical_gradient<F>(f : F, x : ArrayView1<f32>) -> Array1<f32>
+    where F : Fn(ArrayView1<f32>) -> f32 {
 
     let epsilon = 0.001f32;
     let y = f(x);
@@ -254,8 +254,8 @@ pub fn empirical_gradient<F>(f : F, x : &Array1<f32>) -> Array1<f32>
         let mut delta_x : Array1<f32> = Array::zeros((s,));
         delta_x[[i,]] = epsilon;
 
-        let new_x = x + &delta_x;
-        let new_y = f(&new_x);
+        let new_x = &x + &delta_x;
+        let new_y = f(new_x.view());
         let delta_y = new_y - y;
 
         let grad = delta_y / epsilon;
@@ -265,8 +265,8 @@ pub fn empirical_gradient<F>(f : F, x : &Array1<f32>) -> Array1<f32>
     result
 }
 
-pub fn empirical_jacobian<F>(f : F, x : &Array1<f32>) -> Array2<f32> 
-    where F : Fn(&Array1<f32>) -> Array1<f32> {
+pub fn empirical_jacobian<F>(f : F, x : ArrayView1<f32>) -> Array2<f32> 
+    where F : Fn(ArrayView1<f32>) -> Array1<f32> {
     let epsilon = 0.001f32;
     let y = f(x);
     let s = x.shape()[0];
@@ -277,8 +277,8 @@ pub fn empirical_jacobian<F>(f : F, x : &Array1<f32>) -> Array2<f32>
         let mut delta_x : Array1<f32> = Array::zeros((s,));
         delta_x[[i,]] = epsilon;
 
-        let new_x = x + &delta_x;
-        let new_y = f(&new_x); 
+        let new_x = &x + &delta_x;
+        let new_y = f(new_x.view()); 
         let delta_y = &new_y - &y;
 
         let grad = delta_y / epsilon;

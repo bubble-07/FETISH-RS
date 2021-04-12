@@ -36,7 +36,7 @@ pub fn unscented_transform_schmear(in_schmear : &Schmear, feat_space_info : &Fea
     let in_sigma_points = get_sigma_points(in_schmear);
     let mut out_sigma_points = Vec::new();
     for in_sigma_point in in_sigma_points {
-        let out_sigma_point = feat_space_info.get_features(&in_sigma_point);
+        let out_sigma_point = feat_space_info.get_features(in_sigma_point.view());
         out_sigma_points.push(out_sigma_point);
     }
     

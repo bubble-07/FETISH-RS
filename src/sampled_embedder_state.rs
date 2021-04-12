@@ -31,7 +31,7 @@ impl<'a> SampledEmbedderState<'a> {
 
     pub fn expand_compressed_function(&self, compressed_vec : &TypedVector) -> Array2<f32> {
         let space = self.embedding_spaces.get(&compressed_vec.type_id).unwrap();
-        let result = space.expand_compressed_function(&compressed_vec.vec);
+        let result = space.expand_compressed_function(compressed_vec.vec.view());
         result
     }
 
@@ -89,10 +89,10 @@ impl<'a> SampledEmbedderState<'a> {
                                   -> (TermPointer, TypedVector, f32) {
         let ret_type_id = self.ctxt.get_ret_type_id(func_type_id);
         let arg_feat_space = self.ctxt.get_feature_space_info(compressed_arg_vector.type_id);
-        let featurized_arg_vector = arg_feat_space.get_features(&compressed_arg_vector.vec);
+        let featurized_arg_vector = arg_feat_space.get_features(compressed_arg_vector.vec.view());
         let func_embedding_space = self.embedding_spaces.get(&func_type_id).unwrap();
         let (func_index, ret_vec, value) = func_embedding_space.get_best_term_index_to_apply_with_value(
-                                                &featurized_arg_vector,
+                                                featurized_arg_vector.view(),
                                                 ret_type_id, value_field_state);
         let func_ptr = TermPointer {
             index : func_index,
@@ -109,7 +109,7 @@ impl<'a> SampledEmbedderState<'a> {
         let ret_type = self.ctxt.get_ret_type_id(compressed_func_vector.type_id);
         let arg_embedding_space = self.embedding_spaces.get(&arg_type).unwrap();
         let (arg_index, ret_compressed_vec, value) = arg_embedding_space.get_best_term_index_to_pass_with_value(
-                                                 &func_mat, ret_type, value_field_state);
+                                                 func_mat.view(), ret_type, value_field_state);
         let arg_ptr = TermPointer {
             index : arg_index,
             type_id : arg_type
@@ -127,14 +127,14 @@ impl<'a> SampledEmbedderState<'a> {
         let func_mat = &func_embedding_space.get_embedding(term_application.func_ptr.index).sampled_mat;
 
         let arg_vec = match (&term_application.arg_ref) {
-            TermReference::VecRef(_, vec) => from_noisy(vec),
+            TermReference::VecRef(_, vec) => from_noisy(vec.view()),
             TermReference::FuncRef(arg_ptr) => {
                 let arg_embedding_space = self.embedding_spaces.get(&arg_ptr.type_id).unwrap();
                 arg_embedding_space.get_embedding(arg_ptr.index).sampled_compressed_vec.clone()
             }
         };
 
-        let ret_vec = func_space_info.apply(func_mat, &arg_vec);
+        let ret_vec = func_space_info.apply(func_mat.view(), arg_vec.view());
         TypedVector {
             vec : ret_vec,
             type_id : ret_type_id

@@ -26,7 +26,7 @@ impl FuncSchmear {
     ///[`FuncSchmear::flatten`] and [`Schmear::transform`] operation using
     ///the specified transformation. This fused operation is written
     ///to be much faster than manually performing the aforementioned operations.
-    pub fn compress(&self, mat : &Array2<f32>) -> Schmear {
+    pub fn compress(&self, mat : ArrayView2<f32>) -> Schmear {
         let t = self.mean.shape()[0];
         let s = self.mean.shape()[1];
 
@@ -61,7 +61,7 @@ impl FuncSchmear {
     ///computing `function(input)` for each of them, and then
     ///obtaining the [`Schmear`] over those results.
     pub fn apply(&self, x : &Schmear) -> Schmear {
-        let sigma_dot_u = frob_inner(&self.covariance.in_scatter, &x.covariance);
+        let sigma_dot_u = frob_inner(self.covariance.in_scatter.view(), x.covariance.view());
         let u_inner_product = x.mean.dot(&self.covariance.in_scatter).dot(&x.mean);
         let v_scale = sigma_dot_u + u_inner_product;
         let v_contrib = v_scale * &self.covariance.out_scatter;

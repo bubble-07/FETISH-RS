@@ -45,15 +45,15 @@ impl<'a> InterpreterAndEmbedderState<'a> {
             let i : usize = r % data_points.len();
             let (in_vec, out_vec) = &data_points[i];
             let in_term = TermReference::VecRef(self.get_context().get_arg_type_id(term_ptr.type_id), 
-                                                to_noisy(in_vec));
+                                                to_noisy(in_vec.view()));
             let term_app = TermApplication {
                 func_ptr : term_ptr.clone(),
                 arg_ref : in_term
             };
             let result_ref = self.interpreter_state.evaluate(&term_app);
             if let TermReference::VecRef(_, actual_out_vec_noisy) = result_ref {
-                let actual_out_vec = from_noisy(&actual_out_vec_noisy);
-                let loss = sq_vec_dist(out_vec, &actual_out_vec);
+                let actual_out_vec = from_noisy(actual_out_vec_noisy.view());
+                let loss = sq_vec_dist(out_vec.view(), actual_out_vec.view());
                 sq_loss += loss;
             }
         }
@@ -74,7 +74,7 @@ impl<'a> InterpreterAndEmbedderState<'a> {
 
                 let func_vec = sampled_embedder_state.get_model_embedding(func_ptr).sampled_vec.clone();
                 let arg_vec = match (arg_ref) {
-                    TermReference::VecRef(_, vec) => from_noisy(vec),
+                    TermReference::VecRef(_, vec) => from_noisy(vec.view()),
                     TermReference::FuncRef(func_ptr) => 
                         sampled_embedder_state.get_model_embedding(func_ptr).sampled_vec.clone()
                 };

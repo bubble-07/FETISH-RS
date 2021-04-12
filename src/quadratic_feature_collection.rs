@@ -60,7 +60,7 @@ fn from_complex(complex : Complex<f32>) -> f32 {
 
 impl QuadraticFeatureCollection {
     ///Unoptimized implementation of "get_features", for testing purposes
-    fn unoptimized_get_features(&self, in_vec : &Array1<f32>) -> Array1<f32> {
+    fn unoptimized_get_features(&self, in_vec : ArrayView1<f32>) -> Array1<f32> {
         let s = self.in_dimensions;
         let t = self.get_dimension();
         
@@ -80,7 +80,7 @@ impl QuadraticFeatureCollection {
 
 impl FeatureCollection for QuadraticFeatureCollection {
 
-    fn get_jacobian(&self, in_vec: &Array1<f32>) -> Array2<f32> {
+    fn get_jacobian(&self, in_vec: ArrayView1<f32>) -> Array2<f32> {
         //Yield the t x s jacobian of the feature mapping
         //since the feature mapping here is a circular convolution
         //of sketched versions of the input features,
@@ -103,7 +103,7 @@ impl FeatureCollection for QuadraticFeatureCollection {
         self.alpha * result
     }
 
-    fn get_features(&self, in_vec: &Array1<f32>) -> Array1<f32> {
+    fn get_features(&self, in_vec: ArrayView1<f32>) -> Array1<f32> {
         let first_sketch = self.sketch_one.sketch(in_vec);
         let second_sketch = self.sketch_two.sketch(in_vec);
 

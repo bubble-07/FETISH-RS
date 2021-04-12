@@ -47,7 +47,7 @@ impl PriorSpecification for FunctionOptimumPriorSpecification {
 }
 
 impl <'a> FunctionOptimumSpace<'a> {
-    pub fn estimate_optimal_vector_for_compressed_func(&self, compressed_func : &Array1<f32>) -> Array1<f32> {
+    pub fn estimate_optimal_vector_for_compressed_func(&self, compressed_func : ArrayView1<f32>) -> Array1<f32> {
         let mut rng = rand::thread_rng();
         let optimal_input_mapping_sample = self.optimal_input_mapping_sampler.sample(&mut rng);
 
@@ -107,7 +107,7 @@ impl <'a> FunctionOptimumSpace<'a> {
         for model_key in sampled_embeddings.models.keys() {
             let model_embedding = sampled_embeddings.get_embedding(*model_key);
 
-            let model_compressed_vec = &model_embedding.sampled_compressed_vec;
+            let model_compressed_vec = model_embedding.sampled_compressed_vec.view();
 
             //Featurized model embedding matrix
             let model_feat_vec = func_feat_info.get_features(model_compressed_vec);
@@ -153,7 +153,7 @@ impl <'a> FunctionOptimumSpace<'a> {
                 }
             };
 
-            in_model_funcs.row_mut(ind).assign(model_compressed_vec);
+            in_model_funcs.row_mut(ind).assign(&model_compressed_vec);
             out_model_vecs.row_mut(ind).assign(&final_vector);
 
             self.optimal_input_vectors.insert(*model_key, final_vector);
