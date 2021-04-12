@@ -226,9 +226,12 @@ pub fn random_inv_schmear(t : usize) -> InverseSchmear {
 }
 
 pub fn random_func_scatter_tensor(t : usize, s : usize) -> FuncScatterTensor {
-    let in_mat = random_psd_matrix(s);
-    let out_mat = random_psd_matrix(t);
-    FuncScatterTensor::from_in_and_out_scatter(in_mat, out_mat)
+    let in_scatter = random_psd_matrix(s);
+    let out_scatter = random_psd_matrix(t);
+    FuncScatterTensor {
+        in_scatter,
+        out_scatter
+    }
 }
 
 pub fn random_func_schmear(t : usize, s : usize) -> FuncSchmear {

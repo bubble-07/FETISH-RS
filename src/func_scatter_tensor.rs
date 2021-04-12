@@ -5,6 +5,12 @@ use ndarray::*;
 use crate::linalg_utils::*;
 use crate::pseudoinverse::*;
 
+///Represents a 4-tensor which is expressible as
+///`kron(out_scatter, in_scatter)`, where `out_scatter`
+///and `in_scatter` are both positive semi-definite.
+///This is typically used to express the precision
+///or covariance of a [`crate::normal_inverse_wishart::NormalInverseWishart`] model.
+///See also [`crate::func_schmear::FuncSchmear`] for an example of usage.
 #[derive(Clone)]
 pub struct FuncScatterTensor {
     pub in_scatter : Array2<f32>,
@@ -12,24 +18,23 @@ pub struct FuncScatterTensor {
 }
 
 impl FuncScatterTensor {
-    pub fn from_in_and_out_scatter(in_scatter : Array2<f32>, out_scatter : Array2<f32>) -> FuncScatterTensor {
-        let result = FuncScatterTensor {
-            in_scatter,
-            out_scatter
-        };
-        result
-    }
-
+    ///Inverts both `in_scatter` and `out_scatter`
+    ///of this [`FuncScatterTensor`] to yield
+    ///a new one. May be used to e.g: convert between
+    ///a function's covariance 4-tensor and its precision 4-tensor.
     pub fn inverse(&self) -> FuncScatterTensor {
         let in_scatter = pseudoinverse_h(&self.in_scatter);
         let out_scatter = pseudoinverse_h(&self.out_scatter);
-        FuncScatterTensor::from_in_and_out_scatter(in_scatter, out_scatter)
+        FuncScatterTensor {
+            in_scatter,
+            out_scatter
+        }
     }
 
-    //Supposing that out (A), in (B) scatters are nxn and mxm, respectively,
-    //and given a Lx(n*m) matrix C, compute C * kron(A, B)
-    //This has better asymptotic efficiency than the naive method
-    //Delivers a result which is Lx(n*m)
+    ///Supposing that `out_scatter` and `in_scatter` are `nxn` and `mxm`, respectively,
+    ///and given a `Lx(n*m)` matrix `mat`, compute `mat * kron(out_scatter, in_scatter)`. 
+    ///This has better asymptotic efficiency than simply expanding out the definition
+    ///above. Delivers a result of size `Lx(n*m)`. 
     pub fn flatten_and_multiply(&self, mat : ArrayView2<f32>) -> Array2<f32> {
         let out_dim = self.out_scatter.shape()[0];
         let in_dim = self.in_scatter.shape()[0];
@@ -53,38 +58,24 @@ impl FuncScatterTensor {
         result.into_owned()
     }
 
-    //Flattens and compresses by the given Lx(n*m) projection matrix to yield a LxL covariance
-    //matrix
+    ///Efficiently transforms this [`FuncScatterTensor`], taken to represent a covariance tensor,
+    ///through the linear transformation given by `mat`.
+    ///
+    ///Supposing that `out_scatter` and `in_scatter` are `nxn` and `mxm`, respectively,
+    ///and given a `Lx(n*m)` matrix `mat`, compute `mat * kron(out_scatter, in_scatter) * mat.t()`.
+    ///This has better asymptotic efficiency than simply expanding out the definition above.
+    ///Delivers a result of size `LxL`.
     pub fn compress(&self, mat : ArrayView2<f32>) -> Array2<f32> {
         let left_transformed = self.flatten_and_multiply(mat);
         let result = left_transformed.dot(&mat.t());
         result
     }
 
+    ///Flattens this [`FuncScatterTensor`] to a 2d matrix using the kronecker product
+    ///`kron(out_scatter, in_scatter)`.
     pub fn flatten(&self) -> Array2<f32> {
         let result = kron(self.out_scatter.view(), self.in_scatter.view());
         result
-    }
-
-    ///Transform a t x s mean matrix
-    pub fn transform(&self, mean : ArrayView2<f32>) -> Array2<f32> {
-        let mean_in_scatter : Array2<f32> = mean.dot(&self.in_scatter);
-        let result = self.out_scatter.dot(&mean_in_scatter);
-        result
-    }
-
-    ///Induced inner product on t x s mean matrices
-    pub fn inner_product(&self, mean_one : ArrayView2<f32>, mean_two : ArrayView2<f32>) -> f32 {
-        let transformed = self.transform(mean_two);
-        let result = frob_inner(mean_one, transformed.view());
-        result
-    }
-
-    pub fn transform_in_out(&self, in_array : ArrayView2<f32>) -> Array2<f32> {
-        let in_inner = frob_inner(self.in_scatter.view(), in_array);
-        let mut out = self.out_scatter.clone();
-        out *= in_inner;
-        out
     }
 }
 

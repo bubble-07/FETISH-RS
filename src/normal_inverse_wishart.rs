@@ -105,13 +105,19 @@ impl NormalInverseWishart {
         let scale = self.little_v - (self.t as f32) - 1.0f32;
         let mut out_precision = pseudoinverse_h(&self.big_v);
         out_precision *= scale;
-        FuncScatterTensor::from_in_and_out_scatter(self.precision.clone(), out_precision)
+        FuncScatterTensor {
+            in_scatter : self.precision.clone(),
+            out_scatter : out_precision
+        }
     }
 
     pub fn get_covariance(&self) -> FuncScatterTensor {
         let scale = 1.0f32 / (self.little_v - (self.t as f32) - 1.0f32);
         let big_v_scaled = scale * &self.big_v;
-        FuncScatterTensor::from_in_and_out_scatter(self.sigma.clone(), big_v_scaled)
+        FuncScatterTensor {
+            in_scatter : self.sigma.clone(),
+            out_scatter : big_v_scaled
+        }
     }
 
     pub fn eval(&self, in_vec : ArrayView1<f32>) -> Array1<f32> {
