@@ -3,6 +3,7 @@ use rand::prelude::*;
 use crate::func_schmear::*;
 use crate::func_inverse_schmear::*;
 use crate::schmear::*;
+use crate::term_model::*;
 use crate::inverse_schmear::*;
 use crate::array_utils::*;
 use crate::model::*;
@@ -20,13 +21,14 @@ pub struct SampledModelEmbedding {
 }
 
 impl SampledModelEmbedding {
-    pub fn new(model : &Model, rng : &mut ThreadRng) -> SampledModelEmbedding {
+    pub fn new(term_model : &TermModel, rng : &mut ThreadRng) -> SampledModelEmbedding {
+        let model = &term_model.model;
         let sampled_mat = model.sample(rng);
         let func_schmear = model.get_schmear(); 
         let func_inv_schmear = model.get_inverse_schmear();
         let sampled_vec = flatten_matrix(sampled_mat.view()).to_owned();
 
-        let func_feat_info = model.get_context().get_feature_space_info(model.get_type_id());
+        let func_feat_info = model.get_context().get_feature_space_info(term_model.get_type_id());
         let projection_mat = func_feat_info.get_projection_matrix();
 
         let compressed_schmear = func_schmear.compress(projection_mat.view());

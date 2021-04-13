@@ -25,9 +25,8 @@ impl TypeAction {
             }
         }
 
-        let func_sig = Type::FuncType(source_type, dest_type);
-        if (ctxt.has_type(&func_sig)) {
-            let func_type_id = ctxt.get_type_id(&func_sig);
+        if (ctxt.has_func_type(source_type, dest_type)) {
+            let func_type_id = ctxt.get_func_type_id(source_type, dest_type);
             let action = TypeAction::Applying(func_type_id);
             result.push(action);
         }

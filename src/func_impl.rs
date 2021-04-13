@@ -30,8 +30,7 @@ pub trait HasFuncSignature {
 
         let mut result : TypeId = self.ret_type();
         for arg_type_id in reverse_arg_types.drain(..) {
-            let result_type : Type = Type::FuncType(arg_type_id, result);
-            result = type_info_directory.get(&result_type);
+            result = type_info_directory.get_func_type_id(arg_type_id, result);
         }
         result
     }
@@ -259,8 +258,8 @@ pub struct ComposeImpl {
 impl ComposeImpl {
     pub fn new(type_info_directory : &TypeInfoDirectory, 
                in_type : TypeId, middle_type : TypeId, ret_type : TypeId) -> ComposeImpl {
-        let func_one : TypeId = type_info_directory.get(&Type::FuncType(middle_type, ret_type));
-        let func_two : TypeId = type_info_directory.get(&Type::FuncType(in_type, middle_type));
+        let func_one : TypeId = type_info_directory.get_func_type_id(middle_type, ret_type);
+        let func_two : TypeId = type_info_directory.get_func_type_id(in_type, middle_type);
         ComposeImpl {
             in_type,
             middle_type,

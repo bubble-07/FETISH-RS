@@ -41,7 +41,7 @@ impl <'a> ModelSpace<'a> {
 
         let mut result = SampledEmbeddingSpace::new(self.type_id, elaborator, self.ctxt);
         for (key, model) in self.models.iter() {
-            let sample = SampledModelEmbedding::new(&model.model, rng);
+            let sample = SampledModelEmbedding::new(&model, rng);
             result.models.insert(*key, sample);
         }
         result

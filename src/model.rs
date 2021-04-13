@@ -72,10 +72,6 @@ impl <'a> Model<'a> {
     pub fn get_context(&self) -> &'a Context {
         self.ctxt 
     }
-    pub fn get_type_id(&self) -> TypeId {
-        let kind = Type::FuncType(self.arg_type_id, self.ret_type_id);
-        self.ctxt.get_type_id(&kind)
-    }
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
         self.data.sample(rng)
     }
@@ -98,17 +94,6 @@ impl <'a> Model<'a> {
         let func_space_info = self.ctxt.build_function_space_info(self.arg_type_id, self.ret_type_id);
         let feats = func_space_info.in_feat_info.get_features(in_vec);
         self.data.eval(feats.view())
-    }
-
-    pub fn get_schmeared_hole(&self) -> SchmearedHole {
-        let func_type_id = self.get_type_id();
-        let inv_schmear =  self.get_inverse_schmear().flatten();
-
-        let result = SchmearedHole {
-            type_id : func_type_id,
-            inv_schmear
-        };
-        result
     }
 }
 

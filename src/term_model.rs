@@ -4,6 +4,7 @@ extern crate ndarray_linalg;
 use ndarray::*;
 
 use crate::params::*;
+use crate::schmeared_hole::*;
 use crate::data_update::*;
 use crate::space_info::*;
 use crate::type_id::*;
@@ -22,6 +23,7 @@ use crate::model::*;
 
 #[derive(Clone)]
 pub struct TermModel<'a> {
+    pub type_id : TypeId,
     pub model : Model<'a>,
     prior_updates : HashMap::<TermApplication, NormalInverseWishart>,
     pub data_updates : HashMap::<TermReference, DataUpdate>
@@ -46,6 +48,9 @@ impl PriorSpecification for TermModelPriorSpecification {
 }
 
 impl <'a> TermModel<'a> {
+    pub fn get_type_id(&self) -> TypeId {
+        self.type_id
+    }
     pub fn get_total_dims(&self) -> usize {
         self.model.get_total_dims()
     }
@@ -67,8 +72,19 @@ impl <'a> TermModel<'a> {
         self.model.get_schmear()
     }
 
+    pub fn get_schmeared_hole(&self) -> SchmearedHole {
+        let func_type_id = self.get_type_id();
+        let inv_schmear =  self.get_inverse_schmear().flatten();
+
+        let result = SchmearedHole {
+            type_id : func_type_id,
+            inv_schmear
+        };
+        result
+    }
+
     pub fn get_features(&self, in_vec : ArrayView1<f32>) -> Array1<f32> {
-        let func_space_info = self.model.ctxt.get_function_space_info(self.model.get_type_id());
+        let func_space_info = self.model.ctxt.get_function_space_info(self.get_type_id());
         func_space_info.in_feat_info.get_features(in_vec)
     }
 
@@ -80,7 +96,7 @@ impl <'a> TermModel<'a> {
         self.data_updates.contains_key(update_key)
     }
     pub fn update_data(&mut self, update_key : TermReference, data_update : DataUpdate) {
-        let func_space_info = self.model.ctxt.get_function_space_info(self.model.get_type_id());
+        let func_space_info = self.model.ctxt.get_function_space_info(self.get_type_id());
         let feat_update = data_update.featurize(&func_space_info);
         self.model.data += &feat_update;
         self.data_updates.insert(update_key, feat_update);
@@ -111,6 +127,7 @@ impl <'a> TermModel<'a> {
 
         let model = Model::new(&prior_specification, arg_type_id, ret_type_id, ctxt);
         TermModel {
+            type_id,
             model : model,
             prior_updates : prior_updates,
             data_updates : data_updates

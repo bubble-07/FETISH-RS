@@ -270,18 +270,12 @@ impl <'a> OptimizerState<'a> {
         let interpreter_and_embedder_state = InterpreterAndEmbedderState::new(ctxt);
 
         info!("Readying types");
-        let in_dimensions : usize = data_points[0].0.shape()[0];
-        let out_dimensions : usize = data_points[0].1.shape()[0];
 
-        let in_type_id : TypeId = ctxt.get_type_id(&Type::VecType(in_dimensions));
-        let out_type_id : TypeId = ctxt.get_type_id(&Type::VecType(out_dimensions));
-
+        let func_type_id : TypeId = 2 as TypeId; //Corresponds to scalar function type for us
 
         info!("Readying target");
 
-        let prior_specification = TermModelPriorSpecification { };
-        
-        let mut target_model : Model = Model::new(&prior_specification, in_type_id, out_type_id, ctxt);
+        let mut target_model : TermModel = TermModel::new(func_type_id, ctxt);
 
         for (in_vec, out_vec) in data_points.iter() {
             let data_point = DataPoint {
@@ -289,7 +283,7 @@ impl <'a> OptimizerState<'a> {
                 out_vec : out_vec.clone(),
                 weight : 1.0f32
             };
-            target_model += data_point;
+            target_model.model += data_point;
         }
 
         let target = target_model.get_schmeared_hole().rescale_spread(TARGET_INV_SCHMEAR_SCALE_FAC);

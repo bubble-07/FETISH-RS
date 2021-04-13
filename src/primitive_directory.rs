@@ -11,10 +11,10 @@ pub struct PrimitiveDirectory {
 
 pub fn get_default_primitive_directory(type_info_directory : &TypeInfoDirectory) -> PrimitiveDirectory {
     let mut result = PrimitiveDirectory::new(type_info_directory);
-    let scalar_type = type_info_directory.get(&Type::VecType(1));
-    let vector_type = type_info_directory.get(&Type::VecType(DIM));
-    let unary_scalar_func_type = type_info_directory.get(&Type::FuncType(scalar_type, scalar_type));
-    let binary_scalar_func_type = type_info_directory.get(&Type::FuncType(scalar_type, unary_scalar_func_type));
+    let scalar_type = 0 as TypeId;
+    let vector_type = 1 as TypeId;
+    let unary_scalar_func_type = type_info_directory.get_func_type_id(scalar_type, scalar_type);
+    let binary_scalar_func_type = type_info_directory.get_func_type_id(scalar_type, unary_scalar_func_type);
     
     let map_impl = MapImpl {
         unary_scalar_func_type,

@@ -71,12 +71,7 @@ impl <'a> ValueField<'a> {
     }
 
     pub fn from_type_id(type_id : TypeId, ctxt : &'a Context) -> ValueField<'a> {
-        let prior_specification = TermModelPriorSpecification { };
-
-        let arg_type = ctxt.get_arg_type_id(type_id);
-        let ret_type = ctxt.get_ret_type_id(type_id);
-        
-        let default_model = Model::new(&prior_specification, arg_type, ret_type, ctxt);
+        let default_model = TermModel::new(type_id, ctxt);
 
         let full_prior_schmear = default_model.get_schmeared_hole().rescale_spread(TARGET_INV_SCHMEAR_SCALE_FAC);
         ValueField::new(full_prior_schmear, ctxt)

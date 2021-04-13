@@ -7,6 +7,11 @@ use crate::feature_space_info::*;
 use crate::primitive_directory::*;
 use crate::primitive_term_pointer::*;
 
+///Stores interpreter-global context information, such as the
+///collection of all types in the language, the collection of all
+///primitives, and the definitions of their associated featurization
+///maps. See [`TypeInfoDirectory`], [`SpaceInfoDirectory`], [`PrimitiveDirectory`]
+///for these individual components.
 pub struct Context {
     pub type_info_directory : TypeInfoDirectory,
     pub space_info_directory : SpaceInfoDirectory,
@@ -26,14 +31,21 @@ pub fn get_default_context() -> Context {
 
 impl Context {
     //Primitive information
+    
+    ///Given a [`PrimitiveTermPointer`], yields the [`FuncImpl`] it references.
     pub fn get_primitive(&self, primitive_term_pointer : PrimitiveTermPointer) -> &dyn FuncImpl {
         self.primitive_directory.get_primitive(primitive_term_pointer)
     }
 
     //Space information
+    
+    ///Gets a reference to the [`FeatureSpaceInfo`] for the given [`TypeId`].
     pub fn get_feature_space_info(&self, type_id : TypeId) -> &FeatureSpaceInfo {
         self.space_info_directory.get_feature_space_info(type_id)
     }
+
+    ///Gets the [`FunctionSpaceInfo`] for functions going from the given `arg_type_id` to the
+    ///given `ret_type_id`.
     pub fn build_function_space_info(&self, arg_type_id : TypeId, ret_type_id : TypeId) -> FunctionSpaceInfo {
         let arg_feat_info = self.get_feature_space_info(arg_type_id);
         let ret_feat_info = self.get_feature_space_info(ret_type_id);
@@ -42,6 +54,7 @@ impl Context {
             out_feat_info : ret_feat_info
         }
     }
+    ///Gets the [`FunctionSpaceInfo`] for the given function [`TypeId`].
     pub fn get_function_space_info(&self, func_type_id : TypeId) -> FunctionSpaceInfo {
         let func_type = self.get_type(func_type_id);
         match (func_type) {
@@ -60,14 +73,14 @@ impl Context {
     }
 
     //Type Information
-    pub fn get_type_id(&self, kind : &Type) -> TypeId {
-        self.type_info_directory.get(kind)
+    pub fn get_func_type_id(&self, arg_type_id : TypeId, ret_type_id : TypeId) -> TypeId {
+        self.type_info_directory.get_func_type_id(arg_type_id, ret_type_id)
     }
     pub fn get_type(&self, id : TypeId) -> Type {
         self.type_info_directory.get_type(id)
     }
-    pub fn has_type(&self, kind : &Type) -> bool {
-        self.type_info_directory.has_type(kind)
+    pub fn has_func_type(&self, arg_type_id : TypeId, ret_type_id : TypeId) -> bool {
+        self.type_info_directory.has_func_type(arg_type_id, ret_type_id)
     }
     pub fn get_application_type_ids(&self, id : TypeId) -> Vec::<(TypeId, TypeId)> {
         self.type_info_directory.get_application_type_ids(id)

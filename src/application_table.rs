@@ -37,6 +37,7 @@ impl <'a> ApplicationTable<'a> {
         }
     }
 
+    ///Yields all [`TermReference`] results recorded for the given [`TermApplication`].
     pub fn get_results_from_application(&self, term_app : &TermApplication) -> Vec<TermReference> {
         match (self.table.get_vec(term_app)) {
             Option::Some(vec) => vec.clone(),
@@ -44,6 +45,7 @@ impl <'a> ApplicationTable<'a> {
         }
     }
 
+    ///Yields all recorded [`TermApplicationResult`]s which involve the passed `arg`.
     pub fn get_app_results_with_arg(&self, arg : &TermReference) -> Vec<TermApplicationResult> {
         match (self.arg_to_application_map.get_vec(arg)) {
             Option::Some(vec) => vec.clone(),
@@ -51,6 +53,7 @@ impl <'a> ApplicationTable<'a> {
         }
     }
 
+    ///Yields all recorded [`TermApplicationResult`]s which involve the passed `func`.
     pub fn get_app_results_with_func(&self, func : TermPointer) -> Vec<TermApplicationResult> {
         match (self.func_to_application_map.get_vec(&func)) {
             Option::Some(vec) => vec.clone(),
@@ -58,6 +61,7 @@ impl <'a> ApplicationTable<'a> {
         }
     }
 
+    ///Yields all recorded [`TermApplicationResult`]s which have had the passed `result`.
     pub fn get_app_results_with_result(&self, result : &TermReference) -> Vec<TermApplicationResult> {
         match (self.result_to_application_map.get_vec(result)) {
             Option::Some(vec) => vec.clone(),
@@ -65,6 +69,7 @@ impl <'a> ApplicationTable<'a> {
         }
     }
 
+    ///Records that the evaluation of `term_app` resulted in `result_ref`.
     pub fn link(&mut self, term_app : TermApplication, result_ref : TermReference) {
         let result = TermApplicationResult {
             term_app : term_app.clone(),
