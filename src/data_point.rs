@@ -3,8 +3,7 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 
-///Data point [input, output pair]
-///with an output precision matrix
+///A weighted data-point for regressions
 #[derive(Clone)]
 pub struct DataPoint {
     pub in_vec: Array1<f32>,

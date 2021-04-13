@@ -73,30 +73,46 @@ impl Context {
     }
 
     //Type Information
+    ///Given the argument and result types for a function type, returns the
+    ///[`TypeId`] of the corresponding function type, assuming that it exists.
     pub fn get_func_type_id(&self, arg_type_id : TypeId, ret_type_id : TypeId) -> TypeId {
         self.type_info_directory.get_func_type_id(arg_type_id, ret_type_id)
     }
+    ///Given a [`TypeId`], yields the [`Type`] struct describing the type.
     pub fn get_type(&self, id : TypeId) -> Type {
         self.type_info_directory.get_type(id)
     }
+    ///Given the argument and result types for a function type, returns true iff
+    ///the function type actually exists in the [`TypeInfoDirectory`].
     pub fn has_func_type(&self, arg_type_id : TypeId, ret_type_id : TypeId) -> bool {
         self.type_info_directory.has_func_type(arg_type_id, ret_type_id)
     }
+    ///Given a target type, yields the collection of all pairs `(func_type_id, arg_type_id)`
+    ///in the [`TypeInfoDirectory`] for which the return type is the given target.
     pub fn get_application_type_ids(&self, id : TypeId) -> Vec::<(TypeId, TypeId)> {
         self.type_info_directory.get_application_type_ids(id)
     }
+    ///Returns the total number of types registered in the [`TypeInfoDirectory`].
     pub fn get_total_num_types(&self) -> usize {
         self.type_info_directory.get_total_num_types()
     }
+    ///Given the [`TypeId`] of a vector type, yields the dimensionality of the
+    ///corresponding vector space.
     pub fn get_dimension(&self, vec_type_id : TypeId) -> usize {
         self.type_info_directory.get_dimension(vec_type_id)
     }
+    ///Given the [`TypeId`] of a function type, yields the [`TypeId`] of the
+    ///function's argument type.
     pub fn get_arg_type_id(&self, func_type_id : TypeId) -> TypeId {
         self.type_info_directory.get_arg_type_id(func_type_id)
     }
+    ///Given the [`TypeId`] of a function type, yields the [`TypeId`] of the
+    ///function's return type.
     pub fn get_ret_type_id(&self, func_type_id : TypeId) -> TypeId {
         self.type_info_directory.get_ret_type_id(func_type_id)
     }
+    ///Given a [`TypeId`], returns `true` if the underlying [`Type`] is
+    ///a vector type, and `false` if it's a function type instead.
     pub fn is_vector_type(&self, id : TypeId) -> bool {
         self.type_info_directory.is_vector_type(id)
     }

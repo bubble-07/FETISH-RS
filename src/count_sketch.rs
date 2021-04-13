@@ -5,6 +5,10 @@ use ndarray::*;
 
 use rand::prelude::*;
 
+///Represents a count-sketch linear projection transformation
+///for efficient dimensionality reduction.
+///(See Kenneth L. Clarkson and David P. Woodruff. Low rank approximation and
+///regression in input sparsity time. In STOC, 2013.) 
 #[derive(Clone)]
 pub struct CountSketch {
     in_dims : usize,
@@ -14,6 +18,8 @@ pub struct CountSketch {
 }
 
 impl CountSketch {
+    ///Creates a [`CountSketch`] which projects from the specified `in_dims` to
+    ///the specified [`out_dims`].
     pub fn new(in_dims : usize, out_dims : usize) -> CountSketch {
         //Need to initialize both indices and signs here.
         let mut indices = Vec::<usize>::with_capacity(in_dims);
@@ -37,10 +43,12 @@ impl CountSketch {
         }
     }
     
+    ///Gets the target dimension of the projection represented by this [`CountSketch`]
     pub fn get_out_dimensions(&self) -> usize {
         self.out_dims
     }
 
+    ///Projects the given input vector using the projection defined by this [`CountSketch`].
     pub fn sketch(&self, v: ArrayView1<f32>) -> Array1<f32> {
         let mut result = Array::zeros((self.out_dims,));
         for i in 0..self.in_dims {
