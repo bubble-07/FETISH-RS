@@ -21,9 +21,17 @@ use crate::term_index::*;
 
 type ModelKey = TermIndex;
 
+///Learned left-inverse to the sketcher for a given type.
+///Given compressed vectors, an [`Elaborator`] represents
+///information about likely-to-be-seen vectors
+///in the base space which project to it.
 pub struct Elaborator<'a> {
     pub type_id : TypeId,
-    pub model : NormalInverseWishart, //Model is from projected vectors to orthog basis of kernel space of projection
+    ///The linear model here is from projected vectors to vectors expressed in terms of the
+    ///orthogonal basis for the kernel of the projection for the given type.
+    pub model : NormalInverseWishart,
+    ///Stored collection of [`DataPoint`] updates that have been applied to this [`Elaborator`]
+    ///indexed by the [`TermIndex`]es of terms that they originated from.
     pub updates : HashMap::<ModelKey, Vec<DataPoint>>,
     pub ctxt : &'a Context
 }
@@ -48,8 +56,10 @@ impl PriorSpecification for ElaboratorPrior {
 }
 
 impl<'a> Elaborator<'a> {
-    //Before calling, need to check that there is a sketcher, and it has a kernel.
-    //There's no point in constructing one of these otherwise
+    ///Constructs a new [`Elaborator`] for the given [`TypeId`] in the given [`Context`].
+    ///Before calling this, you should make sure that there is in fact a [`LinearSketch`]
+    ///for the given type, and that it has a kernel. There's no point in creating one of these
+    ///otherwise.
     pub fn new(type_id : TypeId, ctxt : &'a Context) -> Elaborator<'a> {
         let feature_space_info = ctxt.get_feature_space_info(type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
@@ -69,6 +79,8 @@ impl<'a> Elaborator<'a> {
         }
     }
 
+    ///Gets the mean of the distribution that this [`Elaborator`] defines over the left-inverse
+    ///of the projection for this elaborator's type.
     pub fn get_mean(&self) -> Array2<f32> {
         let feature_space_info = self.ctxt.get_feature_space_info(self.type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
@@ -82,6 +94,8 @@ impl<'a> Elaborator<'a> {
         expanded_model_sample
     }
 
+    ///Samples a left-inverse to the projection for this elaborator's type from the
+    ///distribution defined by this [`Elaborator`].
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
         let feature_space_info = self.ctxt.get_feature_space_info(self.type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
@@ -95,11 +109,18 @@ impl<'a> Elaborator<'a> {
         expanded_model_sample
     }
 
+    ///Using the distribution that this [`Elaborator`] defines over possible
+    ///expansions of vectors, and given a [`Schmear`] in the compressed space,
+    ///yields the [`Schmear`] in the expanded space which corresponds to sampling
+    ///possible expansion matrices from the [`Elaborator`] and vectors from the
+    ///passed in [`Schmear`], and applying the former to the latter.
     pub fn expand_schmear(&self, compressed_schmear : &Schmear) -> Schmear {
         let expansion_func_schmear = self.get_expansion_func_schmear();
         expansion_func_schmear.apply(compressed_schmear)
     }
 
+    ///Gets the [`FuncSchmear`] that this [`Elaborator`] defines over left-inverses
+    ///to the projection matrix for the type of this elaborator.
     pub fn get_expansion_func_schmear(&self) -> FuncSchmear {
         let feature_space_info = self.ctxt.get_feature_space_info(self.type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
@@ -134,9 +155,15 @@ impl<'a> Elaborator<'a> {
         result_schmear
     }
 
+    ///Returns true if this [`Elaborator`] has an update stemming from the given
+    ///[`TermIndex`] that has been applied to it.
     pub fn has_data(&self, update_key : &ModelKey) -> bool {
         self.updates.contains_key(update_key)
     }
+    ///Given a [`Model`] for a term with the given [`TermIndex`], updates this
+    ///[`Elaborator`] to reflect that the passed [`Model`] should be something
+    ///that this [`Elaborator`] does a good job of faithfully representing through
+    ///a round-trip projection for the type -> expansion with the [`Elaborator`].
     pub fn update_data(&mut self, update_key : ModelKey, data_update : &Model) {
         let feature_space_info = self.ctxt.get_feature_space_info(self.type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
@@ -163,6 +190,7 @@ impl<'a> Elaborator<'a> {
 
         self.updates.insert(update_key, data_updates);
     }
+    ///Undoes an update added for the given [`TermIndex`] using [`update_data`]
     pub fn downdate_data(&mut self, update_key : &ModelKey) {
         let mut data_updates = self.updates.remove(update_key).unwrap();
         for data_update in data_updates.drain(..) {
