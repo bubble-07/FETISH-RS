@@ -16,6 +16,7 @@ use crate::prior_specification::*;
 use crate::context::*;
 use std::collections::HashMap;
 use crate::term_index::*;
+use crate::input_to_schmeared_output::*;
 
 //Learned "opposite" of the sketcher for a given type
 
@@ -30,9 +31,9 @@ pub struct Elaborator<'a> {
     ///The linear model here is from projected vectors to vectors expressed in terms of the
     ///orthogonal basis for the kernel of the projection for the given type.
     pub model : NormalInverseWishart,
-    ///Stored collection of [`DataPoint`] updates that have been applied to this [`Elaborator`]
+    ///Stored collection of [`InputToSchmearedOutput`] updates that have been applied to this [`Elaborator`]
     ///indexed by the [`TermIndex`]es of terms that they originated from.
-    pub updates : HashMap::<ModelKey, Vec<DataPoint>>,
+    pub updates : HashMap::<ModelKey, Vec<InputToSchmearedOutput>>,
     pub ctxt : &'a Context
 }
 
@@ -168,25 +169,25 @@ impl<'a> Elaborator<'a> {
         let feature_space_info = self.ctxt.get_feature_space_info(self.type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
         let kernel_mat = &sketcher.get_kernel_matrix().as_ref().unwrap();
+        let kernel_mat_t = kernel_mat.t();
 
         let func_mean = data_update.get_mean_as_vec();
+        let func_schmear = data_update.get_schmear();
+
+        let sketched_vec = sketcher.sketch(func_mean.view());
+
+        let func_schmear_in_kernel_basis = func_schmear.compress(kernel_mat_t);
 
         let mut data_updates = Vec::new();
 
-        let sketched = sketcher.sketch(func_mean.view());
-        let expanded = sketcher.expand(sketched.view());
-        let diff = func_mean - &expanded;
-        let diff_in_kernel_basis = kernel_mat.t().dot(&diff);
-
-        let data_update = DataPoint {
-            in_vec : sketched,
-            out_vec : diff_in_kernel_basis,
-            weight : 1.0f32
+        let input_to_schmeared_output = InputToSchmearedOutput {
+            in_vec : sketched_vec,
+            out_schmear : func_schmear_in_kernel_basis,
         };
 
-        self.model += &data_update;
+        self.model += &input_to_schmeared_output;
 
-        data_updates.push(data_update);
+        data_updates.push(input_to_schmeared_output);
 
         self.updates.insert(update_key, data_updates);
     }

@@ -169,6 +169,61 @@ impl <'a> InterpreterState<'a> {
         result_ref
     }
 
+    fn ensure_every_type_has_a_term_for_default(&mut self) {
+	let mut type_to_term = HashMap::<TypeId, TermReference>::new();
+        type_to_term.insert(0 as TypeId, TermReference::VecRef(0 as TypeId, Array::zeros((1,))));
+        type_to_term.insert(1 as TypeId, TermReference::VecRef(1 as TypeId, Array::zeros((DIM,))));
+        //Initial population
+        for i in 0..self.ctxt.get_total_num_types() {
+            let type_id = i as TypeId;
+            let kind = self.ctxt.get_type(type_id);
+            match (kind) {
+                Type::VecType(n) => {
+                    type_to_term.insert(type_id, TermReference::VecRef(type_id, Array::zeros((n,))));
+                },
+                Type::FuncType(_, _) => {
+                    let primitive_space = self.ctxt.primitive_directory.primitive_type_spaces.get(&type_id).unwrap();
+                    
+                    if (primitive_space.terms.len() > 0) {
+                        let func_ptr = TermPointer {
+                            type_id : type_id,
+                            index : TermIndex::Primitive(0)
+                        };
+                        type_to_term.insert(type_id, TermReference::FuncRef(func_ptr));
+                    }
+                }
+            }
+        }
+        loop {
+            let mut found_something = false;
+            for i in 0..self.ctxt.get_total_num_types() {
+                let func_type_id = i as TypeId;
+
+                if let Option::Some(func_term) = type_to_term.get(&func_type_id) {
+                    if let Type::FuncType(arg_type_id, ret_type_id) = self.ctxt.get_type(func_type_id) {
+                        if let Option::Some(arg_ref) = type_to_term.get(&arg_type_id) {
+                            if (!type_to_term.contains_key(&ret_type_id)) {
+                                if let TermReference::FuncRef(func_ptr) = func_term {
+                                    let application = TermApplication {
+                                        func_ptr : func_ptr.clone(),
+                                        arg_ref : arg_ref.clone()
+                                    };
+                                    let result_ref = self.evaluate(&application);
+                                    type_to_term.insert(ret_type_id, result_ref);
+
+                                    found_something = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (!found_something) {
+                break;
+            }
+        }
+    }
+
     pub fn new(ctxt : &'a Context) -> InterpreterState<'a> {
         //Initialize hashmaps for each type in the global type table 
         let mut application_tables = HashMap::<TypeId, ApplicationTable>::new();
@@ -181,13 +236,16 @@ impl <'a> InterpreterState<'a> {
             }
         }
 
-        let result = InterpreterState {
+        let mut result = InterpreterState {
             application_tables,
             type_spaces,
             new_term_app_results : Vec::new(),
             new_terms : Vec::new(),
             ctxt
         };
+
+        //TODO: remove
+        result.ensure_every_type_has_a_term_for_default();
 
         result
     }
