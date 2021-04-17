@@ -4,9 +4,9 @@ extern crate ndarray_linalg;
 use std::ops;
 use ndarray::*;
 use crate::prior_specification::*;
+use crate::input_to_schmeared_output::*;
 use crate::params::*;
 use crate::data_points::*;
-use crate::data_update::*;
 use crate::pseudoinverse::*;
 use crate::func_scatter_tensor::*;
 use crate::func_inverse_schmear::*;
@@ -266,23 +266,31 @@ impl NormalInverseWishart {
         self.mean = out_mean;
         self.precision = out_precision;
     }
-}
-
-impl ops::AddAssign<&DataUpdate> for NormalInverseWishart {
-    fn add_assign(&mut self, update : &DataUpdate) {
-        let data_points = update.get_data_points();
-        for data_point in data_points.iter() {
-            self.update(data_point, false);
+    fn update_input_to_schmeared_output(&mut self, update : &InputToSchmearedOutput, downdate : bool) {
+        let data_point = DataPoint {
+            in_vec : update.in_vec.clone(),
+            out_vec : update.out_schmear.mean.clone(),
+            weight : 1.0f32
+        };
+        if (downdate) {
+            self.big_v -= &update.out_schmear.covariance;
+        }
+        self.update(&data_point, downdate);
+        if (!downdate) {
+            self.big_v += &update.out_schmear.covariance;
         }
     }
 }
 
-impl ops::SubAssign<&DataUpdate> for NormalInverseWishart {
-    fn sub_assign(&mut self, update : &DataUpdate) {
-        let data_points = update.get_data_points();
-        for data_point in data_points.iter() {
-            self.update(data_point, true);
-        }
+impl ops::AddAssign<&InputToSchmearedOutput> for NormalInverseWishart {
+    fn add_assign(&mut self, update : &InputToSchmearedOutput) {
+        self.update_input_to_schmeared_output(update, false);
+    }
+}
+
+impl ops::SubAssign<&InputToSchmearedOutput> for NormalInverseWishart {
+    fn sub_assign(&mut self, update : &InputToSchmearedOutput) {
+        self.update_input_to_schmeared_output(update, true);
     }
 }
 

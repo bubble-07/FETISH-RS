@@ -64,7 +64,7 @@ impl<'a> FunctionOptimumState<'a> {
         (best_arg_vector, ret_typed_vec, value)
     }
     pub fn update(&mut self, sampled_embedder_state : &SampledEmbedderState, 
-                             value_field_state : &SampledValueFieldState) -> (TermApplication, f32) {
+                             value_field_state : &SampledValueFieldState) -> Option<(TermApplication, f32)> {
 
         let mut best_term_app = Option::None;
         let mut best_value = f32::NEG_INFINITY;
@@ -73,24 +73,29 @@ impl<'a> FunctionOptimumState<'a> {
             let arg_type_id = self.ctxt.get_arg_type_id(*func_type_id);
             let sampled_embeddings = sampled_embedder_state.embedding_spaces.get(func_type_id).unwrap();
 
-            let (func_index, value) = function_space.update(sampled_embeddings, value_field_state);
+            let maybe_func_index = function_space.update(sampled_embeddings, value_field_state);
+            if let Option::Some((func_index, value)) = maybe_func_index {
+                if (value > best_value) {
+                    let func_ptr = TermPointer {
+                        index : func_index,
+                        type_id : *func_type_id
+                    };
+                    let arg_vec = function_space.get_optimal_vector(func_index);
+                    let arg_ref = TermReference::VecRef(arg_type_id, to_noisy(arg_vec.view()));
+                    let term_app = TermApplication {
+                        func_ptr,
+                        arg_ref
+                    };
 
-            if (value > best_value) {
-                let func_ptr = TermPointer {
-                    index : func_index,
-                    type_id : *func_type_id
-                };
-                let arg_vec = function_space.get_optimal_vector(func_index);
-                let arg_ref = TermReference::VecRef(arg_type_id, to_noisy(arg_vec.view()));
-                let term_app = TermApplication {
-                    func_ptr,
-                    arg_ref
-                };
-
-                best_value = value;
-                best_term_app = Option::Some(term_app);
+                    best_value = value;
+                    best_term_app = Option::Some(term_app);
+                }
             }
         }
-        (best_term_app.unwrap(), best_value)
+        if (best_term_app.is_none()) {
+            Option::None
+        } else {
+            Option::Some((best_term_app.unwrap(), best_value))
+        }
     }
 }

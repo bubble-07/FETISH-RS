@@ -42,7 +42,7 @@ impl<'a> SampledEmbeddingSpace<'a> {
 
     pub fn get_best_term_index_to_pass_with_value(&self, func_mat : ArrayView2<f32>, ret_type : TypeId,
                                             value_field_state : &SampledValueFieldState)
-                                         -> (TermIndex, TypedVector, f32) {
+                                         -> Option<(TermIndex, TypedVector, f32)> {
         let mut best_arg_index = Option::None;
         let mut best_ret_vec = Option::None;
         let mut best_arg_value = f32::NEG_INFINITY;
@@ -61,12 +61,16 @@ impl<'a> SampledEmbeddingSpace<'a> {
                 best_arg_index = Option::Some(*arg_index);
             }
         }
-        (best_arg_index.unwrap(), best_ret_vec.unwrap(), best_arg_value)
+        if (best_arg_index.is_none()) { 
+            Option::None
+        } else {
+            Option::Some((best_arg_index.unwrap(), best_ret_vec.unwrap(), best_arg_value))
+        }
     }
 
     pub fn get_best_term_index_to_apply_with_value(&self, featurized_arg_vector : ArrayView1<f32>, 
                                          ret_type : TypeId, value_field_state : &SampledValueFieldState) 
-                                         -> (TermIndex, TypedVector, f32) {
+                                         -> Option<(TermIndex, TypedVector, f32)> {
         let mut best_model_index = Option::None;
         let mut best_compressed_vec = Option::None;
         let mut best_model_value = f32::NEG_INFINITY;
@@ -85,7 +89,11 @@ impl<'a> SampledEmbeddingSpace<'a> {
                 best_model_index = Option::Some(*model_index);
             }
         }
-        (best_model_index.unwrap(), best_compressed_vec.unwrap(), best_model_value)
+        if (best_model_index.is_none()) {
+            Option::None
+        } else {
+            Option::Some((best_model_index.unwrap(), best_compressed_vec.unwrap(), best_model_value))
+        }
     }
 
     pub fn new(type_id : TypeId, elaborator : Array2<f32>, ctxt : &'a Context) -> SampledEmbeddingSpace<'a> {

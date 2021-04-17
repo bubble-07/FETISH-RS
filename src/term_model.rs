@@ -5,7 +5,6 @@ use ndarray::*;
 
 use crate::params::*;
 use crate::schmeared_hole::*;
-use crate::data_update::*;
 use crate::space_info::*;
 use crate::type_id::*;
 use crate::normal_inverse_wishart::*;
@@ -14,6 +13,7 @@ use crate::term_reference::*;
 use crate::func_schmear::*;
 use crate::prior_specification::*;
 use crate::func_inverse_schmear::*;
+use crate::input_to_schmeared_output::*;
 use crate::context::*;
 
 use rand::prelude::*;
@@ -26,7 +26,7 @@ pub struct TermModel<'a> {
     pub type_id : TypeId,
     pub model : Model<'a>,
     prior_updates : HashMap::<TermApplication, NormalInverseWishart>,
-    pub data_updates : HashMap::<TermReference, DataUpdate>
+    pub data_updates : HashMap::<TermReference, InputToSchmearedOutput>
 }
 
 pub struct TermModelPriorSpecification {
@@ -95,7 +95,7 @@ impl <'a> TermModel<'a> {
     pub fn has_data(&self, update_key : &TermReference) -> bool {
         self.data_updates.contains_key(update_key)
     }
-    pub fn update_data(&mut self, update_key : TermReference, data_update : DataUpdate) {
+    pub fn update_data(&mut self, update_key : TermReference, data_update : InputToSchmearedOutput) {
         let func_space_info = self.model.ctxt.get_function_space_info(self.get_type_id());
         let feat_update = data_update.featurize(&func_space_info);
         self.model.data += &feat_update;
@@ -119,7 +119,7 @@ impl <'a> TermModel<'a> {
 
     pub fn new(type_id : TypeId, ctxt : &'a Context) -> TermModel<'a> {
         let prior_updates : HashMap::<TermApplication, NormalInverseWishart> = HashMap::new();
-        let data_updates : HashMap::<TermReference, DataUpdate> = HashMap::new();
+        let data_updates : HashMap::<TermReference, InputToSchmearedOutput> = HashMap::new();
         let arg_type_id = ctxt.get_arg_type_id(type_id);
         let ret_type_id = ctxt.get_ret_type_id(type_id);
 

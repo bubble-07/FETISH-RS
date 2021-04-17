@@ -3,6 +3,7 @@
 #![allow(unused_imports)]
 #![allow(unused_parens)]
 
+mod input_to_schmeared_output;
 mod nonprimitive_term_pointer;
 mod primitive_term_pointer;
 mod term_index;
@@ -40,7 +41,6 @@ mod rand_utils;
 mod term_model;
 mod sampled_embedder_state;
 mod sampled_embedding_space;
-mod data_update;
 mod sigma_points;
 mod sherman_morrison;
 mod data_point;

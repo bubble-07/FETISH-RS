@@ -6,8 +6,8 @@ use crate::space_info::*;
 use ndarray::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
+use crate::input_to_schmeared_output::*;
 use crate::sampled_embedder_state::*;
-use crate::data_update::*;
 use crate::term_index::*;
 use crate::interpreter_state::*;
 use crate::type_id::*;
@@ -350,12 +350,9 @@ impl<'a> EmbedderState<'a> {
         trace!("Propagating data for space of size {}->{}", arg_mean.shape()[0],
                                                             ret_schmear.mean.shape()[0]);
 
-        let out_type = term_app_res.get_ret_type(self.ctxt);
-        let data_update = if (self.ctxt.is_vector_type(out_type)) {
-            let ret_mean = ret_schmear.mean;
-            construct_vector_data_update(arg_mean, ret_mean)
-        } else {
-            construct_data_update(arg_mean, &ret_schmear)
+        let data_update = InputToSchmearedOutput {
+            in_vec : arg_mean,
+            out_schmear : ret_schmear 
         };
 
         let func_embedding : &mut TermModel = self.get_mut_embedding(term_app_res.get_func_ptr());

@@ -97,31 +97,40 @@ impl <'a> OptimizerState<'a> {
                                       sampled_value_field_state : &SampledValueFieldState,
                                       current_compressed_vec : &TypedVector, 
                                       transition : &TypeAction) ->
-                                      (TermReference, TypedVector, f32) {
+                                      Option<(TermReference, TypedVector, f32)> {
 
         //The current type id must be a function type
         match (transition) {
             TypeAction::Applying(func_type_id) => {
                 //In this case, both the function and the argument will be functions
-                let (func_ptr, next_compressed_vec, value) = 
+                let maybe_result = 
                     sampled_embedder_state.get_best_term_to_apply(current_compressed_vec, *func_type_id,
                                                                   sampled_value_field_state);
+                if (maybe_result.is_none()) {
+                    return Option::None
+                }
+                let (func_ptr, next_compressed_vec, value) = maybe_result.unwrap();
                 let func_ref = TermReference::FuncRef(func_ptr); 
-                (func_ref, next_compressed_vec, value)
+                Option::Some((func_ref, next_compressed_vec, value))
             },
             TypeAction::Passing(arg_type_id) => {
                 if (self.get_context().is_vector_type(*arg_type_id)) {
-                    let (arg_vec, next_compressed_vec, value) = 
+                    let maybe_result = 
                         self.func_opt_state.get_best_vector_to_pass(current_compressed_vec,
                                                     sampled_value_field_state, sampled_embedder_state);
+                    let (arg_vec, next_compressed_vec, value) = maybe_result;
                     let arg_ref = TermReference::VecRef(*arg_type_id, to_noisy(arg_vec.view()));
-                    (arg_ref, next_compressed_vec, value)
+                    Option::Some((arg_ref, next_compressed_vec, value))
                 } else {
-                    let (arg_ptr, next_compressed_vec, value) =
+                    let maybe_result =
                         sampled_embedder_state.get_best_term_to_pass(current_compressed_vec, 
                                                                      sampled_value_field_state);
+                    if (maybe_result.is_none()) {
+                        return Option::None
+                    }
+                    let (arg_ptr, next_compressed_vec, value) = maybe_result.unwrap();
                     let arg_ref = TermReference::FuncRef(arg_ptr);
-                    (arg_ref, next_compressed_vec, value)
+                    Option::Some((arg_ref, next_compressed_vec, value))
                 }
             }
         }
@@ -143,13 +152,16 @@ impl <'a> OptimizerState<'a> {
             if self.type_graph.is_reachable_from(*successor_type, target_type_id) {
                 let type_actions = self.type_graph.get_actions(current_type_id, *successor_type);
                 for type_action in type_actions.iter() {
-                    let (term, vec, value) = self.find_best_next_with_transition(sampled_embedder_state,
+                    let maybe_next = self.find_best_next_with_transition(sampled_embedder_state,
                                                   sampled_value_field_state,
                                                   current_compressed_vec, type_action);
-                    if (value > best_value || best_term.is_none()) {
-                        best_term = Option::Some(term.clone());
-                        best_vec = Option::Some(vec.clone());
-                        best_value = value;
+                    if (!maybe_next.is_none()) {
+                        let (term, vec, value) = maybe_next.unwrap();
+                        if (value > best_value || best_term.is_none()) {
+                            best_term = Option::Some(term.clone());
+                            best_vec = Option::Some(vec.clone());
+                            best_value = value;
+                        }
                     }
                 }
             }
@@ -187,7 +199,7 @@ impl <'a> OptimizerState<'a> {
         let (term, vec, _) = self.find_best_next_with_transition(sampled_embedder_state, 
                                                                 sampled_value_field_state,
                                                                 current_compressed_vec,
-                                                                action);
+                                                                action).unwrap();
 
         (term, vec)
     }
@@ -241,13 +253,23 @@ impl <'a> OptimizerState<'a> {
     pub fn find_best_application(&mut self, sampled_embedder_state : &SampledEmbedderState,
                                             sampled_value_field_state : &SampledValueFieldState)
                                  -> TermApplication {
-        let (nonvec_app, nonvec_value) = 
-            sampled_embedder_state.get_best_nonvector_application_with_value(sampled_value_field_state);
-        let (vec_app, vec_value) = self.func_opt_state.update(sampled_embedder_state, sampled_value_field_state);
-        if (vec_value > nonvec_value) {
+        let maybe_nonvec_app = sampled_embedder_state.get_best_nonvector_application_with_value(sampled_value_field_state);
+        let maybe_vec_app = self.func_opt_state.update(sampled_embedder_state, sampled_value_field_state);
+
+        if (maybe_nonvec_app.is_none()) {
+            let (vec_app, _) = maybe_vec_app.unwrap();
             vec_app
-        } else {
+        } else if (maybe_vec_app.is_none()) {
+            let (nonvec_app, _) = maybe_nonvec_app.unwrap();
             nonvec_app
+        } else {
+            let (vec_app, vec_value) = maybe_vec_app.unwrap();
+            let (nonvec_app, nonvec_value) = maybe_nonvec_app.unwrap();
+            if (vec_value > nonvec_value) {
+                vec_app
+            } else {
+                nonvec_app
+            }
         }
     }
 

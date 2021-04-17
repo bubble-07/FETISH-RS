@@ -27,16 +27,12 @@ pub fn get_default_type_info_directory() -> TypeInfoDirectory {
     info!("Adding composition types");
     
     //Add all composition types of vector functions
-    for n in [1, DIM].iter() {
-        let n_t = types.add(Type::VecType(*n));
-        for m in [1, DIM].iter() {
-            let m_t = types.add(Type::VecType(*m));
-            for p in [1, DIM].iter() {
-                let p_t = types.add(Type::VecType(*p));
-
-                let func_one = types.add(Type::FuncType(m_t, p_t));
-                let func_two = types.add(Type::FuncType(n_t, m_t));
-                let func_out = types.add(Type::FuncType(n_t, p_t));
+    for n_t in [scalar_t, vector_t].iter() {
+        for m_t in [scalar_t, vector_t].iter() {
+            for p_t in [scalar_t, vector_t].iter() {
+                let func_one = types.add(Type::FuncType(*m_t, *p_t));
+                let func_two = types.add(Type::FuncType(*n_t, *m_t));
+                let func_out = types.add(Type::FuncType(*n_t, *p_t));
 
                 let two_to_out = types.add(Type::FuncType(func_two, func_out));
                 let _compose_type = types.add(Type::FuncType(func_one, two_to_out));

@@ -79,7 +79,7 @@ impl <'a> FunctionOptimumSpace<'a> {
         self.optimal_input_vectors.get(&model_key).unwrap()
     }
     pub fn update(&mut self, sampled_embeddings : &SampledEmbeddingSpace, 
-                             value_field_state : &SampledValueFieldState) -> (TermIndex, f32) {
+                             value_field_state : &SampledValueFieldState) -> Option<(TermIndex, f32)> {
         let mut best_index = Option::None;
         let mut best_value = f32::NEG_INFINITY;
 
@@ -168,6 +168,10 @@ impl <'a> FunctionOptimumSpace<'a> {
         self.optimal_input_mapping += data_points;
         self.optimal_input_mapping_sampler = NormalInverseWishartSampler::new(&self.optimal_input_mapping.data);
 
-        (best_index.unwrap(), best_value)
+        if (best_index.is_none()) {
+            Option::None
+        } else {
+            Option::Some((best_index.unwrap(), best_value))
+        }
     }
 }
