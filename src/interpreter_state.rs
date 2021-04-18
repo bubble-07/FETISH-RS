@@ -4,6 +4,7 @@ extern crate ndarray_linalg;
 use ndarray::*;
 use std::collections::HashMap;
 use crate::nonprimitive_term_pointer::*;
+use crate::newly_evaluated_terms::*;
 use crate::type_id::*;
 use crate::application_chain::*;
 use crate::application_table::*;
@@ -23,8 +24,6 @@ use topological_sort::TopologicalSort;
 pub struct InterpreterState<'a> {
     pub application_tables : HashMap::<TypeId, ApplicationTable<'a>>,
     pub type_spaces : HashMap::<TypeId, TypeSpace>,
-    pub new_term_app_results : Vec::<TermApplicationResult>,
-    pub new_terms : Vec::<NonPrimitiveTermPointer>,
     pub ctxt : &'a Context
 }
 
@@ -33,16 +32,9 @@ impl <'a> InterpreterState<'a> {
         self.ctxt
     }
 
-    pub fn clear_newly_received(&mut self) {
-        self.new_term_app_results.clear();
-        self.new_terms.clear();
-    }
-
     pub fn store_term(&mut self, type_id : TypeId, term : PartiallyAppliedTerm) -> NonPrimitiveTermPointer {
         let type_space : &mut TypeSpace = self.type_spaces.get_mut(&type_id).unwrap();
         let result = type_space.add(term);
-
-        self.new_terms.push(result.clone());
         result
     }
 
@@ -93,7 +85,8 @@ impl <'a> InterpreterState<'a> {
         result
     }
 
-    pub fn evaluate_application_chain(&mut self, app_chain : &ApplicationChain) -> TermReference {
+    pub fn evaluate_application_chain(&mut self, app_chain : &ApplicationChain) -> (TermReference, NewlyEvaluatedTerms) {
+        let mut newly_evaluated_terms = NewlyEvaluatedTerms::new();
         let mut current_ref = app_chain.term_refs[0].clone();
         for i in 1..app_chain.term_refs.len() {
             let current_type = current_ref.get_type();
@@ -129,12 +122,14 @@ impl <'a> InterpreterState<'a> {
                 }
             };
 
-            current_ref = self.evaluate(&term_app);
+            let eval_pair = self.evaluate(&term_app);
+            current_ref = eval_pair.0;
+            newly_evaluated_terms.merge(eval_pair.1);
         }
-        current_ref
+        (current_ref, newly_evaluated_terms)
     }
 
-    pub fn evaluate(&mut self, term_app : &TermApplication) -> TermReference {
+    pub fn evaluate(&mut self, term_app : &TermApplication) -> (TermReference, NewlyEvaluatedTerms) {
         let func_type_id : TypeId = term_app.get_func_type();
 
         let func_term : PartiallyAppliedTerm = self.get(term_app.func_ptr);
@@ -145,8 +140,12 @@ impl <'a> InterpreterState<'a> {
 
         args_copy.push(arg_ref);
 
+        let mut newly_evaluated_terms = NewlyEvaluatedTerms::new();
+
         let result_ref : TermReference = if (func_impl.ready_to_evaluate(&args_copy)) {
-            func_impl.evaluate(self, args_copy)
+            let (ret_ref, more_evaluated_terms) = func_impl.evaluate(self, args_copy);
+            newly_evaluated_terms.merge(more_evaluated_terms);
+            ret_ref
         } else {
             let result = PartiallyAppliedTerm {
                 func_ptr : func_term.func_ptr.clone(),
@@ -154,6 +153,9 @@ impl <'a> InterpreterState<'a> {
             };
             let ret_type_id : TypeId = term_app.get_ret_type(self.ctxt);
             let ret_ptr = self.store_term(ret_type_id, result);
+
+            newly_evaluated_terms.add_term(ret_ptr);
+
             let ret_ref = TermReference::FuncRef(TermPointer::from(ret_ptr));
             ret_ref
         };
@@ -163,16 +165,15 @@ impl <'a> InterpreterState<'a> {
             term_app : term_app.clone(),
             result_ref : result_ref.clone()
         };
-        self.new_term_app_results.push(term_app_result);
+
+        newly_evaluated_terms.add_term_app_result(term_app_result);
 
         application_table.link(term_app.clone(), result_ref.clone());
-        result_ref
+        (result_ref, newly_evaluated_terms)
     }
 
-    fn ensure_every_type_has_a_term_for_default(&mut self) {
+    pub fn ensure_every_type_has_a_term_on_init(&mut self) -> NewlyEvaluatedTerms {
 	let mut type_to_term = HashMap::<TypeId, TermReference>::new();
-        type_to_term.insert(0 as TypeId, TermReference::VecRef(0 as TypeId, Array::zeros((1,))));
-        type_to_term.insert(1 as TypeId, TermReference::VecRef(1 as TypeId, Array::zeros((DIM,))));
         //Initial population
         for i in 0..self.ctxt.get_total_num_types() {
             let type_id = i as TypeId;
@@ -194,6 +195,7 @@ impl <'a> InterpreterState<'a> {
                 }
             }
         }
+        let mut newly_evaluated_terms = NewlyEvaluatedTerms::new();
         loop {
             let mut found_something = false;
             for i in 0..self.ctxt.get_total_num_types() {
@@ -208,7 +210,8 @@ impl <'a> InterpreterState<'a> {
                                         func_ptr : func_ptr.clone(),
                                         arg_ref : arg_ref.clone()
                                     };
-                                    let result_ref = self.evaluate(&application);
+                                    let (result_ref, more_evaluated_terms) = self.evaluate(&application);
+                                    newly_evaluated_terms.merge(more_evaluated_terms);
                                     type_to_term.insert(ret_type_id, result_ref);
 
                                     found_something = true;
@@ -222,6 +225,7 @@ impl <'a> InterpreterState<'a> {
                 break;
             }
         }
+        newly_evaluated_terms
     }
 
     pub fn new(ctxt : &'a Context) -> InterpreterState<'a> {
@@ -236,16 +240,11 @@ impl <'a> InterpreterState<'a> {
             }
         }
 
-        let mut result = InterpreterState {
+        let result = InterpreterState {
             application_tables,
             type_spaces,
-            new_term_app_results : Vec::new(),
-            new_terms : Vec::new(),
             ctxt
         };
-
-        //TODO: remove
-        result.ensure_every_type_has_a_term_for_default();
 
         result
     }

@@ -3,6 +3,7 @@
 #![allow(unused_imports)]
 #![allow(unused_parens)]
 
+mod newly_evaluated_terms;
 mod input_to_schmeared_output;
 mod nonprimitive_term_pointer;
 mod primitive_term_pointer;

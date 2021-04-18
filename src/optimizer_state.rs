@@ -6,6 +6,7 @@ use ndarray::*;
 use rand::prelude::*;
 use crate::context::*;
 use crate::array_utils::*;
+use crate::constraint_collection::*;
 use crate::typed_vector::*;
 use crate::sampled_embedder_state::*;
 use crate::type_action::*;
@@ -57,9 +58,11 @@ impl <'a> OptimizerState<'a> {
         let mut rng = rand::thread_rng();
         let sampled_embedder_state = self.interpreter_and_embedder_state.embedder_state.sample(&mut rng);
 
+        let newly_evaluated_terms = &self.interpreter_and_embedder_state.newly_evaluated_terms;
+
         trace!("Updating value fields");
         trace!("Obtaining new constraints");
-        let mut constraints = self.interpreter_and_embedder_state.get_new_constraints(&sampled_embedder_state);
+        let mut constraints = get_new_constraints(&sampled_embedder_state, newly_evaluated_terms);
         constraints.update_repeat(NUM_CONSTRAINT_REPEATS);
         constraints.update_shuffle();
 
@@ -77,8 +80,7 @@ impl <'a> OptimizerState<'a> {
         self.interpreter_and_embedder_state.clear_newly_received();
 
         trace!("Evaluating best application");
-        let result_ref = self.interpreter_and_embedder_state
-                             .interpreter_state.evaluate_application_chain(&best_application_chain);
+        let result_ref = self.interpreter_and_embedder_state.evaluate_application_chain(&best_application_chain);
 
         if (result_ref.get_type() == self.get_target_type_id()) {
             trace!("Best term was in the target type. Evaluating on training data");
@@ -289,7 +291,9 @@ impl <'a> OptimizerState<'a> {
             panic!(); 
         }
         info!("Readying interpreter state");
-        let interpreter_and_embedder_state = InterpreterAndEmbedderState::new(ctxt);
+        let mut interpreter_and_embedder_state = InterpreterAndEmbedderState::new(ctxt);
+
+        interpreter_and_embedder_state.ensure_every_type_has_a_term_on_init();
 
         info!("Readying types");
 

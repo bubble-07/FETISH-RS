@@ -3,6 +3,7 @@ extern crate ndarray_linalg;
 
 use rand::prelude::*;
 use crate::space_info::*;
+use crate::newly_evaluated_terms::*;
 use ndarray::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
@@ -26,6 +27,9 @@ use crate::context::*;
 
 extern crate pretty_env_logger;
 
+///An [`EmbedderState`] keeps track of the embeddings of function terms ([`TermModel`]s)
+///which come from some [`InterpreterState`], and also the learned [`Elaborator`]s for
+///every function type.
 pub struct EmbedderState<'a> {
     pub model_spaces : HashMap::<TypeId, ModelSpace<'a>>,
     pub ctxt : &'a Context
@@ -33,6 +37,8 @@ pub struct EmbedderState<'a> {
 
 impl<'a> EmbedderState<'a> {
 
+    ///Draws a sample from the distribution over [`TermModel`]s represented in this
+    ///[`EmbedderState`], yielding a [`SampledEmbedderState`].
     pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbedderState<'a> {
         let mut embedding_spaces = HashMap::new();
         for (type_id, model_space) in self.model_spaces.iter() {
@@ -45,6 +51,8 @@ impl<'a> EmbedderState<'a> {
         }
     }
 
+    ///Creates a new [`EmbedderState`], initially populated with default embeddings
+    ///for primitive terms in the passed [`Context`].
     pub fn new(ctxt : &'a Context) -> EmbedderState<'a> {
         info!("Readying embedder state");
 
@@ -70,9 +78,9 @@ impl<'a> EmbedderState<'a> {
         }
     }
 
-    pub fn init_embeddings_for_new_terms(&mut self, interpreter_state : &InterpreterState) {
-        trace!("Initializing embeddings for {} new terms", interpreter_state.new_terms.len());
-        for nonprimitive_term_ptr in interpreter_state.new_terms.iter() {
+    pub fn init_embeddings_for_new_terms(&mut self, newly_evaluated_terms : &NewlyEvaluatedTerms) {
+        trace!("Initializing embeddings for {} new terms", newly_evaluated_terms.terms.len());
+        for nonprimitive_term_ptr in newly_evaluated_terms.terms.iter() {
             let term_ptr = TermPointer::from(nonprimitive_term_ptr.clone());
             if (!self.has_embedding(term_ptr)) {
                 self.init_embedding(term_ptr);
@@ -80,14 +88,15 @@ impl<'a> EmbedderState<'a> {
         }
     }
 
-    pub fn bayesian_update_step(&mut self, interpreter_state : &InterpreterState) {
-        self.init_embeddings_for_new_terms(interpreter_state);
+    pub fn bayesian_update_step(&mut self, interpreter_state : &InterpreterState,
+                                           newly_evaluated_terms : &NewlyEvaluatedTerms) {
+        self.init_embeddings_for_new_terms(newly_evaluated_terms);
 
         let mut data_updated_terms : HashSet<TermPointer> = HashSet::new();
         let mut prior_updated_terms : HashSet<TermPointer> = HashSet::new();
 
         let mut updated_apps : HashSet::<TermApplicationResult> = HashSet::new();
-        for term_app_result in interpreter_state.new_term_app_results.iter() {
+        for term_app_result in newly_evaluated_terms.term_app_results.iter() {
             updated_apps.insert(term_app_result.clone()); 
         }
 
