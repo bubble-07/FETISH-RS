@@ -78,6 +78,8 @@ impl<'a> EmbedderState<'a> {
         }
     }
 
+    ///Initializes default embeddings for the passed collection of terms in a
+    ///[`NewlyEvaluatedTerms`].
     pub fn init_embeddings_for_new_terms(&mut self, newly_evaluated_terms : &NewlyEvaluatedTerms) {
         trace!("Initializing embeddings for {} new terms", newly_evaluated_terms.terms.len());
         for nonprimitive_term_ptr in newly_evaluated_terms.terms.iter() {
@@ -88,6 +90,10 @@ impl<'a> EmbedderState<'a> {
         }
     }
 
+    ///Given an [`InterpreterState`] and a collection of [`NewlyEvaluatedTerms`], performs
+    ///a bottom-up (data) update followed by a top-down (prior) update recursively
+    ///on all modified terms. This method may be used to keep the [`TermModel`]s in this
+    ///[`EmbedderState`] up-to-date with new information.
     pub fn bayesian_update_step(&mut self, interpreter_state : &InterpreterState,
                                            newly_evaluated_terms : &NewlyEvaluatedTerms) {
         self.init_embeddings_for_new_terms(newly_evaluated_terms);
@@ -115,26 +121,33 @@ impl<'a> EmbedderState<'a> {
         self.update_elaborators(all_updated_terms);
     }
 
+    ///Determines whether/not there is a stored [`TermModel`] for the given
+    ///[`TermPointer`].
     pub fn has_embedding(&self, term_ptr : TermPointer) -> bool {
         let space : &ModelSpace = self.model_spaces.get(&term_ptr.type_id).unwrap();
         space.has_model(term_ptr.index)
     }
 
+    ///Given a [`TermPointer`] pointing to a [`TermModel`] tracked by this
+    ///[`EmbedderState`], yields a reference to the [`TermModel`]. Panics if there is
+    ///no such entry stored.
     pub fn get_embedding(&self, term_ptr : TermPointer) -> &TermModel {
-        let space = self.get_model_space(term_ptr);
+        let space = self.get_model_space(term_ptr.type_id);
         space.get_model(term_ptr.index)
     }
 
-    pub fn get_model_space(&self, term_ptr : TermPointer) -> &ModelSpace {
-        self.model_spaces.get(&term_ptr.type_id).unwrap()
+    fn get_model_space(&self, type_id : TypeId) -> &ModelSpace {
+        self.model_spaces.get(&type_id).unwrap()
     }
 
+    ///Like [`EmbedderState#get_embedding`], but yields a mutable reference to the
+    ///[`TermModel`] given a [`TermPointer`] pointing to it. 
     pub fn get_mut_embedding(&mut self, term_ptr : TermPointer) -> &mut TermModel<'a> {
         let space : &mut ModelSpace = self.model_spaces.get_mut(&term_ptr.type_id).unwrap();
         space.get_model_mut(term_ptr.index)
     }
 
-    pub fn init_embedding(&mut self, term_ptr : TermPointer) {
+    fn init_embedding(&mut self, term_ptr : TermPointer) {
         let space : &mut ModelSpace = self.model_spaces.get_mut(&term_ptr.type_id).unwrap();
         space.add_model(term_ptr.index)
     }
@@ -165,7 +178,7 @@ impl<'a> EmbedderState<'a> {
         }
     }
 
-    pub fn update_elaborators(&mut self, mut updated_terms : HashSet::<TermPointer>) {
+    fn update_elaborators(&mut self, mut updated_terms : HashSet::<TermPointer>) {
         for term_ptr in updated_terms.drain() {
             let model_space = self.model_spaces.get_mut(&term_ptr.type_id).unwrap();
             let elaborator = &mut model_space.elaborator;
@@ -181,7 +194,7 @@ impl<'a> EmbedderState<'a> {
     }
 
     //Propagates prior updates downwards
-    pub fn propagate_prior_recursive(&mut self, interpreter_state : &InterpreterState,
+    fn propagate_prior_recursive(&mut self, interpreter_state : &InterpreterState,
                                      to_propagate : &HashSet::<TermPointer>,
                                      all_modified : &mut HashSet::<TermPointer>) {
         let mut topo_sort = TopologicalSort::<TermApplicationResult>::new();
@@ -244,7 +257,7 @@ impl<'a> EmbedderState<'a> {
     }
 
     //Propagates data updates upwards
-    pub fn propagate_data_recursive(&mut self, interpreter_state : &InterpreterState,
+    fn propagate_data_recursive(&mut self, interpreter_state : &InterpreterState,
                                     to_propagate : &HashSet::<TermApplicationResult>,
                                     all_modified : &mut HashSet::<TermPointer>) {
         let mut topo_sort = TopologicalSort::<TermApplicationResult>::new();

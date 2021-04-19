@@ -80,7 +80,7 @@ impl FeatureSpaceInfo {
         let alpha = sketch_alpha(base_dimensions);
         let sketcher = Option::Some(LinearSketch::new(base_dimensions, reduced_dimensions, alpha));
 
-        let feature_collections = get_feature_collections(reduced_dimensions);
+        let feature_collections = get_default_feature_collections(reduced_dimensions);
         let feature_dimensions = get_total_feat_dims(&feature_collections);
         FeatureSpaceInfo {
             base_dimensions,
@@ -91,7 +91,7 @@ impl FeatureSpaceInfo {
     }
 
     pub fn build_uncompressed_feature_space(base_dimensions : usize) -> FeatureSpaceInfo {
-        let feature_collections = get_feature_collections(base_dimensions);
+        let feature_collections = get_default_feature_collections(base_dimensions);
         let feature_dimensions = get_total_feat_dims(&feature_collections);
         FeatureSpaceInfo {
             base_dimensions,

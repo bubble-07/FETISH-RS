@@ -7,7 +7,7 @@ use crate::quadratic_feature_collection::*;
 use crate::sketched_linear_feature_collection::*;
 use crate::rand_utils::*;
 
-pub trait FeatureCollection : Sync {
+pub trait FeatureCollection {
     ///Return the number of input dimensions
     fn get_in_dimensions(&self) -> usize;
 
@@ -23,6 +23,9 @@ pub trait FeatureCollection : Sync {
     ///in the format f x s, for s the input space size
     fn get_jacobian(&self, in_vec: ArrayView1<f32>) -> Array2<f32>;
 
+    ///Given a matrix whose rows are each input vectors, yields a new
+    ///matrix where every row of the output is the featurized version
+    ///of the corresponding input vector
     fn get_features_mat(&self, in_mat : ArrayView2<f32>) -> Array2<f32> {
         let n = in_mat.shape()[0];
         let d = self.get_dimension();
@@ -36,7 +39,7 @@ pub trait FeatureCollection : Sync {
     }
 }
 
-pub fn get_feature_collections(in_dimensions : usize) -> Vec<Box<dyn FeatureCollection>> {
+pub fn get_default_feature_collections(in_dimensions : usize) -> Vec<Box<dyn FeatureCollection>> {
     let linear_collection = SketchedLinearFeatureCollection::new(in_dimensions);
     let quadratic_collection = QuadraticFeatureCollection::new(in_dimensions);
     let fourier_collection = FourierFeatureCollection::new(in_dimensions, gen_cauchy_random);
@@ -49,6 +52,8 @@ pub fn get_feature_collections(in_dimensions : usize) -> Vec<Box<dyn FeatureColl
     result
 }
 
+///Gets the total number of feature dimensions in the passed [`Vec`] of [`FeatureCollection`] trait
+///objects.
 pub fn get_total_feat_dims(feature_collections : &Vec<Box<dyn FeatureCollection>>) -> usize {
     let mut total_feat_dims : usize = 0;
     for collection in feature_collections.iter() {

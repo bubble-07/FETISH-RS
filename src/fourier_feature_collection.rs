@@ -9,6 +9,7 @@ use crate::linalg_utils::*;
 use rand::prelude::*;
 use crate::params::*;
 
+///A feature collection of random fourier features
 #[derive(Clone)]
 pub struct FourierFeatureCollection {
     in_dimensions : usize,
