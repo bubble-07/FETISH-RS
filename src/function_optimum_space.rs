@@ -1,23 +1,13 @@
 use ndarray::*;
 use std::collections::HashMap;
-use crate::model::*;
-use crate::normal_inverse_wishart_sampler::*;
-use crate::term_index::*;
-use crate::params::*;
+use fetish_lib::everything::*;
 use crate::value_field_maximum_solver::*;
-use crate::type_id::*;
-use crate::sampled_embedding_space::*;
 use crate::sampled_value_field_state::*;
-use crate::data_points::*;
-use crate::space_info::*;
-use crate::prior_specification::*;
+use crate::params::*;
 
 use argmin::prelude::*;
 use argmin::solver::gradientdescent::SteepestDescent;
 use argmin::solver::linesearch::MoreThuenteLineSearch;
-
-use crate::context::*;
-use crate::term_index::*;
 
 type ModelKey = TermIndex;
 

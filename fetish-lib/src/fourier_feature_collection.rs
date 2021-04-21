@@ -3,7 +3,6 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 
-use crate::alpha_formulas::*;
 use crate::feature_collection::*;
 use crate::linalg_utils::*;
 use rand::prelude::*;
@@ -19,10 +18,9 @@ pub struct FourierFeatureCollection {
 }
 
 impl FourierFeatureCollection {
-    pub fn new(in_dimensions: usize, generator : fn(&mut ThreadRng, usize) -> Array1<f32>) -> FourierFeatureCollection {
-        let num_features = num_fourier_features(in_dimensions);
-
-        let alpha = fourier_sketched_alpha(num_features);
+    pub fn new(in_dimensions: usize, num_features : usize,
+               alpha : f32,
+               generator : fn(&mut ThreadRng, usize) -> Array1<f32>) -> FourierFeatureCollection {
 
         let mut ws = Array::zeros((num_features, in_dimensions));
         let mut rng = rand::thread_rng();

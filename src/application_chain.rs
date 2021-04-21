@@ -1,5 +1,4 @@
-use crate::term_reference::*;
-use crate::term_application::*;
+use fetish_lib::everything::*;
 
 #[derive(Clone)]
 pub struct ApplicationChain {

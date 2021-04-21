@@ -1,5 +1,4 @@
-use crate::type_id::*;
-use crate::context::*;
+use fetish_lib::everything::*;
 
 #[derive(Clone)]
 pub enum TypeAction {

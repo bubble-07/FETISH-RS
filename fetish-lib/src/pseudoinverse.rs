@@ -5,8 +5,6 @@ use ndarray::*;
 use crate::params::*;
 use ndarray_linalg::*;
 
-extern crate pretty_env_logger;
-
 pub fn pseudoinverse_h(in_mat : &Array2<f32>) -> Array2<f32> {
     pseudoinverse(in_mat)
 }

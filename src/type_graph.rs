@@ -1,7 +1,6 @@
 use crate::type_action::*;
-use crate::type_id::*;
 use std::collections::HashSet;
-use crate::context::*;
+use fetish_lib::everything::*;
 
 pub struct TypeGraph<'a> {
     //Indices: from, to, edge index

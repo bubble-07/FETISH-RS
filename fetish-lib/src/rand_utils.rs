@@ -27,8 +27,8 @@ fn generate_nsphere_random<R : Rng + ?Sized>(rng : &mut R, dims : usize) -> Arra
     vec
 }
 
-fn generate_cauchy_random<R : Rng + ?Sized>(rng : &mut R, dims : usize) -> Array1<f32> {
-    let cauchy = Cauchy::<f32>::new(0.0, CAUCHY_SCALING).unwrap();
+pub fn generate_cauchy_random<R : Rng + ?Sized>(rng : &mut R, scaling : f32, dims : usize) -> Array1<f32> {
+    let cauchy = Cauchy::<f32>::new(0.0, scaling).unwrap();
     let norm : f32 = cauchy.sample(rng);
     let mut result = generate_nsphere_random(rng, dims);
     result *= norm;
@@ -44,10 +44,6 @@ fn generate_inverse_gamma_random<R : Rng + ?Sized>(rng : &mut R, a : f32, b : f3
 
 pub fn gen_inverse_gamma_random(rng : &mut ThreadRng, a : f32, b : f32) -> f32 {
     generate_inverse_gamma_random(rng, a, b)
-}
-
-pub fn gen_cauchy_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {
-    generate_cauchy_random(rng, dims)
 }
 
 pub fn gen_nsphere_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {

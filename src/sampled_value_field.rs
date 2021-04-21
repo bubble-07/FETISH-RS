@@ -1,18 +1,10 @@
+use fetish_lib::everything::*;
 use ndarray::*;
 use ndarray_rand::rand_distr::StandardNormal;
 use ndarray_rand::RandomExt;
-use crate::value_field::*;
-use crate::context::*;
-use crate::compressed_inv_schmear::*;
-use crate::type_id::*;
-use crate::normal_inverse_wishart::*;
 use crate::params::*;
-use crate::model::*;
 use crate::term_model::*;
-use crate::schmeared_hole::*;
-use crate::space_info::*;
-use crate::inverse_schmear::*;
-use crate::displayable_with_context::*;
+use crate::value_field::*;
 
 #[derive(Clone)]
 pub struct SampledValueField<'a> {

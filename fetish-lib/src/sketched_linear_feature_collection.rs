@@ -6,7 +6,6 @@ use ndarray::*;
 use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
 
-use crate::alpha_formulas::*;
 use crate::feature_collection::*;
 use crate::params::*;
 
@@ -19,11 +18,8 @@ pub struct SketchedLinearFeatureCollection {
 }
 
 impl SketchedLinearFeatureCollection {
-    pub fn new(in_dimensions : usize) -> SketchedLinearFeatureCollection {
-        let out_dimensions = num_sketched_linear_features(in_dimensions);
+    pub fn new(in_dimensions : usize, out_dimensions : usize, alpha : f32) -> SketchedLinearFeatureCollection {
         let projection_mat = Array::random((out_dimensions, in_dimensions), StandardNormal);
-
-        let alpha = linear_sketched_alpha(in_dimensions, out_dimensions);
 
         SketchedLinearFeatureCollection {
             in_dimensions,

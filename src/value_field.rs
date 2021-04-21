@@ -1,17 +1,10 @@
 use ndarray::*;
 use ndarray_rand::rand_distr::StandardNormal;
 use ndarray_rand::RandomExt;
-use crate::type_id::*;
-use crate::normal_inverse_wishart::*;
-use crate::params::*;
-use crate::model::*;
-use crate::term_model::*;
-use crate::schmeared_hole::*;
-use crate::space_info::*;
 use crate::sampled_value_field::*;
-use crate::sampled_embedding_space::*;
-use crate::displayable_with_context::*;
-use crate::context::*;
+use fetish_lib::everything::*;
+use crate::params::*;
+use crate::term_model::*;
 
 #[derive(Clone)]
 pub struct ValueField<'a> {
@@ -71,7 +64,8 @@ impl <'a> ValueField<'a> {
     }
 
     pub fn from_type_id(type_id : TypeId, ctxt : &'a Context) -> ValueField<'a> {
-        let default_model = TermModel::new(type_id, ctxt);
+        let prior_specification = TermModelPriorSpecification { };
+        let default_model = TermModel::new(type_id, &prior_specification, ctxt);
 
         let full_prior_schmear = default_model.get_schmeared_hole().rescale_spread(TARGET_INV_SCHMEAR_SCALE_FAC);
         ValueField::new(full_prior_schmear, ctxt)

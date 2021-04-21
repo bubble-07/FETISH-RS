@@ -2,13 +2,11 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use ndarray::*;
+use fetish_lib::everything::*;
 
 use rand::prelude::*;
 use ndarray_rand::RandomExt;
 use ndarray_rand::rand_distr::StandardNormal;
-
-use crate::schmear::*;
-use crate::sqrtm::*;
 
 
 pub struct SchmearSampler {

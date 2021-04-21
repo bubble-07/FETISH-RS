@@ -4,31 +4,20 @@ extern crate ndarray_linalg;
 use ndarray::*;
 
 use rand::prelude::*;
-use crate::context::*;
-use crate::array_utils::*;
-use crate::constraint_collection::*;
-use crate::typed_vector::*;
-use crate::sampled_embedder_state::*;
-use crate::type_action::*;
-use crate::term_model::*;
-use crate::linalg_utils::*;
-use crate::application_chain::*;
-use crate::type_id::*;
-use crate::type_graph::*;
-use crate::space_info::*;
-use crate::params::*;
-use crate::term_pointer::*;
-use crate::term_reference::*;
-use crate::term_application::*;
-use crate::data_point::*;
-use crate::interpreter_and_embedder_state::*;
-use crate::model::*;
-use crate::inverse_schmear::*;
-use crate::schmeared_hole::*;
+use fetish_lib::everything::*;
 use crate::sampled_value_field_state::*;
+use crate::params::*;
+use crate::type_action::*;
+use crate::application_chain::*;
+use crate::constraint_collection::*;
 
+use crate::interpreter_and_embedder_state::*;
 use crate::value_field_state::*;
 use crate::function_optimum_state::*;
+use crate::type_graph::*;
+use crate::sampled_embedder_state::*;
+use crate::term_model::*;
+use crate::elaborator::*;
 
 extern crate pretty_env_logger;
 
@@ -80,7 +69,7 @@ impl <'a> OptimizerState<'a> {
         self.interpreter_and_embedder_state.clear_newly_received();
 
         trace!("Evaluating best application");
-        let result_ref = self.interpreter_and_embedder_state.evaluate_application_chain(&best_application_chain);
+        let result_ref = evaluate_application_chain(&mut self.interpreter_and_embedder_state, &best_application_chain);
 
         if (result_ref.get_type() == self.get_target_type_id()) {
             trace!("Best term was in the target type. Evaluating on training data");
@@ -106,7 +95,7 @@ impl <'a> OptimizerState<'a> {
             TypeAction::Applying(func_type_id) => {
                 //In this case, both the function and the argument will be functions
                 let maybe_result = 
-                    sampled_embedder_state.get_best_term_to_apply(current_compressed_vec, *func_type_id,
+                    get_best_term_to_apply(sampled_embedder_state, current_compressed_vec, *func_type_id,
                                                                   sampled_value_field_state);
                 if (maybe_result.is_none()) {
                     return Option::None
@@ -125,7 +114,7 @@ impl <'a> OptimizerState<'a> {
                     Option::Some((arg_ref, next_compressed_vec, value))
                 } else {
                     let maybe_result =
-                        sampled_embedder_state.get_best_term_to_pass(current_compressed_vec, 
+                        get_best_term_to_pass(sampled_embedder_state, current_compressed_vec, 
                                                                      sampled_value_field_state);
                     if (maybe_result.is_none()) {
                         return Option::None
@@ -255,7 +244,7 @@ impl <'a> OptimizerState<'a> {
     pub fn find_best_application(&mut self, sampled_embedder_state : &SampledEmbedderState,
                                             sampled_value_field_state : &SampledValueFieldState)
                                  -> TermApplication {
-        let maybe_nonvec_app = sampled_embedder_state.get_best_nonvector_application_with_value(sampled_value_field_state);
+        let maybe_nonvec_app = get_best_nonvector_application_with_value(sampled_embedder_state, sampled_value_field_state);
         let maybe_vec_app = self.func_opt_state.update(sampled_embedder_state, sampled_value_field_state);
 
         if (maybe_nonvec_app.is_none()) {
@@ -276,14 +265,16 @@ impl <'a> OptimizerState<'a> {
     }
 
     pub fn evaluate_training_data_step(&mut self, term_ptr : TermPointer) {
-        self.interpreter_and_embedder_state.evaluate_training_data_step(term_ptr, &self.data_points);
+        evaluate_training_data_step(&mut self.interpreter_and_embedder_state, term_ptr, &self.data_points);
     }
 
     pub fn init_step(&mut self) {
         self.interpreter_and_embedder_state.init_step();
     }
 
-    pub fn new(data_points : Vec::<(Array1<f32>, Array1<f32>)>, ctxt : &'a Context) -> OptimizerState<'a> {
+    pub fn new(data_points : Vec::<(Array1<f32>, Array1<f32>)>, 
+               model_prior_specification : &'a dyn PriorSpecification,
+               elaborator_prior_specification : &'a dyn PriorSpecification, ctxt : &'a Context) -> OptimizerState<'a> {
 
         //Step 1: find the embedding of the target term
 
@@ -291,7 +282,8 @@ impl <'a> OptimizerState<'a> {
             panic!(); 
         }
         info!("Readying interpreter state");
-        let mut interpreter_and_embedder_state = InterpreterAndEmbedderState::new(ctxt);
+        let mut interpreter_and_embedder_state = InterpreterAndEmbedderState::new(model_prior_specification,
+                                                elaborator_prior_specification, ctxt);
 
         interpreter_and_embedder_state.ensure_every_type_has_a_term_on_init();
 
@@ -301,7 +293,8 @@ impl <'a> OptimizerState<'a> {
 
         info!("Readying target");
 
-        let mut target_model : TermModel = TermModel::new(func_type_id, ctxt);
+        let prior_specification = TermModelPriorSpecification { };
+        let mut target_model : TermModel = TermModel::new(func_type_id, &prior_specification, ctxt);
 
         for (in_vec, out_vec) in data_points.iter() {
             let data_point = DataPoint {

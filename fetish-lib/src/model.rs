@@ -6,7 +6,6 @@ use ndarray::*;
 use std::ops;
 
 use crate::context::*;
-use crate::schmeared_hole::*;
 use crate::prior_specification::*;
 use crate::type_id::*;
 use crate::data_points::*;

@@ -2,6 +2,7 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 
 use rand::prelude::*;
+use crate::prior_specification::*;
 use crate::space_info::*;
 use crate::newly_evaluated_terms::*;
 use ndarray::*;
@@ -24,8 +25,6 @@ use crate::normal_inverse_wishart::*;
 use crate::elaborator::*;
 use topological_sort::TopologicalSort;
 use crate::context::*;
-
-extern crate pretty_env_logger;
 
 ///An [`EmbedderState`] keeps track of the embeddings of function terms ([`TermModel`]s)
 ///which come from some [`InterpreterState`], and also the learned [`Elaborator`]s for
@@ -53,13 +52,16 @@ impl<'a> EmbedderState<'a> {
 
     ///Creates a new [`EmbedderState`], initially populated with default embeddings
     ///for primitive terms in the passed [`Context`].
-    pub fn new(ctxt : &'a Context) -> EmbedderState<'a> {
+    pub fn new(model_prior_specification : &'a dyn PriorSpecification,
+               elaborator_prior_specification : &'a dyn PriorSpecification, 
+               ctxt : &'a Context) -> EmbedderState<'a> {
         info!("Readying embedder state");
 
         let mut model_spaces = HashMap::new();
         for func_type_id in 0..ctxt.get_total_num_types() {
             if (!ctxt.is_vector_type(func_type_id)) {
-                let mut model_space = ModelSpace::new(func_type_id, ctxt);
+                let mut model_space = ModelSpace::new(func_type_id, model_prior_specification, 
+                                                      elaborator_prior_specification, ctxt);
 
                 //Initialize embeddings for primitive terms
                 let primitive_type_space = ctxt.primitive_directory

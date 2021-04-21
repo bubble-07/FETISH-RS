@@ -2,16 +2,13 @@ use std::collections::HashMap;
 use crate::context::*;
 use crate::params::*;
 use crate::displayable_with_context::*;
-use crate::type_graph::*;
 use std::fmt;
 use rand::prelude::*;
 
-extern crate pretty_env_logger;
-
-pub fn get_default_type_info_directory() -> TypeInfoDirectory {
+pub fn get_default_type_info_directory(dim : usize) -> TypeInfoDirectory {
     let mut types : TypeInfoDirectory = TypeInfoDirectory::new();
     let scalar_t = types.add(Type::VecType(1));
-    let vector_t = types.add(Type::VecType(DIM));
+    let vector_t = types.add(Type::VecType(dim));
     let unary_scalar_func_t = types.add(Type::FuncType(scalar_t, scalar_t));
     let unary_vec_func_t = types.add(Type::FuncType(vector_t, vector_t));
     let _binary_vec_func_t = types.add(Type::FuncType(vector_t, unary_vec_func_t));
@@ -42,12 +39,10 @@ pub fn get_default_type_info_directory() -> TypeInfoDirectory {
 
     info!("Adding constant types");
     //Add in all constant functions
-    for n in [1, DIM].iter() {
-        let n_t = types.add(Type::VecType(*n));
-        for m in [1, DIM].iter() {
-            let m_t = types.add(Type::VecType(*m));
-            let out_func_t = types.add(Type::FuncType(m_t, n_t));
-            let _const_func_t = types.add(Type::FuncType(n_t, out_func_t));
+    for n_t in [scalar_t, vector_t].iter() {
+        for m_t in [scalar_t, vector_t].iter() {
+            let out_func_t = types.add(Type::FuncType(*m_t, *n_t));
+            let _const_func_t = types.add(Type::FuncType(*n_t, out_func_t));
         }
     }
 

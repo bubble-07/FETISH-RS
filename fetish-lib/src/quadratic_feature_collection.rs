@@ -12,7 +12,6 @@ use rustfft::FFT;
 use rustfft::num_complex::Complex;
 use rustfft::num_traits::Zero;
 use crate::params::*;
-use crate::alpha_formulas::*;
 
 #[derive(Clone)]
 pub struct QuadraticFeatureCollection {
@@ -25,10 +24,7 @@ pub struct QuadraticFeatureCollection {
 }
 
 impl QuadraticFeatureCollection {
-    pub fn new(in_dimensions : usize) -> QuadraticFeatureCollection {
-        let out_dimensions = num_quadratic_features(in_dimensions);
-
-        let alpha = quadratic_sketched_alpha(in_dimensions);
+    pub fn new(in_dimensions : usize, out_dimensions : usize, alpha : f32) -> QuadraticFeatureCollection {
 
         let sketch_one = CountSketch::new(in_dimensions, out_dimensions);
         let sketch_two = CountSketch::new(in_dimensions, out_dimensions);

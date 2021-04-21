@@ -1,7 +1,5 @@
-use crate::typed_vector::*;
 use ndarray::*;
-use crate::type_id::*;
-use crate::context::*;
+use fetish_lib::everything::*;
 
 #[derive(Clone)]
 pub struct VectorApplicationResult<'a> {

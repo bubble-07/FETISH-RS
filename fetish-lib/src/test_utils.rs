@@ -19,6 +19,7 @@ use crate::func_scatter_tensor::*;
 use crate::model::*;
 use crate::normal_inverse_wishart::*;
 use crate::term_reference::*;
+use crate::prior_specification::*;
 use crate::array_utils::*;
 
 pub fn random_scalar() -> f32 {
@@ -69,11 +70,24 @@ pub fn random_model_app<'a>(ctxt : &'a Context, func_type_id : TypeId) -> (Model
     (func_model, arg_model)
 }
 
+struct TestPriorSpecification { }
+impl PriorSpecification for TestPriorSpecification {
+    fn get_in_precision_multiplier(&self, _feat_dims : usize) -> f32 {
+        1.0f32
+    }
+    fn get_out_covariance_multiplier(&self, _out_dims : usize) -> f32 {
+        1.0f32
+    }
+    fn get_out_pseudo_observations(&self, out_dims : usize) -> f32 {
+        (out_dims as f32) + 4.0f32
+    }
+}
+
 pub fn random_model<'a>(ctxt : &'a Context, type_id : TypeId) -> Model {
     let arg_type_id = ctxt.get_arg_type_id(type_id);
     let ret_type_id = ctxt.get_ret_type_id(type_id);
 
-    let prior_specification = TermModelPriorSpecification { };
+    let prior_specification = TestPriorSpecification { };
 
     let mut result = Model::new(&prior_specification, arg_type_id, ret_type_id, ctxt);
     let func_space_info = ctxt.get_function_space_info(type_id);

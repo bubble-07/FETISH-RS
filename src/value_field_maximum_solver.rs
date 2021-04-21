@@ -5,14 +5,11 @@ use ndarray::*;
 
 use anyhow::*;
 
-use crate::array_utils::*;
-use crate::inverse_schmear::*;
-use crate::type_id::*;
-use crate::space_info::*;
 use crate::sampled_value_field::*;
 use crate::value_field::*;
-use crate::context::Context;
 use argmin::prelude::*;
+use fetish_lib::everything::*;
+use fetish_lib::everything::Context;
 
 pub struct ValueFieldMaximumSolver<'a> {
     pub func_mat : Array2<f32>,

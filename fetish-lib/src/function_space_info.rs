@@ -9,9 +9,6 @@ use crate::schmear::*;
 use crate::func_schmear::*;
 use crate::data_point::*;
 
-extern crate pretty_env_logger;
-
-
 #[derive(Clone)]
 pub struct FunctionSpaceInfo<'a> {
     pub in_feat_info : &'a FeatureSpaceInfo,

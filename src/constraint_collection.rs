@@ -1,10 +1,7 @@
 use crate::vector_application_result::*;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use crate::newly_evaluated_terms::*;
-use crate::array_utils::*;
-use crate::sampled_embedder_state::*;
-use crate::term_reference::*;
+use fetish_lib::everything::*;
 
 pub struct ConstraintCollection<'a> {
     pub constraints : Vec<VectorApplicationResult<'a>>

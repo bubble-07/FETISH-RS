@@ -6,6 +6,7 @@ use ndarray::*;
 use crate::context::*;
 use rand::prelude::*;
 use crate::func_schmear::*;
+use crate::prior_specification::*;
 use crate::sampled_model_embedding::*;
 use crate::embedder_state::*;
 use crate::pseudoinverse::*;
@@ -19,14 +20,13 @@ use crate::elaborator::*;
 use crate::sampled_embedding_space::*;
 use crate::term_index::*;
 
-extern crate pretty_env_logger;
-
 use std::collections::HashMap;
 
 type ModelKey = TermIndex;
 
 pub struct ModelSpace<'a> {
     pub type_id : TypeId,
+    pub model_prior_specification : &'a dyn PriorSpecification,
     pub elaborator : Elaborator<'a>,
     pub models : HashMap<ModelKey, TermModel<'a>>,
     pub ctxt : &'a Context
@@ -84,7 +84,7 @@ impl <'a> ModelSpace<'a> {
         NormalInverseWishart::new(mean, in_precision, big_v, little_v)
     }
     pub fn add_model(&mut self, model_key : ModelKey) {
-        let model = TermModel::new(self.type_id, self.ctxt);
+        let model = TermModel::new(self.type_id, self.model_prior_specification, self.ctxt);
         self.models.insert(model_key, model);
     }
     
@@ -98,10 +98,13 @@ impl <'a> ModelSpace<'a> {
         self.models.contains_key(&model_key)
     }
 
-    pub fn new(type_id : TypeId, ctxt : &'a Context) -> ModelSpace<'a> {
+    pub fn new(type_id : TypeId, model_prior_specification : &'a dyn PriorSpecification,
+                                 elaborator_prior_specification : &dyn PriorSpecification,
+                                 ctxt : &'a Context) -> ModelSpace<'a> {
         ModelSpace {
             models : HashMap::new(),
-            elaborator : Elaborator::new(type_id, ctxt),
+            model_prior_specification,
+            elaborator : Elaborator::new(type_id, elaborator_prior_specification, ctxt),
             type_id,
             ctxt
         }

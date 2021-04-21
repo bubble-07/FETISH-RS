@@ -1,18 +1,10 @@
 use ndarray::*;
 use ndarray_linalg::*;
 use std::collections::HashMap;
-use crate::term_pointer::*;
-use crate::type_id::*;
-use crate::typed_vector::*;
 use crate::sampled_value_field_state::*;
-use crate::term_reference::*;
-use crate::function_optimum_space::*;
-use crate::term_application::*;
 use crate::value_field_state::*;
-use crate::sampled_embedder_state::*;
-use crate::space_info::*;
-use crate::array_utils::*;
-use crate::context::*;
+use crate::function_optimum_space::*;
+use fetish_lib::everything::*;
 
 pub struct FunctionOptimumState<'a> {
     pub function_spaces : HashMap::<TypeId, FunctionOptimumSpace<'a>>,

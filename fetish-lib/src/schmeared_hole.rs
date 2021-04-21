@@ -1,9 +1,8 @@
+use crate::type_id::*;
+use crate::inverse_schmear::*;
 use crate::term_pointer::*;
 use crate::term_reference::*;
-use crate::type_id::*;
 use crate::sampled_embedder_state::*;
-use crate::inverse_schmear::*;
-use crate::context::*;
 use crate::array_utils::*;
 
 #[derive(Clone)]

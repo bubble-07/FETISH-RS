@@ -1,48 +1,28 @@
-extern crate ndarray;
-extern crate ndarray_linalg;
-
+use fetish_lib::everything::*;
+use crate::params::*;
+use crate::alpha_formulas::*;
 use ndarray::*;
-use crate::fourier_feature_collection::*;
-use crate::quadratic_feature_collection::*;
-use crate::sketched_linear_feature_collection::*;
-use crate::rand_utils::*;
+use rand::prelude::*;
 
-pub trait FeatureCollection {
-    ///Return the number of input dimensions
-    fn get_in_dimensions(&self) -> usize;
-
-    ///Return the number of dimensions in the output of get_features
-    fn get_dimension(&self) -> usize;
-
-    ///Given a vector in the input space of this feature space, return the
-    ///vector of features for this feature space
-    fn get_features(&self, in_vec: ArrayView1<f32>) -> Array1<f32>;
-
-    ///Given a vector in the input space of this feature space, return
-    ///the Jacobian matrix for the feature vector at that point
-    ///in the format f x s, for s the input space size
-    fn get_jacobian(&self, in_vec: ArrayView1<f32>) -> Array2<f32>;
-
-    ///Given a matrix whose rows are each input vectors, yields a new
-    ///matrix where every row of the output is the featurized version
-    ///of the corresponding input vector
-    fn get_features_mat(&self, in_mat : ArrayView2<f32>) -> Array2<f32> {
-        let n = in_mat.shape()[0];
-        let d = self.get_dimension();
-        let mut result = Array::zeros((n, d));
-        for i in 0..n {
-            let in_vec = in_mat.row(i).to_owned();
-            let feat_vec = self.get_features(in_vec.view());
-            result.row_mut(i).assign(&feat_vec);
-        }
-        result
-    }
+fn gen_cauchy_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {
+    generate_cauchy_random(rng, CAUCHY_SCALING, dims)
 }
 
 pub fn get_default_feature_collections(in_dimensions : usize) -> Vec<Box<dyn FeatureCollection>> {
-    let linear_collection = SketchedLinearFeatureCollection::new(in_dimensions);
-    let quadratic_collection = QuadraticFeatureCollection::new(in_dimensions);
-    let fourier_collection = FourierFeatureCollection::new(in_dimensions, gen_cauchy_random);
+    let quadratic_feats = num_quadratic_features(in_dimensions);
+    let fourier_feats = num_fourier_features(in_dimensions);
+    let linear_feats = num_sketched_linear_features(in_dimensions);
+
+    let linear_alpha = linear_sketched_alpha(in_dimensions, linear_feats);
+    let fourier_alpha = fourier_sketched_alpha(fourier_feats);
+    let quadratic_alpha = quadratic_sketched_alpha(in_dimensions);
+
+    let fourier_generator = gen_cauchy_random;
+
+    let linear_collection = SketchedLinearFeatureCollection::new(in_dimensions, linear_feats, linear_alpha);
+    let quadratic_collection = QuadraticFeatureCollection::new(in_dimensions, quadratic_feats, quadratic_alpha);
+    let fourier_collection = FourierFeatureCollection::new(in_dimensions, fourier_feats, 
+                                                           fourier_alpha, fourier_generator);
 
     let mut result = Vec::<Box<dyn FeatureCollection>>::new();
     result.push(Box::new(linear_collection));
@@ -52,12 +32,3 @@ pub fn get_default_feature_collections(in_dimensions : usize) -> Vec<Box<dyn Fea
     result
 }
 
-///Gets the total number of feature dimensions in the passed [`Vec`] of [`FeatureCollection`] trait
-///objects.
-pub fn get_total_feat_dims(feature_collections : &Vec<Box<dyn FeatureCollection>>) -> usize {
-    let mut total_feat_dims : usize = 0;
-    for collection in feature_collections.iter() {
-        total_feat_dims += collection.get_dimension();
-    }
-    total_feat_dims
-}
