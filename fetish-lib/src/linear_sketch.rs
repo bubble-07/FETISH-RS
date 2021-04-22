@@ -11,6 +11,9 @@ use crate::kernel::*;
 use crate::inverse_schmear::*;
 use crate::pseudoinverse::*;
 
+///A representation of a linear "sketch", or projection from a higher dimension to a
+///lower-dimension. This struct represents both the sketching matrix itself and information
+///about its pseudoinverse and kernel.
 #[derive(Clone)]
 pub struct LinearSketch {
     projection_mat : Array2<f32>,
@@ -19,6 +22,8 @@ pub struct LinearSketch {
 }
 
 impl LinearSketch {
+    ///Generates a new [`LinearSketch`] with projection matrix with entries drawn
+    ///from a zero-centered normal distribution with standard deviation `alpha`.
     pub fn new(in_dimensions : usize, out_dimensions : usize, alpha : f32) -> LinearSketch {
         let mut projection_mat = Array::random((out_dimensions, in_dimensions), StandardNormal);
         let mut projection_mat_pinv = pseudoinverse(&projection_mat);
@@ -34,6 +39,8 @@ impl LinearSketch {
             kernel_mat
         }
     }
+    ///Creates a [`LinearSketch`] which is actually just the identity matrix on the 
+    ///given number of dimensions.
     pub fn trivial_sketch(dimensions : usize) -> LinearSketch {
         let ident = Array::eye(dimensions);
         LinearSketch {
@@ -43,27 +50,31 @@ impl LinearSketch {
         }
     }
 
+    ///Given a [`Schmear`], computes its image under this [`LinearSketch`].
     pub fn compress_schmear(&self, schmear : &Schmear) -> Schmear {
         schmear.transform(&self.projection_mat)
     }
 
+    ///Sketches the given vector
     pub fn sketch(&self, vec : ArrayView1<f32>) -> Array1<f32> {
         self.projection_mat.dot(&vec)
     }
-    pub fn expand(&self, mean : ArrayView1<f32>) -> Array1<f32> {
-        self.projection_mat_pinv.dot(&mean)
-    }
 
+    ///Gets the matrix representation of this [`LinearSketch`].
     pub fn get_projection_matrix(&self) -> &Array2<f32> {
         &self.projection_mat
     }
+
+    ///Gets the kernel of the sketching matrix of this [`LinearSketch`]. See [`kernel`].
     pub fn get_kernel_matrix(&self) -> &Option<Array2<f32>> {
         &self.kernel_mat
     }
 
+    ///Gets the pseudoinverse of the sketching matrix
     pub fn get_expansion_matrix(&self) -> &Array2<f32> {
         &self.projection_mat_pinv
     }
+
     pub fn get_output_dimension(&self) -> usize {
         self.projection_mat.shape()[0]
     }

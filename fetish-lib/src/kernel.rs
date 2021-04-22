@@ -5,9 +5,9 @@ use ndarray::*;
 use crate::params::*;
 use ndarray_linalg::*;
 
-//Yields a matrix mapping from the intrinsic dimension
-//of the kernel to the dimension of kernel vectors
-//It will be an orthonormal basis by construction
+///Yields a matrix mapping from the intrinsic dimension
+///of the kernel to the dimension of kernel vectors
+///It will be an orthonormal basis by construction
 pub fn kernel(in_mat : &Array2<f32>) -> Option<Array2<f32>> {
     let maybe_svd = in_mat.svd(true, true);
     if let Result::Err(_) = &maybe_svd {
