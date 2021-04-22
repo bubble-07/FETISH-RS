@@ -5,6 +5,7 @@
 
 mod params;
 
+mod type_id;
 mod alpha_formulas;
 mod context;
 mod elaborator;

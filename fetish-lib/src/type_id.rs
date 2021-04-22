@@ -5,67 +5,6 @@ use crate::displayable_with_context::*;
 use std::fmt;
 use rand::prelude::*;
 
-pub fn get_default_type_info_directory(dim : usize) -> TypeInfoDirectory {
-    let mut types : TypeInfoDirectory = TypeInfoDirectory::new();
-    let scalar_t = types.add(Type::VecType(1));
-    let vector_t = types.add(Type::VecType(dim));
-    let unary_scalar_func_t = types.add(Type::FuncType(scalar_t, scalar_t));
-    let unary_vec_func_t = types.add(Type::FuncType(vector_t, vector_t));
-    let _binary_vec_func_t = types.add(Type::FuncType(vector_t, unary_vec_func_t));
-    let binary_scalar_func_t = types.add(Type::FuncType(scalar_t, unary_scalar_func_t));
-    let _map_func_t = types.add(Type::FuncType(unary_scalar_func_t, unary_vec_func_t));
-    let vector_to_scalar_func_t = types.add(Type::FuncType(vector_t, scalar_t));
-    let reduce_temp_t = types.add(Type::FuncType(scalar_t, vector_to_scalar_func_t));
-    let _reduce_func_t = types.add(Type::FuncType(binary_scalar_func_t, reduce_temp_t));
-    let _fill_func_t = types.add(Type::FuncType(scalar_t, vector_t));
-    let scalar_to_vector_func_t = types.add(Type::FuncType(scalar_t, vector_t));
-    let _set_head_func_t = types.add(Type::FuncType(vector_t, scalar_to_vector_func_t));
-    
-    info!("Adding composition types");
-    
-    //Add all composition types of vector functions
-    for n_t in [scalar_t, vector_t].iter() {
-        for m_t in [scalar_t, vector_t].iter() {
-            for p_t in [scalar_t, vector_t].iter() {
-                let func_one = types.add(Type::FuncType(*m_t, *p_t));
-                let func_two = types.add(Type::FuncType(*n_t, *m_t));
-                let func_out = types.add(Type::FuncType(*n_t, *p_t));
-
-                let two_to_out = types.add(Type::FuncType(func_two, func_out));
-                let _compose_type = types.add(Type::FuncType(func_one, two_to_out));
-            }
-        }
-    }
-
-    info!("Adding constant types");
-    //Add in all constant functions
-    for n_t in [scalar_t, vector_t].iter() {
-        for m_t in [scalar_t, vector_t].iter() {
-            let out_func_t = types.add(Type::FuncType(*m_t, *n_t));
-            let _const_func_t = types.add(Type::FuncType(*n_t, out_func_t));
-        }
-    }
-
-    //Fill in the ret_types table
-   for ret_type_id in 0..types.info_vec.len() {
-        if (!types.ret_map.contains_key(&ret_type_id)) {
-            types.ret_map.insert(ret_type_id, Vec::new());
-        }
-    } 
-
-    for i in 0..types.info_vec.len() {
-        let type_id = i as TypeId;
-        if let Type::FuncType(arg_type_id, ret_type_id) = types.info_vec[type_id] {
-            let vec : &mut Vec::<(TypeId, TypeId)> = types.ret_map.get_mut(&ret_type_id).unwrap();
-            vec.push((type_id, arg_type_id));
-        }
-    }
-    
-    info!("Type initialization complete");
-
-    types
-}
-
 pub struct TypeInfoDirectory {
     info_vec : Vec::<Type>,
     func_ind_map : HashMap<(TypeId, TypeId), TypeId>,
@@ -73,27 +12,32 @@ pub struct TypeInfoDirectory {
 }
 
 impl TypeInfoDirectory {
-    fn new() -> Self {
+    pub fn new() -> Self {
         TypeInfoDirectory {
             info_vec : Vec::new(),
             func_ind_map : HashMap::new(),
             ret_map : HashMap::new()
         }
     }
-    fn add(&mut self, info : Type) -> TypeId {
-        let ret_ind : usize = self.info_vec.len();
+    pub fn add(&mut self, info : Type) -> TypeId {
+        let added_type_id : usize = self.info_vec.len();
+
+        self.ret_map.insert(added_type_id, Vec::new());
 
         if let Type::FuncType(arg_type, ret_type) = info {
             let pair = (arg_type, ret_type);
             if (self.func_ind_map.contains_key(&pair)) {
                 return *self.func_ind_map.get(&pair).unwrap();
             } else {
-                self.func_ind_map.insert(pair, ret_ind);
+                self.func_ind_map.insert(pair, added_type_id);
             }
+
+            let ret_row = self.ret_map.get_mut(&ret_type).unwrap();
+            ret_row.push((added_type_id, arg_type));
         }
 
         self.info_vec.push(info); 
-        ret_ind
+        added_type_id
     }
     pub fn get_total_num_types(&self) -> usize {
         self.info_vec.len()

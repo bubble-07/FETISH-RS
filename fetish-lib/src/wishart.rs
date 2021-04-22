@@ -10,6 +10,7 @@ use ndarray_rand::rand_distr::ChiSquared;
 use crate::pseudoinverse::*;
 use crate::sqrtm::*;
 
+///A representation of a Wishart distribution over matrices
 pub struct Wishart {
     pub scale_mat : Array2<f32>,
     pub scale_cholesky_factor : Array2<f32>,
@@ -19,6 +20,7 @@ pub struct Wishart {
 
 
 impl Wishart {
+    ///Creates a Wishart distribution with the given scale and degrees of freedom.
     pub fn new(scale_mat : Array2<f32>, degrees_of_freedom : f32) -> Wishart {
         let scale_cholesky_factor = sqrtm(&scale_mat);
         let dim = scale_mat.shape()[0];
@@ -29,24 +31,28 @@ impl Wishart {
             dim
         }
     }
+    ///Draws the pseudoinverse of a sample from this Wishart distribution
     pub fn sample_inv(&self, rng : &mut ThreadRng) -> Array2<f32> {
         let sample = self.sample(rng);
         let result = pseudoinverse_h(&sample);
         result
     }
 
+    ///Draws a sample from this Wishart distribution
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
         let L = self.sample_cholesky_factor(rng);
 	let result = L.dot(&L.t());
         result
     }
 
+    ///Draws a matrix `L` such that `(L * L_^T)^(-1)` has this Wishart distribution
     pub fn sample_inv_cholesky_factor(&self, rng : &mut ThreadRng) -> Array2<f32> {
         let sample_inv = self.sample_inv(rng);
         let cholesky_factor = sqrtm(&sample_inv);
         cholesky_factor
     }
 
+    ///Draws a matrix `L` such that `L * L^T` has this Wishart distribution.
     pub fn sample_cholesky_factor(&self, rng : &mut ThreadRng) -> Array2<f32> {
         //Following https://github.com/scipy/scipy/blob/v1.5.1/scipy/stats/_multivariate.py
         //and https://www.math.wustl.edu/~sawyer/hmhandouts/Wishart.pdf,

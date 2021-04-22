@@ -1,6 +1,7 @@
 use fetish_lib::everything::*;
 use crate::space_info::*;
 use crate::params::*;
+use crate::type_id::*;
 
 pub fn get_default_context() -> Context {
     let type_info_directory = get_default_type_info_directory(DIM);
