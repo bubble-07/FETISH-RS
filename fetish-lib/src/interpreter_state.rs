@@ -20,6 +20,10 @@ use crate::primitive_term_pointer::*;
 use crate::func_impl::*;
 use topological_sort::TopologicalSort;
 
+///Represents the state of a simple interpreter for the combinatorial language
+///defined through the referenced [`Context`], with the given [`TypeId`]-indexed
+///[`TypeSpace`]s and [`ApplicationTable`]s memoizing all known non-primitive terms
+///and results of term evaluations, respectively. 
 pub struct InterpreterState<'a> {
     pub application_tables : HashMap::<TypeId, ApplicationTable<'a>>,
     pub type_spaces : HashMap::<TypeId, TypeSpace>,
@@ -27,16 +31,24 @@ pub struct InterpreterState<'a> {
 }
 
 impl <'a> InterpreterState<'a> {
+    ///Gets the [`Context`] that this [`InterpreterState`] operates within.
     pub fn get_context(&self) -> &Context {
         self.ctxt
     }
 
+    ///Stores the given [`PartiallyAppliedTerm`] in the [`TypeSpace`] for the
+    ///given [`TypeId`], if it wasn't already present. Returns a
+    ///[`NonPrimitiveTermPointer`] referencing where it was stored
+    ///in this [`InterpreterState`].
     pub fn store_term(&mut self, type_id : TypeId, term : PartiallyAppliedTerm) -> NonPrimitiveTermPointer {
         let type_space : &mut TypeSpace = self.type_spaces.get_mut(&type_id).unwrap();
         let result = type_space.add(term);
         result
     }
 
+    ///Given a [`TermPointer`], yields the [`PartiallyAppliedTerm`] which
+    ///is stored at that location within this [`InterpreterState`] (or, 
+    ///in the case of a primitive, within the containing `Context`)
     pub fn get(&self, term_ptr : TermPointer) -> PartiallyAppliedTerm {
         match (term_ptr.index) {
             TermIndex::Primitive(index) => {
@@ -53,10 +65,13 @@ impl <'a> InterpreterState<'a> {
         }
     }
 
+    ///Given a [`NonPrimitiveTermPointer`], yields the [`PartiallyAppliedTerm`]
+    ///which is stored at that location within this [`InterpreterState`].
     pub fn get_nonprimitive(&self, term_ptr : NonPrimitiveTermPointer) -> &PartiallyAppliedTerm {
         self.type_spaces.get(&term_ptr.type_id).unwrap().get(term_ptr.index)
     }
 
+    ///Gets all currently-known [`TermApplicationResult`]s which use the given [`TermReference`] argument.
     pub fn get_app_results_with_arg(&self, arg : &TermReference) -> Vec<TermApplicationResult> {
         let mut result : Vec<TermApplicationResult> = Vec::new();
         for table in self.application_tables.values() {
@@ -66,6 +81,8 @@ impl <'a> InterpreterState<'a> {
         result
     }
 
+    ///Gets all currently-known [`TermApplicationResult`]s which involve the function
+    ///that the given [`TermPointer`] points to.
     pub fn get_app_results_with_func(&self, func : TermPointer) -> Vec<TermApplicationResult> {
         let mut result : Vec<TermApplicationResult> = Vec::new();
         for table in self.application_tables.values() {
@@ -75,6 +92,8 @@ impl <'a> InterpreterState<'a> {
         result
     }
 
+    ///Gets all currently-known [`TermApplicationResult`]s which had the given [`TermReference`]
+    ///result.
     pub fn get_app_results_with_result(&self, result_term : &TermReference) -> Vec<TermApplicationResult> {
         let mut result : Vec<TermApplicationResult> = Vec::new();
         for table in self.application_tables.values() {
@@ -84,6 +103,10 @@ impl <'a> InterpreterState<'a> {
         result
     }
 
+    ///Evaluates the given [`TermApplication`] against this [`InterpreterState`], assuming
+    ///that the function pointed to in the [`TermApplication`] is a primitive. Yields
+    ///a [`TermReference`] to the result of the evaluation, and a list of [`NewlyEvaluatedTerms`]
+    ///for this [`InterpreterState`] which resulted from evaluating the application.
     pub fn evaluate(&mut self, term_app : &TermApplication) -> (TermReference, NewlyEvaluatedTerms) {
         let func_type_id : TypeId = term_app.get_func_type();
 
@@ -127,6 +150,9 @@ impl <'a> InterpreterState<'a> {
         (result_ref, newly_evaluated_terms)
     }
 
+    ///Convenience method that ensures that every type has at least one term, assuming
+    ///that this [`InterpreterState`] was just-initialized. Returns [`NewlyEvaluatedTerms`]
+    ///for evaluations that were performed as a result of this operation.
     pub fn ensure_every_type_has_a_term_on_init(&mut self) -> NewlyEvaluatedTerms {
 	let mut type_to_term = HashMap::<TypeId, TermReference>::new();
         //Initial population
@@ -183,6 +209,7 @@ impl <'a> InterpreterState<'a> {
         newly_evaluated_terms
     }
 
+    ///Constructs a fresh [`InterpreterState`] operating within the given [`Context`].
     pub fn new(ctxt : &'a Context) -> InterpreterState<'a> {
         //Initialize hashmaps for each type in the global type table 
         let mut application_tables = HashMap::<TypeId, ApplicationTable>::new();

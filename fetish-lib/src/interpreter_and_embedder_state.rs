@@ -22,6 +22,10 @@ use crate::newly_evaluated_terms::*;
 
 use crate::term_application_result::*;
 
+///A more convenient, stateful wrapper around an [`InterpreterState`] and [`EmbedderState`]
+///which automatically tracks any [`NewlyEvaluatedTerms`] originating from evaluations,
+///and an interface which allows for using these to update the wrapped [`EmbedderState`]
+///at a caller-chosen time.
 pub struct InterpreterAndEmbedderState<'a> {
     pub interpreter_state : InterpreterState<'a>,
     pub embedder_state : EmbedderState<'a>,
@@ -29,27 +33,43 @@ pub struct InterpreterAndEmbedderState<'a> {
 }
 
 impl<'a> InterpreterAndEmbedderState<'a> {
+    ///Gets the [`Context`] that this [`InterpreterAndEmbedderState`] exists in.
     pub fn get_context(&self) -> &Context {
         self.interpreter_state.get_context()
     }
-    pub fn init_step(&mut self) {
-    }
+    ///Given a [`TermApplication`], uses the wrapped [`InterpreterState`] to evaluate
+    ///the application, returning a `TermReference` for the result of the evaluation.
+    ///Any newly-evaluated terms which result from evaluation will be added to
+    ///this [`InterpreterAndEmbedderState`]'s `newly_evaluated_terms` member variable.
     pub fn evaluate(&mut self, term_app : &TermApplication) -> TermReference {
         let (result_ref, newly_evaluated_terms) = self.interpreter_state.evaluate(term_app);
         self.newly_evaluated_terms.merge(newly_evaluated_terms);
         result_ref
     }
+    ///Convenience method to force the wrapped [`InterpreterState`] to have at least
+    ///one term inhabiting every type, assuming that it doesn't really matter what these are.
+    ///Calling this method will result in every newly-added term being added to the
+    ///wrapped [`NewlyEvaluatedTerms`]
     pub fn ensure_every_type_has_a_term_on_init(&mut self) {
         let newly_evaluated_terms = self.interpreter_state.ensure_every_type_has_a_term_on_init();
         self.newly_evaluated_terms.merge(newly_evaluated_terms);
     }
+    ///Uses the wrapped [`NewlyEvaluatedTerms`] and [`InterpreterState`] to update the embeddings
+    ///within the wrapped [`EmbedderState`]. Calling this method will not modfiy the wrapped
+    ///[`NewlyEvaluatedTerms`], in case they are still of use after an embedding update in
+    ///your particular use-case.
     pub fn bayesian_update_step(&mut self) {
         self.embedder_state.bayesian_update_step(&self.interpreter_state, &self.newly_evaluated_terms);
     }
+
+    ///Clears out the wrapped [`NewlyEvaluatedTerms`], which typically will indicate that 
+    ///a new cycle of evaluations of terms against the [`InterpreterState`] is about to begin.
     pub fn clear_newly_received(&mut self) {
         self.newly_evaluated_terms = NewlyEvaluatedTerms::new();
     }
 
+    ///Constructs a new [`InterpreterAndEmbedderState`] with the given [`PriorSpecification`]s
+    ///for [`TermModel`]s and [`Elaborator`]s within the given [`Context`].
     pub fn new(model_prior_specification : &'a dyn PriorSpecification,
                elaborator_prior_specification : &'a dyn PriorSpecification, 
                ctxt : &'a Context) -> InterpreterAndEmbedderState<'a> {
