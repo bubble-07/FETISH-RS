@@ -18,6 +18,11 @@ pub struct FourierFeatureCollection {
 }
 
 impl FourierFeatureCollection {
+    ///Constructs a new collection of (alpha-scaled) random fourier features for the given number of
+    ///input dimensions, the given number of features, and the given closure which samples random
+    ///coefficient vectors for the fourier features.
+    ///Concretely, the features are of the form `x -> alpha * <w_i, x>`, where each `w_i` is
+    ///a sampled coefficient vector.
     pub fn new(in_dimensions: usize, num_features : usize,
                alpha : f32,
                generator : fn(&mut ThreadRng, usize) -> Array1<f32>) -> FourierFeatureCollection {

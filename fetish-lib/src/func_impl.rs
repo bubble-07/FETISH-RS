@@ -15,16 +15,28 @@ use std::hash::*;
 use crate::params::*;
 use crate::newly_evaluated_terms::*;
 
+///Trait which gives a "signature" for
+///functions to be included in a [`crate::PrimitiveDirectory`].
+///This consists of a name, a collection of required argument types,
+///and a return type. Primitive functions are assumed to be 
+///uniquely identifiable from their particular implementation of this trait.
 pub trait HasFuncSignature {
+    ///Gets the name for the implemented function.
     fn get_name(&self) -> String;
+    ///Gets the return type for the implemented function.
     fn ret_type(&self) -> TypeId;
+    ///Gets the list of required argument types for the implemented function.
     fn required_arg_types(&self) -> Vec::<TypeId>;
 
+    ///Given a collection of [`TermReference`]s, determines whether
+    ///we have sufficiently-many arguments to fully evaluate this function.
     fn ready_to_evaluate(&self, args : &Vec::<TermReference>) -> bool {
         let expected_num : usize =  self.required_arg_types().len();
         expected_num == args.len()
     }
 
+    ///Given a [`TypeInfoDirectory`], obtains the [`TypeId`] which
+    ///corresponds to the type of this implemented function.
     fn func_type(&self, type_info_directory : &TypeInfoDirectory) -> TypeId {
         let mut reverse_arg_types : Vec<TypeId> = self.required_arg_types();
         reverse_arg_types.reverse();
@@ -37,7 +49,13 @@ pub trait HasFuncSignature {
     }
 }
 
+///Trait for primitive function implementations.
 pub trait FuncImpl : HasFuncSignature {
+    ///Given a handle on the current [`InterpreterState`] (primarily useful if additional terms
+    ///need to be evaluated / looked up) and the collection of [`TermReference`] arguments to
+    ///apply this function implementation to, yields a [`TermReference`] to the result, along
+    ///with a collection of any `NewlyEvaluatedTerms` which may have arisen as part of the
+    ///implementation of this method. See `func_impl.rs` in the source for sample implementations.
     fn evaluate(&self, state : &mut InterpreterState, args : Vec::<TermReference>)
                 -> (TermReference, NewlyEvaluatedTerms);
 }
@@ -60,8 +78,12 @@ impl Hash for dyn FuncImpl + '_ {
     }
 }
 
+///Trait to ease implementation of primitive binary operators which have identical argument types
+///and return type. To be used in tandem with [`BinaryFuncImpl`].
 pub trait BinaryArrayOperator {
+    ///Given two arrays of equal dimension, act to yield an array of the same number of dimensions.
     fn act(&self, arg_one : ArrayView1::<R32>, arg_two : ArrayView1::<R32>) -> Array1::<R32>;
+    ///Gets the name of this binary operator
     fn get_name(&self) -> String;
 }
 
@@ -79,6 +101,7 @@ impl Hash for dyn BinaryArrayOperator + '_ {
     }
 }
 
+///[`BinaryArrayOperator`] for vector addition.
 pub struct AddOperator {
 }
 
@@ -91,6 +114,7 @@ impl BinaryArrayOperator for AddOperator {
     }
 }
 
+///[`BinaryArrayOperator`] for vector subtraction.
 pub struct SubOperator {
 }
 
@@ -103,6 +127,7 @@ impl BinaryArrayOperator for SubOperator {
     }
 }
 
+///[`BinaryArrayOperator`] for elementwise vector multiplication.
 pub struct MulOperator {
 }
 
@@ -115,6 +140,8 @@ impl BinaryArrayOperator for MulOperator {
     }
 }
 
+///Wrapper around a [`BinaryArrayOperator`] to conveniently lift it to a [`FuncImpl`]
+///given the [`TypeId`] of the argument/return type.
 pub struct BinaryFuncImpl {
     pub elem_type : TypeId,
     pub f : Box<dyn BinaryArrayOperator>
@@ -148,6 +175,8 @@ impl FuncImpl for BinaryFuncImpl {
     }
 }
 
+///Implementation of a "rotate left one index" [`FuncImpl`] for a given vector [`TypeId`].
+///(That is, given `[x_1, x_2, ...]`, rotates to `[x_2, x_2, ... x_1]`.
 #[derive(Clone)]
 pub struct RotateImpl {
     pub vector_type : TypeId
@@ -182,6 +211,8 @@ impl FuncImpl for RotateImpl {
     }
 }
 
+///Implementation of a "set the first element of a vector to the given one" [`FuncImpl`] for the given
+///vector and scalar types. 
 #[derive(Clone)]
 pub struct SetHeadImpl {
     pub vector_type : TypeId,
@@ -217,6 +248,8 @@ impl FuncImpl for SetHeadImpl {
     }
 }
 
+///Implementation of a "get the first element of a vector" [`FuncImpl`] for the given vector
+///and scalar types.
 #[derive(Clone)]
 pub struct HeadImpl {
     pub vector_type : TypeId,
@@ -248,6 +281,7 @@ impl FuncImpl for HeadImpl {
     }
 }
 
+///Implementation of a "function composition" [`FuncImpl`]
 #[derive(Clone)]
 pub struct ComposeImpl {
     in_type : TypeId,
@@ -258,6 +292,8 @@ pub struct ComposeImpl {
 }
 
 impl ComposeImpl {
+    ///Given a [`TypeInfoDirectory`], the input type, a middle type, and a return type,
+    ///yields a [`ComposeImpl`] of type `(in -> middle) -> (middle -> return) -> (in -> return)`.
     pub fn new(type_info_directory : &TypeInfoDirectory, 
                in_type : TypeId, middle_type : TypeId, ret_type : TypeId) -> ComposeImpl {
         let func_one : TypeId = type_info_directory.get_func_type_id(middle_type, ret_type);
@@ -310,6 +346,8 @@ impl FuncImpl for ComposeImpl {
     }
 }
 
+///Implementation of a "Fill a vector with the given scalar" [`FuncImpl`] for the given
+///scalar and vector [`TypeId`]s.
 #[derive(Clone)]
 pub struct FillImpl {
     pub scalar_type : TypeId,
@@ -343,6 +381,8 @@ impl FuncImpl for FillImpl {
     }
 }
 
+///Implementation of the constant function for the given "return" and "ignored" types.
+///The result is of type `return -> ignored -> return`.
 #[derive(Clone)]
 pub struct ConstImpl {
     pub ret_type : TypeId,
@@ -367,6 +407,9 @@ impl FuncImpl for ConstImpl {
     }
 }
 
+///Implementation of a "reduce this vector by this binary operator to yield a scalar"
+///[`FuncImpl`] for the given [`TypeId`]s of the binary scalar operator, the scalar type,
+///and the vector type.
 #[derive(Clone)]
 pub struct ReduceImpl {
     pub binary_scalar_func_type : TypeId,
@@ -430,6 +473,8 @@ impl FuncImpl for ReduceImpl {
     }
 }
 
+///Implementation of a "map this scalar function over every element of a vector"
+///[`FuncImpl`] for the given scalar type, scalar function type, and vector type.
 #[derive(Clone)]
 pub struct MapImpl {
     pub scalar_type : TypeId,
