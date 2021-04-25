@@ -22,6 +22,8 @@ use crate::term_reference::*;
 use crate::prior_specification::*;
 use crate::array_utils::*;
 
+///A collection of crate-internal utilities for constructing tests.
+
 pub fn random_scalar() -> f32 {
     let mut rng = rand::thread_rng();
     let result : f32 = rng.gen();
