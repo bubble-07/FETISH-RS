@@ -17,7 +17,7 @@ use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::term_application_result::*;
 use crate::term_model::*;
-use crate::model_space::*;
+use crate::embedding_space::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
 use crate::func_inverse_schmear::*;
@@ -30,7 +30,7 @@ use crate::context::*;
 ///which come from some [`InterpreterState`], and also the learned [`Elaborator`]s for
 ///every function type.
 pub struct EmbedderState<'a> {
-    pub model_spaces : HashMap::<TypeId, ModelSpace<'a>>,
+    pub model_spaces : HashMap::<TypeId, EmbeddingSpace<'a>>,
     pub ctxt : &'a Context
 }
 
@@ -60,7 +60,7 @@ impl<'a> EmbedderState<'a> {
         let mut model_spaces = HashMap::new();
         for func_type_id in 0..ctxt.get_total_num_types() {
             if (!ctxt.is_vector_type(func_type_id)) {
-                let mut model_space = ModelSpace::new(func_type_id, model_prior_specification, 
+                let mut model_space = EmbeddingSpace::new(func_type_id, model_prior_specification, 
                                                       elaborator_prior_specification, ctxt);
 
                 //Initialize embeddings for primitive terms
@@ -126,7 +126,7 @@ impl<'a> EmbedderState<'a> {
     ///Determines whether/not there is a stored [`TermModel`] for the given
     ///[`TermPointer`].
     pub fn has_embedding(&self, term_ptr : TermPointer) -> bool {
-        let space : &ModelSpace = self.model_spaces.get(&term_ptr.type_id).unwrap();
+        let space : &EmbeddingSpace = self.model_spaces.get(&term_ptr.type_id).unwrap();
         space.has_model(term_ptr.index)
     }
 
@@ -138,19 +138,19 @@ impl<'a> EmbedderState<'a> {
         space.get_model(term_ptr.index)
     }
 
-    fn get_model_space(&self, type_id : TypeId) -> &ModelSpace {
+    fn get_model_space(&self, type_id : TypeId) -> &EmbeddingSpace {
         self.model_spaces.get(&type_id).unwrap()
     }
 
     ///Like [`EmbedderState#get_embedding`], but yields a mutable reference to the
     ///[`TermModel`] given a [`TermPointer`] pointing to it. 
     pub fn get_mut_embedding(&mut self, term_ptr : TermPointer) -> &mut TermModel<'a> {
-        let space : &mut ModelSpace = self.model_spaces.get_mut(&term_ptr.type_id).unwrap();
+        let space : &mut EmbeddingSpace = self.model_spaces.get_mut(&term_ptr.type_id).unwrap();
         space.get_model_mut(term_ptr.index)
     }
 
     fn init_embedding(&mut self, term_ptr : TermPointer) {
-        let space : &mut ModelSpace = self.model_spaces.get_mut(&term_ptr.type_id).unwrap();
+        let space : &mut EmbeddingSpace = self.model_spaces.get_mut(&term_ptr.type_id).unwrap();
         space.add_model(term_ptr.index)
     }
 
@@ -335,7 +335,7 @@ impl<'a> EmbedderState<'a> {
         let func_schmear = self.get_prior_propagation_func_schmear(&term_app_res);
       
         //Get the model space for the func type
-        let ret_space : &ModelSpace = self.model_spaces.get(&term_app_res.get_ret_type(self.ctxt)).unwrap();
+        let ret_space : &EmbeddingSpace = self.model_spaces.get(&term_app_res.get_ret_type(self.ctxt)).unwrap();
 
         let func_space_info = self.ctxt.get_function_space_info(term_app_res.get_func_type());
 

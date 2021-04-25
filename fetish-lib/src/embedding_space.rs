@@ -24,15 +24,23 @@ use std::collections::HashMap;
 
 type ModelKey = TermIndex;
 
-pub struct ModelSpace<'a> {
+///Collection of all learned information about embeddings for a given type
+///in and [`EmbedderState`]. This comprises the learned [`Elaborator`]s and
+///the learned [`TermModel`]s for the type.
+pub struct EmbeddingSpace<'a> {
     pub type_id : TypeId,
+    ///[`PriorSpecification`] to use for any newly-created [`TermModel`]s.
     pub model_prior_specification : &'a dyn PriorSpecification,
     pub elaborator : Elaborator<'a>,
     pub models : HashMap<ModelKey, TermModel<'a>>,
     pub ctxt : &'a Context
 }
 
-impl <'a> ModelSpace<'a> {
+impl <'a> EmbeddingSpace<'a> {
+    ///Draws a sample from the distribution defined by this [`EmbeddingSpace`]
+    ///over collections of [`TermModel`]s of the same type, to yield
+    ///a corresponding `SampledEmbeddingSpace` containing information about
+    ///sampled embeddings.
     pub fn sample(&self, rng : &mut ThreadRng) -> SampledEmbeddingSpace<'a> {
         //We do this for speed, but also because the variation should
         //already mostly be captured in the values for the embeddings
@@ -83,25 +91,31 @@ impl <'a> ModelSpace<'a> {
 
         NormalInverseWishart::new(mean, in_precision, big_v, little_v)
     }
+    ///Adds a new [`TermModel`] with the assigned [`ModelKey`].
     pub fn add_model(&mut self, model_key : ModelKey) {
         let model = TermModel::new(self.type_id, self.model_prior_specification, self.ctxt);
         self.models.insert(model_key, model);
     }
     
+    ///Gets a handle to the [`TermModel`] with the given [`ModelKey`].
     pub fn get_model_mut(&mut self, model_key : ModelKey) -> &mut TermModel<'a> {
         self.models.get_mut(&model_key).unwrap()
     }
+    ///Gets a reference to the [`TermModel`] with the given [`ModelKey`].
     pub fn get_model(&self, model_key : ModelKey) -> &TermModel<'a> {
         self.models.get(&model_key).unwrap()
     }
+    ///Determines if a [`TermModel`] exists with the given [`ModelKey`].
     pub fn has_model(&self, model_key : ModelKey) -> bool {
         self.models.contains_key(&model_key)
     }
 
+    ///Constructs a new embedding space with the given [`PriorSpecification`]s for [`TermModel`]s
+    ///and for the [`Elaborator`], respectively, and occurring within the given [`Context`].
     pub fn new(type_id : TypeId, model_prior_specification : &'a dyn PriorSpecification,
                                  elaborator_prior_specification : &dyn PriorSpecification,
-                                 ctxt : &'a Context) -> ModelSpace<'a> {
-        ModelSpace {
+                                 ctxt : &'a Context) -> EmbeddingSpace<'a> {
+        EmbeddingSpace {
             models : HashMap::new(),
             model_prior_specification,
             elaborator : Elaborator::new(type_id, elaborator_prior_specification, ctxt),

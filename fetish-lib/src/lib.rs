@@ -55,7 +55,7 @@ pub mod inverse_schmear;
 pub mod func_schmear;
 pub mod func_inverse_schmear;
 pub mod schmear;
-pub mod model_space;
+pub mod embedding_space;
 pub mod type_id;
 pub mod params;
 pub mod application_table;

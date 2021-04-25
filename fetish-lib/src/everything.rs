@@ -47,7 +47,7 @@ pub use crate::inverse_schmear::*;
 pub use crate::func_schmear::*;
 pub use crate::func_inverse_schmear::*;
 pub use crate::schmear::*;
-pub use crate::model_space::*;
+pub use crate::embedding_space::*;
 pub use crate::type_id::*;
 pub use crate::params::*;
 pub use crate::application_table::*;
