@@ -70,10 +70,6 @@ impl <'a> TermModel<'a> {
         func_space_info.in_feat_info.get_features(in_vec)
     }
 
-    pub fn eval(&self, in_vec : ArrayView1<f32>) -> Array1<f32> {
-        self.model.eval(in_vec)
-    }
-
     pub fn has_data(&self, update_key : &TermReference) -> bool {
         self.data_updates.contains_key(update_key)
     }

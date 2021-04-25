@@ -18,6 +18,12 @@ use crate::space_info::*;
 
 use rand::prelude::*;
 
+///A representation of the information known via Bayesian regression
+///of a nonlinear model from the compressed space of the given argument [`TypeId`]
+///to the compressed space of the given return [`TypeId`]. The wrapped
+///[`NormalInverseWishart`] linear model is defined on mappings from the 
+///feature space of the input to the compressed space of the output,
+///and the whole [`Model`] is assumed to exist in the given [`Context`].
 #[derive(Clone)]
 pub struct Model<'a> {
     pub arg_type_id : TypeId,
@@ -26,6 +32,8 @@ pub struct Model<'a> {
     pub ctxt : &'a Context
 }
 
+///Convenience method to get all ordered features for a given collection of [`FeatureCollection`]s
+///and a given input vector.
 pub fn to_features(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_vec : ArrayView1<f32>) -> Array1<f32> {
     let comps = feature_collections.iter()
                                    .map(|coll| coll.get_features(in_vec))
@@ -37,6 +45,8 @@ pub fn to_features(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_ve
     stack(Axis(0), &comp_views).unwrap()
 }
 
+///Convenience method to get all features for a given collection of [`FeatureCollection`]s
+///and a given input matrix whose rows are vectors to featurize.
 pub fn to_features_mat(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_mat : ArrayView2<f32>)
                       -> Array2<f32> {
     let comps = feature_collections.iter()
@@ -48,6 +58,8 @@ pub fn to_features_mat(feature_collections : &Vec<Box<dyn FeatureCollection>>, i
     stack(Axis(1), &comp_views).unwrap()
 }
 
+///Convenience method to get the jacobian of the concatenation of the given
+///collection of [`FeatureCollection`]s evaluated at the given input vector.
 pub fn to_jacobian(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_vec : ArrayView1<f32>) -> Array2<f32> {
     let comps = feature_collections.iter()
                                    .map(|coll| coll.get_jacobian(in_vec))
@@ -61,6 +73,7 @@ pub fn to_jacobian(feature_collections : &Vec<Box<dyn FeatureCollection>>, in_ve
 }
 
 impl <'a> Model<'a> {
+    ///Gets the total number of coefficients used to define the mean of this [`Model`]
     pub fn get_total_dims(&self) -> usize {
         self.data.get_total_dims()
     }
@@ -68,35 +81,41 @@ impl <'a> Model<'a> {
 
 
 impl <'a> Model<'a> {
+    ///Gets the [`Context`] that this [`Model`] exists within.
     pub fn get_context(&self) -> &'a Context {
         self.ctxt 
     }
+    ///Draws a sample of a linear mapping from the feature space of the input
+    ///to the compressed space of the output from the distribution defined by this [`Model`].
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
         self.data.sample(rng)
     }
+    ///Identical to [`sample`], but the result is flattened.
     pub fn sample_as_vec(&self, rng : &mut ThreadRng) -> Array1::<f32> {
         self.data.sample_as_vec(rng)
     }
+    ///Gets the mean of the underlying [`NormalInverseWishart`] model from the feature
+    ///space of the input space to the compressed space of the output, as a flattened vector.
     pub fn get_mean_as_vec(&self) -> Array1::<f32> {
         self.data.get_mean_as_vec()
     }
-
+    ///Gets the [`FuncInverseSchmear`] for the underlying [`NormalInverseWishart`] model
+    ///from the feature space of the input to the compressed space of the output.
     pub fn get_inverse_schmear(&self) -> FuncInverseSchmear {
         self.data.get_inverse_schmear()
     }
 
+    ///Gets the [`FuncSchmear`] for the underlying [`NormalInverseWishart`] model
+    ///from the feature space of the input to the compressed space of the output.
     pub fn get_schmear(&self) -> FuncSchmear {
         self.data.get_schmear()
-    }
-
-    pub fn eval(&self, in_vec: ArrayView1<f32>) -> Array1<f32> {
-        let func_space_info = self.ctxt.build_function_space_info(self.arg_type_id, self.ret_type_id);
-        let feats = func_space_info.in_feat_info.get_features(in_vec);
-        self.data.eval(feats.view())
     }
 }
 
 impl <'a> ops::AddAssign<DataPoint> for Model<'a> {
+    ///Updates this [`Model`] to reflect new regression information from the
+    ///given [`DataPoint`], which is assumed to map from the compressed space
+    ///of the input to the compressed space of the output.
     fn add_assign(&mut self, other: DataPoint) {
         let func_space_info = self.ctxt.build_function_space_info(self.arg_type_id, self.ret_type_id);
         self.data += &func_space_info.get_data(other);
@@ -104,6 +123,9 @@ impl <'a> ops::AddAssign<DataPoint> for Model<'a> {
 }
 
 impl <'a> ops::AddAssign<DataPoints> for Model<'a> {
+    ///Updates this [`Model`] to reflect new regression information from the
+    ///given [`DataPoints`], which is assumed to map from the compressed space
+    ///of the input to the compressed space of the output.
     fn add_assign(&mut self, other : DataPoints) {
         let func_space_info = self.ctxt.build_function_space_info(self.arg_type_id, self.ret_type_id);
         self.data.update_datapoints(&func_space_info.get_data_points(other));
@@ -111,6 +133,7 @@ impl <'a> ops::AddAssign<DataPoints> for Model<'a> {
 }
 
 impl <'a> ops::SubAssign<DataPoint> for Model<'a> {
+    ///Undoes the action of the corresponding `add_assign` method.
     fn sub_assign(&mut self, other: DataPoint) {
         let func_space_info = self.ctxt.build_function_space_info(self.arg_type_id, self.ret_type_id);
         self.data -= &func_space_info.get_data(other);
@@ -118,18 +141,25 @@ impl <'a> ops::SubAssign<DataPoint> for Model<'a> {
 }
 
 impl <'a> ops::AddAssign<&NormalInverseWishart> for Model<'a> {
+    ///Updates this [`Model`] to reflect new prior information from the
+    ///given [`NormalInverseWishart`], which is assumed to come from another [`Model`]
+    ///with the same input and return spaces.
     fn add_assign(&mut self, other : &NormalInverseWishart) {
         self.data += other;
     }
 }
 
 impl <'a> ops::SubAssign<&NormalInverseWishart> for Model<'a> {
+    ///Undoes the action of the corresponding `add_assign` method.
     fn sub_assign(&mut self, other : &NormalInverseWishart) {
         self.data -= other;
     }
 }
 
 impl <'a> Model<'a> {
+    ///Constructs a new [`Model`] with the given [`PriorSpecification`] for the
+    ///underlying [`NormalInverseWishart`] model, the given argument and return
+    ///types, and existing within the given [`Context`].
     pub fn new(prior_spec : &dyn PriorSpecification,
                arg_type_id : TypeId, ret_type_id : TypeId,
                ctxt : &'a Context) -> Model<'a> {

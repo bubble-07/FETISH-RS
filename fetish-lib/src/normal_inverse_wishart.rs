@@ -106,10 +106,6 @@ impl NormalInverseWishart {
             out_scatter : big_v_scaled
         }
     }
-
-    pub fn eval(&self, in_vec : ArrayView1<f32>) -> Array1<f32> {
-        self.mean.dot(&in_vec)
-    }
 }
 
 impl NormalInverseWishart {
