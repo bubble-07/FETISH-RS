@@ -5,6 +5,7 @@ use std::ops;
 use ndarray::*;
 use crate::prior_specification::*;
 use crate::input_to_schmeared_output::*;
+use crate::array_utils::*;
 use crate::params::*;
 use crate::data_points::*;
 use crate::pseudoinverse::*;
@@ -21,73 +22,76 @@ use crate::function_space_info::*;
 use rand::prelude::*;
 
 
-///Normal-inverse-wishart distribution representation
+///Matrix-normal-inverse-wishart distribution representation
 ///for bayesian inference
 #[derive(Clone)]
 pub struct NormalInverseWishart {
     pub mean : Array2<f32>,
+    ///This is always maintained to equal `mean.dot(&precision)`
     pub precision_u : Array2<f32>,
     pub precision : Array2<f32>,
+    ///This is always maintained to equal `pseudoinverse_h(&precision)`
     pub sigma : Array2<f32>,
     pub big_v : Array2<f32>,
     pub little_v : f32,
+    ///The output dimensionality
     pub t : usize,
+    ///The input dimensionality
     pub s : usize
 }
 
-pub fn mean_to_array(mean : ArrayView2<f32>) -> Array1<f32> {
-    let t = mean.shape()[0];
-    let s = mean.shape()[1];
-    let n = t * s;
-
-    let mut mean_copy = Array::zeros((t, s));
-    mean_copy.assign(&mean);
-
-    mean_copy.into_shape((n,)).unwrap()
-}
-
 impl NormalInverseWishart {
+    ///Manually re-computes `self.sigma` and `self.precision_u` to
+    ///align with their definitions based on the other fields in `self`.
+    ///This method takes cubic time, so it's not recommended to call this
+    ///unless you observe issues with these fields accumulating numerical
+    ///errors away from what they should be.
     pub fn recompute_derived(&mut self) {
         self.sigma = pseudoinverse_h(&self.precision);
         self.precision_u = self.mean.dot(&self.precision);
     }
 
+    ///Gets the total dimensionality of `self.mean`.
     pub fn get_total_dims(&self) -> usize {
         self.s * self.t
     }
 
+    ///Draws a sample from the represented MNIW distribution
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
         let sampler = NormalInverseWishartSampler::new(&self);
         sampler.sample(rng)
     }
 
+    ///The same as [`sample`], but the result is flattened.
     pub fn sample_as_vec(&self, rng : &mut ThreadRng) -> Array1<f32> {
         let thick = self.sample(rng);
         let total_dims = self.get_total_dims();
         thick.into_shape((total_dims,)).unwrap()
     }
 
-    pub fn get_mean_as_vec(&self) -> Array1::<f32> {
-        mean_to_array(self.mean.view())
+    ///Returns the mean of the represented MNIW distribution, but flattened to be a vector.
+    pub fn get_mean_as_vec(&self) -> ArrayView1::<f32> {
+        flatten_matrix(self.mean.view())
     }
+    ///Returns the mean of the represented MNIW distribution as a linear map.
     pub fn get_mean(&self) -> Array2<f32> {
         self.mean.clone()
     }
-
+    ///Gets the [`FuncSchmear`] over linear mappings given by this MNIW distribution
     pub fn get_schmear(&self) -> FuncSchmear {
         FuncSchmear {
             mean : self.mean.clone(),
             covariance : self.get_covariance()
         }
     }
-
+    ///Gets the [`FuncInverseSchmear`] over linear mappings given by this MNIW distribution.
     pub fn get_inverse_schmear(&self) -> FuncInverseSchmear {
         FuncInverseSchmear {
             mean : self.mean.clone(),
             precision : self.get_precision()
         }
     }
-
+    ///Gets the precision (inverse covariance) [`FuncScatterTensor`] of this MNIW distribution.
     pub fn get_precision(&self) -> FuncScatterTensor {
         let scale = self.little_v - (self.t as f32) - 1.0f32;
         let mut out_precision = pseudoinverse_h(&self.big_v);
@@ -97,7 +101,7 @@ impl NormalInverseWishart {
             out_scatter : out_precision
         }
     }
-
+    ///Gets the covariance [`FuncScatterTensor`] of this MNIW distribution.
     pub fn get_covariance(&self) -> FuncScatterTensor {
         let scale = 1.0f32 / (self.little_v - (self.t as f32) - 1.0f32);
         let big_v_scaled = scale * &self.big_v;
@@ -109,6 +113,8 @@ impl NormalInverseWishart {
 }
 
 impl NormalInverseWishart {
+    ///Constructs a [`NormalInverseWishart`] distribution from the given [`PriorSpecification`],
+    ///the given feature dimensions, and the given output dimensions.
     pub fn from_in_out_dims(prior_specification : &dyn PriorSpecification,
                             feat_dims : usize, out_dims : usize) -> NormalInverseWishart {
         let mean : Array2<f32> = Array::zeros((out_dims, feat_dims));
@@ -123,6 +129,8 @@ impl NormalInverseWishart {
 
         NormalInverseWishart::new(mean, in_precision, out_covariance, little_v)
     }
+    ///Constructs a [`NormalInverseWishart`] distribution from the given [`PriorSpecification`]
+    ///and the given [`FunctionSpaceInfo`].
     pub fn from_space_info(prior_specification : &dyn PriorSpecification,
                            func_space_info : &FunctionSpaceInfo) -> NormalInverseWishart {
         let feat_dims = func_space_info.get_feature_dimensions();
@@ -130,6 +138,8 @@ impl NormalInverseWishart {
 
         NormalInverseWishart::from_in_out_dims(prior_specification, feat_dims, out_dims)
     }
+    ///Constructs a [`NormalInverseWishart`] distribution with the given mean, input precision,
+    ///total output error covariance, and (pseudo-)observation count.
     pub fn new(mean : Array2<f32>, precision : Array2<f32>, big_v : Array2<f32>, little_v : f32) -> NormalInverseWishart {
         let precision_u : Array2<f32> = mean.dot(&precision);
         let sigma : Array2<f32> = pseudoinverse_h(&precision);
@@ -149,8 +159,16 @@ impl NormalInverseWishart {
     }
 }
 
-///Allows doing dist ^= () to invert dist in place
 impl ops::BitXorAssign<()> for NormalInverseWishart {
+    ///Inverts this [`NormalInverseWishart`] distribution in place 
+    ///with respect to the addition operation given by the MNIW sum. This
+    ///always will satisfy 
+    ///`
+    ///let mut other = self.clone();
+    ///other ^= ();
+    ///other += self;
+    ///self == zero_normal_inverse_wishart(self.t, self.s)
+    ///`
     fn bitxor_assign(&mut self, _rhs: ()) {
         self.precision_u *= -1.0;
         self.precision *= -1.0;
@@ -160,6 +178,8 @@ impl ops::BitXorAssign<()> for NormalInverseWishart {
     }
 }
 
+///Constructs the zero element with respect to the MNIW sum, of the given
+///output and input dimensions, respectively.
 fn zero_normal_inverse_wishart(t : usize, s : usize) -> NormalInverseWishart {
     NormalInverseWishart {
         mean: Array::zeros((t, s)),
@@ -174,6 +194,8 @@ fn zero_normal_inverse_wishart(t : usize, s : usize) -> NormalInverseWishart {
 }
 
 impl NormalInverseWishart {
+    ///Updates this [`NormalInverseWishart`] distribution to reflect
+    ///new data-points for linear regression.
     pub fn update_datapoints(&mut self, data_points : &DataPoints) {
         let n = data_points.num_points();
         let X = &data_points.in_vecs;
@@ -266,24 +288,32 @@ impl NormalInverseWishart {
 }
 
 impl ops::AddAssign<&InputToSchmearedOutput> for NormalInverseWishart {
+    ///Updates this [`NormalInverseWishart`] distribution to incorporate
+    ///regression information from the given [`InputToSchmearedOutput`].
     fn add_assign(&mut self, update : &InputToSchmearedOutput) {
         self.update_input_to_schmeared_output(update, false);
     }
 }
 
 impl ops::SubAssign<&InputToSchmearedOutput> for NormalInverseWishart {
+    ///Updates this [`NormalInverseWishart`] distribution to remove
+    ///regression information from the given [`InputToSchmearedOutput`].
     fn sub_assign(&mut self, update : &InputToSchmearedOutput) {
         self.update_input_to_schmeared_output(update, true);
     }
 }
 
 impl ops::AddAssign<&DataPoint> for NormalInverseWishart {
+    ///Updates this [`NormalInverseWishart`] distribution to incorporate
+    ///regression information from the given [`DataPoint`].
     fn add_assign(&mut self, other: &DataPoint) {
         self.update(other, false)
     }
 }
 
 impl ops::SubAssign<&DataPoint> for NormalInverseWishart {
+    ///Updates this [`NormalInverseWishart`] distribution to remove
+    ///regression information from the given [`DataPoint`].
     fn sub_assign(&mut self, other: &DataPoint) {
         self.update(other, true)
     }
@@ -337,11 +367,15 @@ impl NormalInverseWishart {
 }
 
 impl ops::AddAssign<&NormalInverseWishart> for NormalInverseWishart {
+    ///Updates this [`NormalInverseWishart`] distribution to the 
+    ///MNIW-sum of it and the passed in [`NormalInverseWishart`] distribution.
     fn add_assign(&mut self, other: &NormalInverseWishart) {
         self.update_combine(other, false);
     }
 }
 impl ops::SubAssign<&NormalInverseWishart> for NormalInverseWishart {
+    ///Updates this [`NormalInverseWishart`] distribution to the 
+    ///MNIW-sum of it and the additive inverse of the passed in [`NormalInverseWishart`] distribution.
     fn sub_assign(&mut self, other : &NormalInverseWishart) {
         self.update_combine(other, true);
     }

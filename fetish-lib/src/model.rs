@@ -96,7 +96,7 @@ impl <'a> Model<'a> {
     }
     ///Gets the mean of the underlying [`NormalInverseWishart`] model from the feature
     ///space of the input space to the compressed space of the output, as a flattened vector.
-    pub fn get_mean_as_vec(&self) -> Array1::<f32> {
+    pub fn get_mean_as_vec(&self) -> ArrayView1::<f32> {
         self.data.get_mean_as_vec()
     }
     ///Gets the [`FuncInverseSchmear`] for the underlying [`NormalInverseWishart`] model

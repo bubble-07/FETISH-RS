@@ -4,6 +4,7 @@ use crate::displayable_with_state::*;
 use crate::context::*;
 use crate::interpreter_state::*;
 
+///A pointer to a non-primitive term stored in an [`InterpreterState`].
 #[derive(Copy, Clone, PartialEq, Hash, Eq)]
 pub struct NonPrimitiveTermPointer {
     pub type_id : TypeId,

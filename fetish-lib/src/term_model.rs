@@ -42,7 +42,7 @@ impl <'a> TermModel<'a> {
     pub fn sample_as_vec(&self, rng : &mut ThreadRng) -> Array1::<f32> {
         self.model.sample_as_vec(rng)
     }
-    pub fn get_mean_as_vec(&self) -> Array1::<f32> {
+    pub fn get_mean_as_vec(&self) -> ArrayView1::<f32> {
         self.model.get_mean_as_vec()
     }
 

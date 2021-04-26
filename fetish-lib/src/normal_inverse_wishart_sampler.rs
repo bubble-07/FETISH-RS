@@ -12,7 +12,9 @@ use crate::wishart::*;
 use crate::normal_inverse_wishart::*;
 use crate::sqrtm::*;
 
-
+///A structure that may be used to efficiently
+///sample from some fixed [`NormalInverseWishart`]
+///distribution.
 pub struct NormalInverseWishartSampler {
     wishart : Wishart,
     mean : Array2<f32>,
@@ -22,6 +24,8 @@ pub struct NormalInverseWishartSampler {
 }
 
 impl NormalInverseWishartSampler {
+    ///Constructs a new [`NormalInverseWishartSampler`] from the
+    ///given [`NormalInverseWishart`] distribution.
     pub fn new(distr : &NormalInverseWishart) -> NormalInverseWishartSampler {
         let big_v_inverse = pseudoinverse_h(&distr.big_v);
         let wishart : Wishart = Wishart::new(big_v_inverse, distr.little_v);
@@ -37,6 +41,8 @@ impl NormalInverseWishartSampler {
             s
         }
     }
+    ///Draws a sample from the [`NormalInverseWishart`] distribution
+    ///that this [`NormalInverseWishartSampler`] was constructed with.
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
         let out_chol = self.wishart.sample_inv_cholesky_factor(rng);
         let in_chol = &self.covariance_cholesky_factor;
