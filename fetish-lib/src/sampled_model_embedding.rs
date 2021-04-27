@@ -9,18 +9,29 @@ use crate::array_utils::*;
 use crate::model::*;
 use crate::space_info::*;
 
+///Contains a bunch of useful information which originates
+///from drawing a sample from a [`TermModel`].
 pub struct SampledModelEmbedding {
+    ///The [`FuncSchmear`] for the [`TermModel`] that this was sampled from.
     pub func_schmear : FuncSchmear,
+    ///The [`FuncInverseSchmear`] for the [`TermModel`] that this was sampled from.
     pub func_inv_schmear : FuncInverseSchmear,
+    ///The compressed-space [`Schmear`] for the [`TermModel`] that this was sampled from.
     pub compressed_schmear : Schmear,
+    ///The compressed-space [`InverseSchmear`] for the [`TermModel`] that this was sampled from.
     pub compressed_inv_schmear : InverseSchmear,
+    ///A sample from the underlying MNIW distribution for the [`TermModel`] that this was sampled from.
     pub sampled_mat : Array2<f32>,
+    ///A flattened version of `sampled_mat`.
     pub sampled_vec : Array1<f32>,
+    ///A compressed version version of `sampled_vec`.
     pub sampled_compressed_vec : Array1<f32>,
+    ///A featurized version version of `sampled_compressed_vec`.
     pub sampled_feat_vec : Array1<f32>
 }
 
 impl SampledModelEmbedding {
+    ///Draws a [`SampledModelEmbedding`] for the given [`TermModel`].
     pub fn new(term_model : &TermModel, rng : &mut ThreadRng) -> SampledModelEmbedding {
         let model = &term_model.model;
         let sampled_mat = model.sample(rng);
