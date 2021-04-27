@@ -9,6 +9,7 @@ use ndarray_rand::rand_distr::StandardNormal;
 use crate::feature_collection::*;
 use crate::params::*;
 
+///A [`FeatureCollection`] of sketched, linear features.
 #[derive(Clone)]
 pub struct SketchedLinearFeatureCollection {
     in_dimensions : usize,
@@ -18,6 +19,9 @@ pub struct SketchedLinearFeatureCollection {
 }
 
 impl SketchedLinearFeatureCollection {
+    ///Constructs a new [`SketchedLinearFeatureCollection`] with the given number of input
+    ///dimensions, the given number of sketched linear features, and the given post-scaling
+    ///factor `alpha`.
     pub fn new(in_dimensions : usize, out_dimensions : usize, alpha : f32) -> SketchedLinearFeatureCollection {
         let projection_mat = Array::random((out_dimensions, in_dimensions), StandardNormal);
 

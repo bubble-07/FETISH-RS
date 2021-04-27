@@ -5,6 +5,7 @@ use crate::term_reference::*;
 use crate::sampled_embedder_state::*;
 use crate::array_utils::*;
 
+///An [`InverseSchmear`] associated with the given [`TypeId`].
 #[derive(Clone)]
 pub struct SchmearedHole {
     pub type_id : TypeId,
@@ -12,6 +13,7 @@ pub struct SchmearedHole {
 }
 
 impl SchmearedHole {
+    ///Scales the spread matrix of the wrapped [`InverseSchmear`] by the given factor.
     pub fn rescale_spread(&self, scale_fac : f32) -> SchmearedHole {
         let inv_schmear = self.inv_schmear.rescale_spread(scale_fac);
         SchmearedHole {
@@ -19,9 +21,14 @@ impl SchmearedHole {
             inv_schmear
         }
     }
-    pub fn get_closest_term(&self, embedder_state : &SampledEmbedderState) -> (TermReference, f32) {
+    ///Assuming that this [`SchmearedHole`] is in the base space of its type,
+    ///gets the term which is closest in mahalanobis distance to the center
+    ///of the wrapped [`InverseSchmear`] within the given [`SampledEmbedderState`],
+    ///and returns both a reference to the term and the square of the best mahalanobis distance.
+    ///If there are no terms of the proper type in `embedder_state`, yields `Option::None`.
+    pub fn get_closest_term(&self, embedder_state : &SampledEmbedderState) -> Option<(TermReference, f32)> {
         if (embedder_state.ctxt.is_vector_type(self.type_id)) {
-            (TermReference::VecRef(self.type_id, to_noisy(self.inv_schmear.mean.view())), 0.0f32)
+            Option::Some((TermReference::VecRef(self.type_id, to_noisy(self.inv_schmear.mean.view())), 0.0f32))
         } else {
             let embedding_space = embedder_state.embedding_spaces.get(&self.type_id).unwrap();
             let mut best_dist = f32::INFINITY;
@@ -40,7 +47,11 @@ impl SchmearedHole {
                 index : best_term_id.unwrap()
             };
             let term_ref = TermReference::FuncRef(term_ptr);
-            (term_ref, best_dist)
+            if best_term_id.is_none() {
+                Option::None
+            } else {
+                Option::Some((term_ref, best_dist))
+            }
         }
     }
 }

@@ -8,6 +8,9 @@ use crate::displayable_with_context::*;
 use crate::interpreter_state::*;
 use crate::primitive_term_pointer::*;
 
+///The application of some [`PrimitiveTermPointer`]
+///(which points to a [`FuncImpl`]) to some number of
+///[`TermReference`] arguments.
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub struct PartiallyAppliedTerm {
     pub func_ptr : PrimitiveTermPointer,
@@ -37,6 +40,8 @@ impl DisplayableWithState for PartiallyAppliedTerm {
 }
 
 impl PartiallyAppliedTerm {
+    ///Constructs a new [`PartiallyAppliedTerm`] with the given `func_ptr`
+    ///as its function, and an initially-empty list of [`TermReference`] arguments.
     pub fn new(func_ptr : PrimitiveTermPointer) -> PartiallyAppliedTerm {
         PartiallyAppliedTerm {
             func_ptr,

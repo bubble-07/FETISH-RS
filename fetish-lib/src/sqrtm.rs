@@ -4,6 +4,7 @@ extern crate ndarray_linalg;
 use ndarray::*;
 use ndarray_linalg::*;
 
+///Computes the unique PSD square root of a PSD matrix
 pub fn sqrtm(in_mat : &Array2<f32>) -> Array2<f32> {
     let maybe_svd = in_mat.svd(true, true);
     if let Result::Err(_) = &maybe_svd {

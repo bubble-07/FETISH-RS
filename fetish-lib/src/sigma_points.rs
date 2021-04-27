@@ -7,6 +7,9 @@ use crate::schmear::*;
 use crate::feature_space_info::*;
 use crate::sqrtm::*;
 
+///Gets the canonical set of 2n + 1 sigma points (see: unscented transform)
+///for the given [`Schmear`]. These points are chosen in such a way
+///that their mean and covariance match that of the given schmear.
 pub fn get_sigma_points(in_schmear : &Schmear) -> Vec<Array1<f32>> {
     let mean = &in_schmear.mean;
     let n = mean.shape()[0];
@@ -28,10 +31,14 @@ pub fn get_sigma_points(in_schmear : &Schmear) -> Vec<Array1<f32>> {
     result
 }
 
+///Given some points, yields a [`Schmear`] with their mean and (sample) covariance.
 pub fn sigma_points_to_schmear(in_points : &Vec<Array1<f32>>) -> Schmear {
     Schmear::from_sample_vectors(in_points)
 }
 
+///Given a [`Schmear`] in a compressed space and some [`FeatureSpaceInfo`], computes
+///an estimated featurized [`Schmear`] using an unscented transform on the canonical set
+///of 2n + 1 sigma points.
 pub fn unscented_transform_schmear(in_schmear : &Schmear, feat_space_info : &FeatureSpaceInfo) -> Schmear {
     let in_sigma_points = get_sigma_points(in_schmear);
     let mut out_sigma_points = Vec::new();

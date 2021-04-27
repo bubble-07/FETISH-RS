@@ -8,6 +8,8 @@ use std::hash::*;
 use crate::interpreter_state::*;
 use crate::displayable_with_state::*;
 
+///The application of some [`TermPointer`] to a function
+///to a [`TermReference`] argument.
 #[derive(Clone, PartialEq, Hash, Eq)]
 pub struct TermApplication {
     pub func_ptr : TermPointer,
@@ -15,20 +17,24 @@ pub struct TermApplication {
 }
 
 impl TermApplication {
+    ///Gets the argument [`TypeId`] of this [`TermApplication`] in the given [`Context`].
     pub fn get_arg_type(&self, ctxt : &Context) -> TypeId {
         let (arg_type, _) = self.get_func_type_pair(ctxt);
         arg_type
     }
 
+    ///Gets the return [`TypeId`] of this [`TermApplication`] in the given [`Context`].
     pub fn get_ret_type(&self, ctxt : &Context) -> TypeId {
         let (_, ret_type) = self.get_func_type_pair(ctxt);
         ret_type
     }
 
+    ///Gets the function [`TypeId`] of this [`TermApplication`].
     pub fn get_func_type(&self) -> TypeId {
         self.func_ptr.type_id
     }
 
+    ///Gets the (argument, return) [`TypeId`]s of this [`TermApplication`] in the given [`Context`].
     fn get_func_type_pair(&self, ctxt : &Context) -> (TypeId, TypeId) {
         let func_id : TypeId = self.get_func_type();
         let func_type : Type = ctxt.get_type(func_id);

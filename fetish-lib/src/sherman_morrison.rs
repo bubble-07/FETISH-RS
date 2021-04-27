@@ -6,8 +6,9 @@ use crate::linalg_utils::*;
 use std::ops::AddAssign;
 use std::ops::SubAssign;
 
-//Compute A + w * uu^T and its inverse in one stroke
-//for the case where A is already symmetric
+///Compute A + w * uu^T and its inverse in one stroke
+///for the case where A is already symmetric, updating both `A` and `A_inv` in place.
+///This uses the sherman-morrison matrix inverse formula.
 pub fn sherman_morrison_update(A : &mut Array2<f32>, A_inv : &mut Array2<f32>,
                         w : f32, u : ArrayView1<f32>) {
     let w_u_outer_u = w * outer(u, u);
