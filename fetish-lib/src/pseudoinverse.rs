@@ -5,10 +5,12 @@ use ndarray::*;
 use crate::params::*;
 use ndarray_linalg::*;
 
+///Returns the Moore-Penrose pseudoinverse of the given Hermitian matrix
 pub fn pseudoinverse_h(in_mat : &Array2<f32>) -> Array2<f32> {
     pseudoinverse(in_mat)
 }
 
+///Returns the Moore-Penrose pseudoinverse of the given matrix
 pub fn pseudoinverse(in_mat : &Array2<f32>) -> Array2<f32> {
     let maybe_svd = in_mat.svd(true, true);
     if let Result::Err(_) = &maybe_svd {

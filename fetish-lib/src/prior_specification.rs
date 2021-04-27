@@ -1,3 +1,4 @@
+///A generic specification for MNIW priors of arbitrary dimensionality.
 pub trait PriorSpecification {
     ///Returns the scaling factor to apply to the prior input precision
     fn get_in_precision_multiplier(&self, feat_dims : usize) -> f32;

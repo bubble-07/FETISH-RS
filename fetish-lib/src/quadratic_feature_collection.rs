@@ -13,6 +13,9 @@ use rustfft::num_complex::Complex;
 use rustfft::num_traits::Zero;
 use crate::params::*;
 
+///A feature collection consisting of sketched quadratic features
+///utilizing the [`CountSketch`]-and-[`FFT`] technique
+///described in (TODO: cite reference from paper here)
 #[derive(Clone)]
 pub struct QuadraticFeatureCollection {
     in_dimensions : usize,
@@ -24,6 +27,9 @@ pub struct QuadraticFeatureCollection {
 }
 
 impl QuadraticFeatureCollection {
+    ///Constructs a new [`QuadraticFeatureCollection`] with the given number of input
+    ///dimensions, the given scaling factor `alpha`], and the given number of quadratic
+    ///features `out_dimensions`.
     pub fn new(in_dimensions : usize, out_dimensions : usize, alpha : f32) -> QuadraticFeatureCollection {
 
         let sketch_one = CountSketch::new(in_dimensions, out_dimensions);

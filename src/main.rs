@@ -5,6 +5,7 @@
 
 mod params;
 
+mod primitive_directory;
 mod type_id;
 mod alpha_formulas;
 mod context;

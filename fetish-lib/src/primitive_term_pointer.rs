@@ -3,6 +3,8 @@ use crate::type_id::*;
 use crate::displayable_with_context::*;
 use crate::context::*;
 
+///A pointer to a primtive function term ([`FuncImpl`])
+///within a [`Context`]'s [`crate::PrimitiveDirectory`].
 #[derive(Copy, Clone, PartialEq, Hash, Eq)]
 pub struct PrimitiveTermPointer {
     pub type_id : TypeId,

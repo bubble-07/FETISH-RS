@@ -27,6 +27,8 @@ fn generate_nsphere_random<R : Rng + ?Sized>(rng : &mut R, dims : usize) -> Arra
     vec
 }
 
+///Generates a zero-centered Cauchy random vector with the given `scaling` parameter and
+///the given number of dimensions.
 pub fn generate_cauchy_random<R : Rng + ?Sized>(rng : &mut R, scaling : f32, dims : usize) -> Array1<f32> {
     let cauchy = Cauchy::<f32>::new(0.0, scaling).unwrap();
     let norm : f32 = cauchy.sample(rng);
@@ -42,14 +44,17 @@ fn generate_inverse_gamma_random<R : Rng + ?Sized>(rng : &mut R, a : f32, b : f3
     (1.0 / inv_result)
 }
 
+///Generates an inverse-gamma random variable with the given `a` and `b` parameters.
 pub fn gen_inverse_gamma_random(rng : &mut ThreadRng, a : f32, b : f32) -> f32 {
     generate_inverse_gamma_random(rng, a, b)
 }
 
+///Generates a random vector on the unit `dims`-sphere.
 pub fn gen_nsphere_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {
     generate_nsphere_random(rng, dims)
 }
 
+///Generates a random vector contained in the unit `dims`-ball.
 pub fn gen_nball_random(rng : &mut ThreadRng, dims : usize) -> Array1<f32> {
     let mut result = gen_nsphere_random(rng, dims);
     let u : f32 = rng.gen();

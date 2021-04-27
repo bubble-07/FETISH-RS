@@ -5,90 +5,23 @@ use crate::func_impl::*;
 use crate::params::*;
 use crate::primitive_term_pointer::*;
 
+///A directory of primitive function terms ([`FuncImpl`]s),
+///consisting of one [`PrimitiveTypeSpace`] for each function [`TypeId`]
+///in some [`TypeInfoDirectory`].
 pub struct PrimitiveDirectory {
     pub primitive_type_spaces : HashMap::<TypeId, PrimitiveTypeSpace>
 }
 
-pub fn get_default_primitive_directory(type_info_directory : &TypeInfoDirectory) -> PrimitiveDirectory {
-    let mut result = PrimitiveDirectory::new(type_info_directory);
-    let scalar_type = 0 as TypeId;
-    let vector_type = 1 as TypeId;
-    let unary_scalar_func_type = type_info_directory.get_func_type_id(scalar_type, scalar_type);
-    let binary_scalar_func_type = type_info_directory.get_func_type_id(scalar_type, unary_scalar_func_type);
-    
-    let map_impl = MapImpl {
-        unary_scalar_func_type,
-        vector_type,
-        scalar_type
-    };
-
-    let fill_impl = FillImpl {
-        scalar_type,
-        vector_type
-    };
-
-    let set_head_impl = SetHeadImpl {
-        vector_type,
-        scalar_type
-    };
-
-    let head_impl = HeadImpl {
-        vector_type,
-        scalar_type
-    };
-
-    let rotate_impl = RotateImpl {
-        vector_type
-    };
-
-    let reduce_impl = ReduceImpl {
-        binary_scalar_func_type,
-        scalar_type,
-        vector_type
-    };
-
-    result.add(Box::new(map_impl), type_info_directory);
-    result.add(Box::new(fill_impl), type_info_directory);
-    result.add(Box::new(set_head_impl), type_info_directory);
-    result.add(Box::new(head_impl), type_info_directory);
-    result.add(Box::new(rotate_impl), type_info_directory);
-    result.add(Box::new(reduce_impl), type_info_directory);
-
-    //Binary functions
-    for type_id in [scalar_type, vector_type].iter() {
-        result.add_binary_func(*type_id, Box::new(AddOperator {}), type_info_directory);
-        result.add_binary_func(*type_id, Box::new(SubOperator {}), type_info_directory);
-        result.add_binary_func(*type_id, Box::new(MulOperator {}), type_info_directory);
-    }
-
-    for ret_type in [scalar_type, vector_type].iter() {
-        for ignored_type in [scalar_type, vector_type].iter() {
-            let const_impl = ConstImpl {
-                ret_type : *ret_type,
-                ignored_type : *ignored_type
-            };
-            result.add(Box::new(const_impl), type_info_directory);
-        }
-    }
-    for in_type in [scalar_type, vector_type].iter() {
-        for middle_type in [scalar_type, vector_type].iter() {
-            for ret_type in [scalar_type, vector_type].iter() {
-                let compose_impl = ComposeImpl::new(type_info_directory, *in_type, *middle_type, *ret_type);
-                result.add(Box::new(compose_impl), type_info_directory);
-            }
-        }
-    }
-    result
-}
-
 impl PrimitiveDirectory {
-
+    ///Given a [`PrimitiveTermPointer`] pointing to a primitive term in this
+    ///[`PrimitiveDirectory`], yields the primitive term as a [`FuncImpl`].
     pub fn get_primitive(&self, primitive_term_pointer : PrimitiveTermPointer) -> &dyn FuncImpl {
         let primitive_type_space = self.primitive_type_spaces.get(&primitive_term_pointer.type_id).unwrap();
         let term = &primitive_type_space.terms[primitive_term_pointer.index];
         term.as_ref()
     }
 
+    ///Constructs a new, initially-empty [`PrimitiveDirectory`].
     pub fn new(type_info_directory : &TypeInfoDirectory) -> PrimitiveDirectory {
         let mut primitive_type_spaces = HashMap::new();
 
@@ -101,12 +34,17 @@ impl PrimitiveDirectory {
             primitive_type_spaces
         }
     }
+    ///Adds the given [`FuncImpl`] to this [`PrimitiveDirectory`], which is assumed
+    ///to reference types pulled from the given [`TypeInfoDirectory`].
     pub fn add(&mut self, func_impl : Box<dyn FuncImpl>, type_info_directory : &TypeInfoDirectory) {
         let func_type = func_impl.func_type(type_info_directory);
         let primitive_type_space = self.primitive_type_spaces.get_mut(&func_type).unwrap();
         primitive_type_space.terms.push(func_impl);
     }
 
+    ///Convenient wrapper around [`add`] which allows adding a [`BinaryArrayOperator`]
+    ///to this [`PrimitiveDirectory`] whose element type is the given [`TypeId`] within
+    ///the given [`TypeInfoDirectory`].
     pub fn add_binary_func(&mut self, type_id : TypeId, binary_func : Box<dyn BinaryArrayOperator>, 
                                       type_info_directory : &TypeInfoDirectory) {
         let binary_func_impl = BinaryFuncImpl {
