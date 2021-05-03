@@ -1,3 +1,4 @@
+pub use crate::term_input_output::*;
 pub use crate::schmeared_hole::*;
 pub use crate::typed_vector::*;
 pub use crate::newly_evaluated_terms::*;

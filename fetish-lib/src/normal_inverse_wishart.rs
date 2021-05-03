@@ -3,6 +3,7 @@ extern crate ndarray_linalg;
 
 use std::ops;
 use ndarray::*;
+use crate::multiple::*;
 use crate::prior_specification::*;
 use crate::input_to_schmeared_output::*;
 use crate::array_utils::*;
@@ -287,6 +288,23 @@ impl NormalInverseWishart {
     }
 }
 
+impl ops::AddAssign<&Multiple<InputToSchmearedOutput>> for NormalInverseWishart {
+    fn add_assign(&mut self, update : &Multiple<InputToSchmearedOutput>) {
+        //TODO: closed form expression here
+        for _ in 0..update.count {
+            self.update_input_to_schmeared_output(&update.elem, false);
+        }
+    }
+}
+
+impl ops::SubAssign<&Multiple<InputToSchmearedOutput>> for NormalInverseWishart {
+    fn sub_assign(&mut self, update : &Multiple<InputToSchmearedOutput>) {
+        for _ in 0..update.count {
+            self.update_input_to_schmeared_output(&update.elem, true);
+        }
+    }
+}
+
 impl ops::AddAssign<&InputToSchmearedOutput> for NormalInverseWishart {
     ///Updates this [`NormalInverseWishart`] distribution to incorporate
     ///regression information from the given [`InputToSchmearedOutput`].
@@ -362,6 +380,24 @@ impl NormalInverseWishart {
             println!("Big v became negative due to prior update");
             println!("Big v: {}", &self.big_v);
             println!("Other big v: {}", &other_big_v);
+        }
+    }
+}
+
+impl ops::AddAssign<&Multiple<NormalInverseWishart>> for NormalInverseWishart {
+    fn add_assign(&mut self, other : &Multiple<NormalInverseWishart>) {
+        //TODO: Use a closed-form expression, for this and for the subtraction
+        //and then just make tests verifying that it matches
+        for _ in 0..other.count {
+            self.update_combine(&other.elem, false);
+        }
+    }
+}
+
+impl ops::SubAssign<&Multiple<NormalInverseWishart>> for NormalInverseWishart {
+    fn sub_assign(&mut self, other : &Multiple<NormalInverseWishart>) {
+        for _ in 0..other.count {
+            self.update_combine(&other.elem, true);
         }
     }
 }

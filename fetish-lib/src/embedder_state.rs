@@ -1,6 +1,7 @@
 extern crate ndarray;
 extern crate ndarray_linalg;
 
+use crate::multiple::*;
 use rand::prelude::*;
 use crate::prior_specification::*;
 use crate::space_info::*;
@@ -109,9 +110,11 @@ impl<'a> EmbedderState<'a> {
         }
 
         trace!("Propagating data updates for {} applications", updated_apps.len());
-        self.propagate_data_recursive(interpreter_state, &updated_apps, &mut data_updated_terms);
+        self.propagate_data_recursive(interpreter_state, &updated_apps, &mut data_updated_terms,
+                                      newly_evaluated_terms);
         trace!("Propagating prior updates for {} applications", data_updated_terms.len());
-        self.propagate_prior_recursive(interpreter_state, &data_updated_terms, &mut prior_updated_terms);
+        self.propagate_prior_recursive(interpreter_state, &data_updated_terms, &mut prior_updated_terms,
+                                       newly_evaluated_terms);
 
         let mut all_updated_terms = HashSet::new();
         for data_updated_term in data_updated_terms.drain() {
@@ -198,7 +201,10 @@ impl<'a> EmbedderState<'a> {
     //Propagates prior updates downwards
     fn propagate_prior_recursive(&mut self, interpreter_state : &InterpreterState,
                                      to_propagate : &HashSet::<TermPointer>,
-                                     all_modified : &mut HashSet::<TermPointer>) {
+                                     all_modified : &mut HashSet::<TermPointer>,
+                                     newly_evaluated : &NewlyEvaluatedTerms) {
+        let new_count_map = newly_evaluated.get_count_map();
+
         let mut topo_sort = TopologicalSort::<TermApplicationResult>::new();
         let mut stack = Vec::<TermApplicationResult>::new();
 
@@ -253,7 +259,13 @@ impl<'a> EmbedderState<'a> {
             for elem in to_process.drain(..) {
                 let out_type = elem.get_ret_type(self.ctxt);
                 let elaborator_func_schmear = elaborator_func_schmears.get(&out_type).unwrap();
-                self.propagate_prior(elem, elaborator_func_schmear);
+
+                let new_count = match (new_count_map.get(&elem)) {
+                    Option::None => 0,
+                    Option::Some(count) => *count
+                };
+
+                self.propagate_prior(elem, elaborator_func_schmear, new_count);
             }
         }
     }
@@ -261,7 +273,10 @@ impl<'a> EmbedderState<'a> {
     //Propagates data updates upwards
     fn propagate_data_recursive(&mut self, interpreter_state : &InterpreterState,
                                     to_propagate : &HashSet::<TermApplicationResult>,
-                                    all_modified : &mut HashSet::<TermPointer>) {
+                                    all_modified : &mut HashSet::<TermPointer>,
+                                    newly_evaluated : &NewlyEvaluatedTerms) {
+        let new_count_map = newly_evaluated.get_count_map();
+
         let mut topo_sort = TopologicalSort::<TermApplicationResult>::new();
         let mut stack = Vec::<TermApplicationResult>::new();
 
@@ -294,7 +309,11 @@ impl<'a> EmbedderState<'a> {
         while (!topo_sort.is_empty()) {
             let to_process = topo_sort.pop_all();
             for elem in to_process {
-                self.propagate_data(elem);
+                let new_count = match (new_count_map.get(&elem)) {
+                    Option::None => 0,
+                    Option::Some(count) => *count
+                };
+                self.propagate_data(elem, new_count);
             }
         }
         
@@ -302,36 +321,27 @@ impl<'a> EmbedderState<'a> {
 
     fn get_prior_propagation_func_schmear(&self, term_app_res : &TermApplicationResult) -> FuncSchmear {
         let func_model = self.get_embedding(term_app_res.get_func_ptr());
-        //If the model for the function has any data update involving
-        //the argument, we need to consider the model with it removed
-        let arg_ref = &term_app_res.get_arg_ref();
-        let func_schmear = if (func_model.has_data(arg_ref)) {
-            let data_update = func_model.data_updates.get(arg_ref).unwrap();
-            let mut downdated_distr = func_model.model.data.clone();
-            downdated_distr -= data_update;
+        //If the model for the function has data updates involving this
+        //exact same [`TermApplicationResult`] (which it should), we need to remove all data which
+        //was added to the model for it, or we risk re-inforcing redundant information.
+        let term_input_output = term_app_res.get_term_input_output();
 
-            downdated_distr.get_schmear()
-        } else {
-            func_model.get_schmear()
-        };
-        func_schmear 
+        let mut model_clone = func_model.clone();
+        model_clone.downdate_data(&term_input_output);
+        model_clone.get_schmear()
     }
 
     fn has_nontrivial_prior_update(&self, term_app_res : &TermApplicationResult) -> bool {
+        let term_input_output = term_app_res.get_term_input_output();
         let func_model = self.get_embedding(term_app_res.get_func_ptr());
-        let arg_ref = &term_app_res.get_arg_ref();
-        let mut num_data_updates = func_model.data_updates.len();
-        if (func_model.has_data(arg_ref)) {
-            num_data_updates -= 1;
-        }
-        num_data_updates > 0
+        func_model.has_some_data_other_than(&term_input_output)
     }
 
     //Given a TermApplicationResult, compute the estimated output from the application
     //and use it to update the model for the result. If an existing update
     //exists for the given application of terms, this will first remove that update
     fn propagate_prior(&mut self, term_app_res : TermApplicationResult,
-                       elaborator_func_schmear : &FuncSchmear) {
+                       elaborator_func_schmear : &FuncSchmear, count_increment : usize) {
         let func_schmear = self.get_prior_propagation_func_schmear(&term_app_res);
       
         //Get the model space for the func type
@@ -351,10 +361,14 @@ impl<'a> EmbedderState<'a> {
                                                                               ret_ptr, &out_schmear);
             //Actually perform the update
             let ret_embedding : &mut TermModel = self.get_mut_embedding(ret_ptr);
-            if (ret_embedding.has_prior(&term_app_res.term_app)) {
-                ret_embedding.downdate_prior(&term_app_res.term_app);
-            }
-            ret_embedding.update_prior(term_app_res.term_app, out_prior);
+            let prev_count = ret_embedding.downdate_prior(&term_app_res.term_app);
+            let new_count = prev_count + count_increment;
+
+            let out_update = Multiple {
+                elem : out_prior,
+                count : new_count
+            };
+            ret_embedding.update_prior(term_app_res.term_app, out_update);
         } else {
             panic!();
         }
@@ -362,7 +376,8 @@ impl<'a> EmbedderState<'a> {
 
     //Given a TermApplicationResult, update the model for the function based on the
     //implicitly-defined data-point for the result
-    fn propagate_data(&mut self, term_app_res : TermApplicationResult) {
+    fn propagate_data(&mut self, term_app_res : TermApplicationResult, count_increment : usize) {
+        let term_input_output = term_app_res.get_term_input_output();
         let arg_ref = term_app_res.get_arg_ref();
         let ret_ref = term_app_res.get_ret_ref();
 
@@ -374,17 +389,20 @@ impl<'a> EmbedderState<'a> {
         trace!("Propagating data for space of size {}->{}", arg_mean.shape()[0],
                                                             ret_schmear.mean.shape()[0]);
 
-        let data_update = InputToSchmearedOutput {
+        let data_point = InputToSchmearedOutput {
             in_vec : arg_mean,
             out_schmear : ret_schmear 
         };
 
         let func_embedding : &mut TermModel = self.get_mut_embedding(term_app_res.get_func_ptr());
-        if (func_embedding.has_data(&arg_ref)) {
-            func_embedding.downdate_data(&arg_ref);
-        }
-        func_embedding.update_data(arg_ref, data_update);
-    }
+        let prev_count = func_embedding.downdate_data(&term_input_output);
+        let new_count = prev_count + count_increment;
 
+        let data_update = Multiple {
+            elem : data_point,
+            count : new_count
+        };
+        func_embedding.update_data(term_input_output, data_update);
+    }
 }
 

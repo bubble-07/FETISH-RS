@@ -5,6 +5,8 @@
 
 #[macro_use] extern crate log;
 
+pub mod multiple;
+pub mod term_input_output;
 pub mod everything;
 pub mod schmeared_hole;
 pub mod typed_vector;

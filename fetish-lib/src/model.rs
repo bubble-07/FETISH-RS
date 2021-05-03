@@ -5,6 +5,7 @@ use ndarray::*;
 
 use std::ops;
 
+use crate::multiple::*;
 use crate::context::*;
 use crate::prior_specification::*;
 use crate::type_id::*;

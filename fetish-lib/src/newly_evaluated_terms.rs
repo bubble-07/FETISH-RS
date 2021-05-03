@@ -3,6 +3,7 @@ use crate::type_id::*;
 use crate::term::*;
 use crate::term_application_result::*;
 use crate::primitive_term_pointer::*;
+use std::collections::HashMap;
 
 ///A collection of [`TermApplicationResult`]s and [`NonPrimitiveTermPointer`]s
 ///which were generated as a consequence of new evaluations performed
@@ -20,6 +21,23 @@ impl NewlyEvaluatedTerms {
             terms : Vec::new()
         }
     }
+
+    ///Yields a [`HashMap`] mapping from [`TermApplicationResult`]s to the
+    ///count at which each occurs within this [`NewlyEvaluatedTerms`].
+    pub fn get_count_map(&self) -> HashMap<TermApplicationResult, usize> {
+        let mut result = HashMap::new();
+        for term_app_result in self.term_app_results.iter() {
+            let the_clone = term_app_result.clone();
+            if (!result.contains_key(term_app_result)) {
+                result.insert(the_clone, 1);
+            } else {
+                let prev_count = *result.get(term_app_result).unwrap();
+                result.insert(the_clone, prev_count + 1);
+            }
+        }
+        result
+    }
+
     ///Adds the given [`TermApplicationResult`] to the list of new term applications.
     pub fn add_term_app_result(&mut self, term_app_result : TermApplicationResult) {
         self.term_app_results.push(term_app_result);

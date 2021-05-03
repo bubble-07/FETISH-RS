@@ -3,6 +3,8 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 
+use crate::multiple::*;
+use crate::term_input_output::*;
 use crate::params::*;
 use crate::space_info::*;
 use crate::type_id::*;
@@ -28,8 +30,8 @@ use crate::model::*;
 pub struct TermModel<'a> {
     pub type_id : TypeId,
     pub model : Model<'a>,
-    prior_updates : HashMap::<TermApplication, NormalInverseWishart>,
-    pub data_updates : HashMap::<TermReference, InputToSchmearedOutput>
+    prior_updates : HashMap::<TermApplication, Multiple<NormalInverseWishart>>,
+    data_updates : HashMap::<TermInputOutput, Multiple<InputToSchmearedOutput>>
 }
 
 impl <'a> TermModel<'a> {
@@ -68,7 +70,7 @@ impl <'a> TermModel<'a> {
     ///Gets the [`SchmearedHole`] in the base space of the type for this [`TermModel`].
     pub fn get_schmeared_hole(&self) -> SchmearedHole {
         let func_type_id = self.get_type_id();
-        let inv_schmear =  self.get_inverse_schmear().flatten();
+        let inv_schmear = self.get_inverse_schmear().flatten();
 
         let result = SchmearedHole {
             type_id : func_type_id,
@@ -77,37 +79,68 @@ impl <'a> TermModel<'a> {
         result
     }
 
-    pub(crate) fn has_data(&self, update_key : &TermReference) -> bool {
-        self.data_updates.contains_key(update_key)
+    ///Returns true iff this [`TermModel`] has had at least one [`TermInputOutput`]
+    ///applied which is not the given one.
+    pub fn has_some_data_other_than(&self, term_input_output : &TermInputOutput) -> bool {
+        let mut num_data_updates = self.data_updates.len();
+        if (self.data_updates.contains_key(term_input_output)) {
+            num_data_updates -= 1;
+        }
+        num_data_updates > 0
     }
-    pub(crate) fn update_data(&mut self, update_key : TermReference, data_update : InputToSchmearedOutput) {
+
+    ///Updates this [`TermModel`] with a data update stemming from the given [`TermInputOutput`]
+    ///with data given by possibly multiple copies of the same [`InputToSchmearedOutput`].
+    pub fn update_data(&mut self, update_key : TermInputOutput, data_update : Multiple<InputToSchmearedOutput>) {
         let func_space_info = self.model.ctxt.get_function_space_info(self.get_type_id());
-        let feat_update = data_update.featurize(&func_space_info);
+        let feat_update_elem = data_update.elem.featurize(&func_space_info);
+        let feat_update = Multiple {
+            elem : feat_update_elem,
+            count : data_update.count
+        };
         self.model.data += &feat_update;
         self.data_updates.insert(update_key, feat_update);
     }
-    pub(crate) fn downdate_data(&mut self, update_key : &TermReference) {
-        let data_update = self.data_updates.remove(update_key).unwrap();
-        self.model.data -= &data_update;
-    }    
-    pub(crate) fn has_prior(&self, update_key : &TermApplication) -> bool {
-        self.prior_updates.contains_key(update_key)
+
+    ///Downdates this [`TermModel`] for data updates with the given [`TermInputOutput`] key.
+    ///Yields the number of data-points which were removed as a consequence of this operation.
+    pub fn downdate_data(&mut self, update_key : &TermInputOutput) -> usize {
+        match (self.data_updates.remove(update_key)) {
+            Option::None => 0,
+            Option::Some(multiple) => {
+                self.model.data -= &multiple;
+                multiple.count
+            }
+        }
     }
-    pub(crate) fn update_prior(&mut self, update_key : TermApplication, distr : NormalInverseWishart) {
-        self.model += &distr;
+
+    ///Updates this [`TermModel`] with a prior update stemming from the given [`TermApplication`]
+    ///with data given by possibly multiple copies of the same [`NormalInverseWishart`]
+    ///distribution.
+    pub fn update_prior(&mut self, update_key : TermApplication, distr : Multiple<NormalInverseWishart>) {
+        self.model.data += &distr;
         self.prior_updates.insert(update_key, distr);
     }
-    pub(crate) fn downdate_prior(&mut self, key : &TermApplication) {
-        let distr = self.prior_updates.remove(key).unwrap();
-        self.model -= &distr;
+
+    ///Downdates this [`TermModel`] for prior updates with the given [`TermApplication`] key.
+    ///Yields the number of prior applications which were removed as a consequence of this
+    ///operation.
+    pub fn downdate_prior(&mut self, key : &TermApplication) -> usize {
+        match (self.prior_updates.remove(key)) {
+            Option::None => 0,
+            Option::Some(multiple) => {
+                self.model.data -= &multiple;
+                multiple.count
+            }
+        }
     }
 
     ///Constructs a new [`TermModel`] for the given type with the given [`PriorSpecification`]
     ///within the given [`Context`].
     pub fn new(type_id : TypeId, prior_specification : &dyn PriorSpecification,
                                  ctxt : &'a Context) -> TermModel<'a> {
-        let prior_updates : HashMap::<TermApplication, NormalInverseWishart> = HashMap::new();
-        let data_updates : HashMap::<TermReference, InputToSchmearedOutput> = HashMap::new();
+        let prior_updates = HashMap::new();
+        let data_updates = HashMap::new();
         let arg_type_id = ctxt.get_arg_type_id(type_id);
         let ret_type_id = ctxt.get_ret_type_id(type_id);
 

@@ -269,7 +269,7 @@ impl <'a> OptimizerState<'a> {
     }
 
     pub fn init_step(&mut self) {
-        self.interpreter_and_embedder_state.init_step();
+        //self.interpreter_and_embedder_state.init_step();
     }
 
     pub fn new(data_points : Vec::<(Array1<f32>, Array1<f32>)>, 

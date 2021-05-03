@@ -4,6 +4,7 @@ use crate::term_pointer::*;
 use crate::term_reference::*;
 use crate::type_id::*;
 use crate::context::*;
+use crate::term_input_output::*;
 
 ///The pairing of a [`TermApplication`] with
 ///a [`TermReference`] that it evaluated to
@@ -15,6 +16,12 @@ pub struct TermApplicationResult {
 }
 
 impl TermApplicationResult {
+    pub fn get_term_input_output(&self) -> TermInputOutput {
+        TermInputOutput {
+            input : self.term_app.arg_ref.clone(),
+            output : self.result_ref.clone()
+        }
+    }
     ///Gets the [`TypeId`] of the argument in the given [`Context`].
     pub fn get_arg_type(&self, ctxt : &Context) -> TypeId {
         self.term_app.get_arg_type(ctxt)
