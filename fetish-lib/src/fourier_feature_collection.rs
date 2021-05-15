@@ -92,12 +92,12 @@ mod tests {
     fn empirical_jacobian_is_jacobian() {
         let mut successes : usize = 0;
         for _ in 0..10 {
-            let fourier_feature_collection = FourierFeatureCollection::new(10, gen_cauchy_random);
+            let fourier_feature_collection = FourierFeatureCollection::new(10, 15, 1.0f32, gen_nsphere_random);
             let in_vec = random_vector(10);
-            let jacobian = fourier_feature_collection.get_jacobian(&in_vec);
+            let jacobian = fourier_feature_collection.get_jacobian(in_vec.view());
             let empirical_jacobian = empirical_jacobian(|x| fourier_feature_collection.get_features(x),
-                                                            &in_vec);
-            let test = are_equal_matrices_to_within(&jacobian, &empirical_jacobian, 1.0f32, false);
+                                                            in_vec.view());
+            let test = are_equal_matrices_to_within(jacobian.view(), empirical_jacobian.view(), 1.0f32, false);
             if (test) {
                 successes += 1;
             }

@@ -42,10 +42,10 @@ mod tests {
 
         let mut A_updated = A.clone(); 
         let mut A_inv_updated = A_inv.clone();
-        sherman_morrison_update(&mut A_updated, &mut A_inv_updated, w, &u);
+        sherman_morrison_update(&mut A_updated, &mut A_inv_updated, w, u.view());
 
         let expected_A_inv = pseudoinverse_h(&A_updated);
 
-        assert_equal_matrices_to_within(&A_inv_updated, &expected_A_inv, 0.001f32);
+        assert_equal_matrices_to_within(A_inv_updated.view(), expected_A_inv.view(), 0.001f32);
     }
 }

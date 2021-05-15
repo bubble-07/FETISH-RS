@@ -184,14 +184,16 @@ mod tests {
     use crate::linalg_utils::*;
     use crate::test_utils::*;
 
-    fn clone_model(model : &Model) -> Model {
-        let mut result = Model::new(model.arg_type_id, model.ret_type_id);
+    fn clone_model<'a>(model : &Model<'a>) -> Model<'a> {
+        let prior_spec = TestPriorSpecification {};
+        let mut result = Model::new(&prior_spec, model.arg_type_id, model.ret_type_id, &model.ctxt);
         result.data = model.data.clone();
         result
     }
     
-    fn clone_and_perturb_model(model : &Model, epsilon : f32) -> Model {
-        let mut result = Model::new(model.arg_type_id, model.ret_type_id);
+    fn clone_and_perturb_model<'a>(model : &Model<'a>, epsilon : f32) -> Model<'a> {
+        let prior_spec = TestPriorSpecification {};
+        let mut result = Model::new(&prior_spec, model.arg_type_id, model.ret_type_id, &model.ctxt);
         result.data = model.data.clone();
         
         let mean = &model.data.mean;
@@ -209,15 +211,16 @@ mod tests {
 
     #[test]
     fn data_updates_bulk_matches_incremental() {
-        let mut bulk_updated = random_model(*UNARY_VEC_FUNC_T);
+        let ctxt = get_test_vector_only_context();
+        let mut bulk_updated = random_model(&ctxt, TEST_VECTOR_T, TEST_VECTOR_T);
         let mut incremental_updated = bulk_updated.clone();
 
-        let mut data_point = random_data_point(DIM, DIM);
+        let mut data_point = random_data_point(TEST_VECTOR_SIZE, TEST_VECTOR_SIZE);
         data_point.weight = 1.0f32;
 
-        let mut in_vecs = Array::zeros((1, DIM));
+        let mut in_vecs = Array::zeros((1, TEST_VECTOR_SIZE));
         in_vecs.row_mut(0).assign(&data_point.in_vec);
-        let mut out_vecs = Array::zeros((1, DIM));
+        let mut out_vecs = Array::zeros((1, TEST_VECTOR_SIZE));
         out_vecs.row_mut(0).assign(&data_point.out_vec);
         let data_points = DataPoints {
             in_vecs,
@@ -233,10 +236,11 @@ mod tests {
 
     #[test]
     fn data_updates_undo_cleanly() {
-        let expected = random_model(*UNARY_VEC_FUNC_T);
+        let ctxt = get_test_vector_only_context();
+        let expected = random_model(&ctxt, TEST_VECTOR_T, TEST_VECTOR_T);
 
         let mut model = expected.clone();
-        let data_point = random_data_point(DIM, DIM);
+        let data_point = random_data_point(TEST_VECTOR_SIZE, TEST_VECTOR_SIZE);
 
         model += data_point.clone();
         model -= data_point.clone();
@@ -249,7 +253,9 @@ mod tests {
         let epsilon = 10.0f32;
         let num_samps = 1000;
 
-        let model = random_model(*UNARY_VEC_FUNC_T);
+        let ctxt = get_test_vector_only_context();
+
+        let model = random_model(&ctxt, TEST_VECTOR_T, TEST_VECTOR_T);
 
         let model_schmear = model.get_schmear().flatten();
 
@@ -268,7 +274,7 @@ mod tests {
 
         mean *= scale_fac;
 
-        assert_equal_vectors_to_within(&mean, &model_schmear.mean, epsilon);
+        assert_equal_vectors_to_within(mean.view(), model_schmear.mean.view(), epsilon);
 
 
         let mut covariance = Array::zeros((model_dims, model_dims));
@@ -276,10 +282,10 @@ mod tests {
             let sample = model.sample_as_vec(&mut rng);
 
             let diff = &sample - &model_schmear.mean;
-            covariance += &(scale_fac * &outer(&diff, &diff));
+            covariance += &(scale_fac * &outer(diff.view(), diff.view()));
         }
 
-        assert_equal_matrices_to_within(&covariance, &model_schmear.covariance, epsilon * (model_dims as f32));
+        assert_equal_matrices_to_within(covariance.view(), model_schmear.covariance.view(), epsilon * (model_dims as f32));
     }
 
 }

@@ -155,20 +155,20 @@ mod tests {
 
     #[test]
     fn empirical_jacobian_is_jacobian() {
-        let quadratic_feature_collection = QuadraticFeatureCollection::new(10);
+        let quadratic_feature_collection = QuadraticFeatureCollection::new(10, 15, 1.0f32);
         let in_vec = random_vector(10);
-        let jacobian = quadratic_feature_collection.get_jacobian(&in_vec);
+        let jacobian = quadratic_feature_collection.get_jacobian(in_vec.view());
         let empirical_jacobian = empirical_jacobian(|x| quadratic_feature_collection.get_features(x),
-                                                        &in_vec);
-        assert_equal_matrices_to_within(&jacobian, &empirical_jacobian, 0.1f32);
+                                                        in_vec.view());
+        assert_equal_matrices_to_within(jacobian.view(), empirical_jacobian.view(), 0.1f32);
     }
 
     #[test]
     fn unoptimized_get_features_is_get_features() {
-        let quadratic_feature_collection = QuadraticFeatureCollection::new(10);
+        let quadratic_feature_collection = QuadraticFeatureCollection::new(10, 15, 1.0f32);
         let in_vec = random_vector(10);
-        let unoptimized = quadratic_feature_collection.unoptimized_get_features(&in_vec);
-        let optimized = quadratic_feature_collection.get_features(&in_vec);
-        assert_equal_vectors(&optimized, &unoptimized);
+        let unoptimized = quadratic_feature_collection.unoptimized_get_features(in_vec.view());
+        let optimized = quadratic_feature_collection.get_features(in_vec.view());
+        assert_equal_vectors(optimized.view(), unoptimized.view());
     }
 }

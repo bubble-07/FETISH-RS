@@ -21,8 +21,66 @@ use crate::normal_inverse_wishart::*;
 use crate::term_reference::*;
 use crate::prior_specification::*;
 use crate::array_utils::*;
+use crate::feature_space_info::*;
+use crate::feature_collection::*;
+use crate::fourier_feature_collection::*;
+use crate::sketched_linear_feature_collection::*;
+use crate::primitive_directory::*;
+use crate::rand_utils::*;
 
 ///A collection of crate-internal utilities for constructing tests.
+
+pub const TEST_VECTOR_T : TypeId = 1 as TypeId;
+pub const TEST_SCALAR_T : TypeId = 0 as TypeId;
+pub const TEST_VECTOR_SIZE : usize = 2;
+
+fn get_test_vector_only_type_info_directory() -> TypeInfoDirectory {
+    let mut result = TypeInfoDirectory::new();
+    result.add(Type::VecType(1));
+    result.add(Type::VecType(TEST_VECTOR_SIZE));
+    result
+}
+
+pub fn get_test_vector_only_feature_space_info(base_dimensions : usize) -> FeatureSpaceInfo {
+    let sketcher = Option::None; 
+    let mut feature_collections = Vec::<Box<dyn FeatureCollection>>::new();
+    let fourier_feature_collection = FourierFeatureCollection::new(base_dimensions, base_dimensions * 2, 1.0f32,
+                                                          gen_nsphere_random);
+    let sketched_linear_feature_collection = SketchedLinearFeatureCollection::new(base_dimensions, base_dimensions * 2, 1.0f32);
+    feature_collections.push(Box::new(fourier_feature_collection));
+    feature_collections.push(Box::new(sketched_linear_feature_collection));
+
+    let feature_dimensions = get_total_feat_dims(&feature_collections);
+
+    FeatureSpaceInfo {
+        base_dimensions,
+        feature_dimensions,
+        feature_collections,
+        sketcher
+    }
+}
+
+fn get_test_vector_only_space_info_directory() -> SpaceInfoDirectory {
+    let mut feature_spaces = Vec::new();
+
+    feature_spaces.push(get_test_vector_only_feature_space_info(1));
+    feature_spaces.push(get_test_vector_only_feature_space_info(TEST_VECTOR_SIZE));
+
+    SpaceInfoDirectory {
+        feature_spaces
+    }
+}
+
+pub fn get_test_vector_only_context() -> Context {
+    let type_info_directory = get_test_vector_only_type_info_directory();
+    let space_info_directory = get_test_vector_only_space_info_directory();
+    let primitive_directory = PrimitiveDirectory::new(&type_info_directory);
+    Context {
+        type_info_directory,
+        space_info_directory,
+        primitive_directory
+    }
+}
 
 pub fn random_scalar() -> f32 {
     let mut rng = rand::thread_rng();
@@ -67,12 +125,17 @@ pub fn random_normal_inverse_wishart(feature_dimensions : usize, out_dimensions 
 //out_dimensions
 pub fn random_model_app<'a>(ctxt : &'a Context, func_type_id : TypeId) -> (Model<'a>, Model<'a>) {
     let arg_type_id = ctxt.get_arg_type_id(func_type_id);
-    let arg_model = random_model(ctxt, arg_type_id);
-    let func_model = random_model(ctxt, func_type_id);
+
+    let in_type_id = ctxt.get_arg_type_id(arg_type_id);
+    let middle_type_id = ctxt.get_ret_type_id(arg_type_id);
+
+    let ret_type_id = ctxt.get_ret_type_id(func_type_id);
+    let arg_model = random_model(ctxt, in_type_id, middle_type_id);
+    let func_model = random_model(ctxt, arg_type_id, ret_type_id);
     (func_model, arg_model)
 }
 
-struct TestPriorSpecification { }
+pub struct TestPriorSpecification { }
 impl PriorSpecification for TestPriorSpecification {
     fn get_in_precision_multiplier(&self, _feat_dims : usize) -> f32 {
         1.0f32
@@ -85,16 +148,14 @@ impl PriorSpecification for TestPriorSpecification {
     }
 }
 
-pub fn random_model<'a>(ctxt : &'a Context, type_id : TypeId) -> Model {
-    let arg_type_id = ctxt.get_arg_type_id(type_id);
-    let ret_type_id = ctxt.get_ret_type_id(type_id);
-
+pub fn random_model<'a>(ctxt : &'a Context, arg_type_id : TypeId, ret_type_id : TypeId) -> Model {
     let prior_specification = TestPriorSpecification { };
 
     let mut result = Model::new(&prior_specification, arg_type_id, ret_type_id, ctxt);
-    let func_space_info = ctxt.get_function_space_info(type_id);
-    result.data = random_normal_inverse_wishart(func_space_info.get_feature_dimensions(), 
-                                                func_space_info.get_output_dimensions());
+    let arg_feat_space_info = ctxt.get_feature_space_info(arg_type_id);
+    let ret_feat_space_info = ctxt.get_feature_space_info(ret_type_id);
+    result.data = random_normal_inverse_wishart(arg_feat_space_info.feature_dimensions, 
+                                                ret_feat_space_info.base_dimensions);
     result 
 }
 

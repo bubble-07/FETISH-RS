@@ -59,6 +59,6 @@ mod tests {
         let zeros = Array::zeros(matrix.shape()[0]);
 
         let result = matrix.dot(&kernel).dot(&vector);
-        assert_equal_vectors(&result, &zeros);
+        assert_equal_vectors(result.view(), zeros.view());
     }
 }

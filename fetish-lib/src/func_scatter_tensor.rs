@@ -96,8 +96,8 @@ mod tests {
         let kroned = func_scatter_tensor.flatten();
         let expected = mat.dot(&kroned);
 
-        let actual = func_scatter_tensor.flatten_and_multiply(&mat);
+        let actual = func_scatter_tensor.flatten_and_multiply(mat.view());
 
-        assert_equal_matrices(&actual, &expected);
+        assert_equal_matrices(actual.view(), expected.view());
     }
 }

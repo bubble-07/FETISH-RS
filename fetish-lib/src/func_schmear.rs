@@ -136,11 +136,11 @@ mod tests {
             let out_diff = &out_samp - &actual_out_schmear.mean;
 
             expected_out_mean += &(scale_fac * &out_samp);
-            expected_out_covariance += &(scale_fac * &outer(&out_diff, &out_diff));
+            expected_out_covariance += &(scale_fac * &outer(out_diff.view(), out_diff.view()));
         }
 
-        assert_equal_vectors_to_within(&actual_out_schmear.mean, &expected_out_mean, 1.0f32);
-        assert_equal_matrices_to_within(&actual_out_schmear.covariance, &expected_out_covariance, 10.0f32);
+        assert_equal_vectors_to_within(actual_out_schmear.mean.view(), expected_out_mean.view(), 1.0f32);
+        assert_equal_matrices_to_within(actual_out_schmear.covariance.view(), expected_out_covariance.view(), 10.0f32);
     }
 }
 

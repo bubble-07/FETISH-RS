@@ -89,22 +89,11 @@ mod tests {
     use crate::test_utils::*;
 
     #[test]
-    fn compesss_schmear_and_compress_inv_schmear_align() {
-        let linear_sketch = LinearSketch::new(10, 5, 1.0f32);
-        let schmear = random_schmear(10);
-        let inv_schmear = schmear.inverse();
-        let compressed_schmear = linear_sketch.compress_schmear(&schmear);
-        let compressed_inv_schmear = linear_sketch.compress_inverse_schmear(&inv_schmear);
-        let compressed_schmear_inv = compressed_schmear.inverse();
-        assert_equal_inv_schmears(&compressed_inv_schmear, &compressed_schmear_inv);
-    }
-
-    #[test]
     fn expand_then_sketch_is_identity() {
         let linear_sketch = LinearSketch::new(20, 10, 1.0f32);
         let vector = random_vector(10); 
-        let expanded = linear_sketch.expand(&vector);
-        let sketched = linear_sketch.sketch(&expanded);
-        assert_equal_vectors(&sketched, &vector);
+        let expanded = linear_sketch.projection_mat_pinv.dot(&vector);
+        let sketched = linear_sketch.sketch(expanded.view());
+        assert_equal_vectors(sketched.view(), vector.view());
     }
 }

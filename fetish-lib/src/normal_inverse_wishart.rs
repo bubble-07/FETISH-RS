@@ -425,10 +425,11 @@ mod tests {
 
     #[test]
     fn prior_updates_undo_cleanly() {
-        let expected = random_model(*UNARY_VEC_FUNC_T);
+        let ctxt = get_test_vector_only_context();
+        let expected = random_model(&ctxt, TEST_VECTOR_T, TEST_VECTOR_T);
 
         let mut model = expected.clone();
-        let other = random_model(*UNARY_VEC_FUNC_T);
+        let other = random_model(&ctxt, TEST_VECTOR_T, TEST_VECTOR_T);
 
         model.data += &other.data;
         model.data -= &other.data;
@@ -458,6 +459,6 @@ mod tests {
             model += &data_point;
         }
 
-        assert_equal_matrices(&model.mean, &mat);
+        assert_equal_matrices(model.mean.view(), mat.view());
     }
 }

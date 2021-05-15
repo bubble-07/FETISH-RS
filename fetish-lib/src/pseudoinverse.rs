@@ -49,7 +49,7 @@ mod tests {
         let matrix = random_matrix(10, 10);
         let matrix_inv = matrix.inv().unwrap();
         let matrix_pinv = pseudoinverse(&matrix);
-        assert_equal_matrices(&matrix_pinv, &matrix_inv);
+        assert_equal_matrices(matrix_pinv.view(), matrix_inv.view());
     }
 
     #[test]
@@ -57,7 +57,7 @@ mod tests {
         let matrix = random_matrix(8, 10);
         let matrix_pinv = pseudoinverse(&matrix);
         let matrix_pinv_pinv = pseudoinverse(&matrix_pinv);
-        assert_equal_matrices(&matrix_pinv_pinv, &matrix);
+        assert_equal_matrices(matrix_pinv_pinv.view(), matrix.view());
     }
 
     #[test]

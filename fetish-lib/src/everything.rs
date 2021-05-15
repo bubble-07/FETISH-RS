@@ -31,7 +31,6 @@ pub use crate::data_point::*;
 pub use crate::normal_inverse_wishart::*;
 pub use crate::normal_inverse_wishart_sampler::*;
 pub use crate::wishart::*;
-pub use crate::test_utils::*;
 pub use crate::array_utils::*;
 pub use crate::pseudoinverse::*;
 pub use crate::linear_sketch::*;

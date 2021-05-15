@@ -111,6 +111,6 @@ mod tests {
         let scale_fac = 1.0f32 / (num_samps as f32);
         actual_mean *= scale_fac;
 
-        assert_equal_matrices_to_within(&actual_mean, &true_mean, 16.0f32);
+        assert_equal_matrices_to_within(actual_mean.view(), true_mean.view(), 16.0f32);
     }
 }
