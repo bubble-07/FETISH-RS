@@ -63,7 +63,7 @@ impl NormalInverseWishart {
         sampler.sample(rng)
     }
 
-    ///The same as [`sample`], but the result is flattened.
+    ///The same as [`Self::sample`], but the result is flattened.
     pub fn sample_as_vec(&self, rng : &mut ThreadRng) -> Array1<f32> {
         let thick = self.sample(rng);
         let total_dims = self.get_total_dims();

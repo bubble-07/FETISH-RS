@@ -91,7 +91,7 @@ impl <'a> Model<'a> {
     pub fn sample(&self, rng : &mut ThreadRng) -> Array2<f32> {
         self.data.sample(rng)
     }
-    ///Identical to [`sample`], but the result is flattened.
+    ///Identical to [`Self::sample`], but the result is flattened.
     pub fn sample_as_vec(&self, rng : &mut ThreadRng) -> Array1::<f32> {
         self.data.sample_as_vec(rng)
     }

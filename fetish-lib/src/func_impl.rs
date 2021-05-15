@@ -16,7 +16,7 @@ use crate::params::*;
 use crate::newly_evaluated_terms::*;
 
 ///Trait which gives a "signature" for
-///functions to be included in a [`crate::PrimitiveDirectory`].
+///functions to be included in a [`crate::primitive_directory::PrimitiveDirectory`].
 ///This consists of a name, a collection of required argument types,
 ///and a return type. Primitive functions are assumed to be 
 ///uniquely identifiable from their particular implementation of this trait.

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 ///A collection of [`TermApplicationResult`]s and [`NonPrimitiveTermPointer`]s
 ///which were generated as a consequence of new evaluations performed
-///by an [`InterpreterState`].
+///by an [`crate::interpreter_state::InterpreterState`].
 pub struct NewlyEvaluatedTerms {
     pub term_app_results : Vec<TermApplicationResult>,
     pub terms : Vec<NonPrimitiveTermPointer>

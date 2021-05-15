@@ -42,7 +42,7 @@ impl PrimitiveDirectory {
         primitive_type_space.terms.push(func_impl);
     }
 
-    ///Convenient wrapper around [`add`] which allows adding a [`BinaryArrayOperator`]
+    ///Convenient wrapper around [`Self::add`] which allows adding a [`BinaryArrayOperator`]
     ///to this [`PrimitiveDirectory`] whose element type is the given [`TypeId`] within
     ///the given [`TypeInfoDirectory`].
     pub fn add_binary_func(&mut self, type_id : TypeId, binary_func : Box<dyn BinaryArrayOperator>, 

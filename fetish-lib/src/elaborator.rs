@@ -39,7 +39,7 @@ pub struct Elaborator<'a> {
 
 impl<'a> Elaborator<'a> {
     ///Constructs a new [`Elaborator`] for the given [`TypeId`] in the given [`Context`].
-    ///Before calling this, you should make sure that there is in fact a [`LinearSketch`]
+    ///Before calling this, you should make sure that there is in fact a [`crate::linear_sketch::LinearSketch`]
     ///for the given type, and that it has a kernel. There's no point in creating one of these
     ///otherwise.
     pub fn new(type_id : TypeId, prior_specification : &dyn PriorSpecification, 
@@ -172,7 +172,7 @@ impl<'a> Elaborator<'a> {
 
         self.updates.insert(update_key, data_updates);
     }
-    ///Undoes an update added for the given [`TermIndex`] using [`update_data`]
+    ///Undoes an update added for the given [`TermIndex`] using [`Self::update_data`]
     pub fn downdate_data(&mut self, update_key : &ModelKey) {
         let mut data_updates = self.updates.remove(update_key).unwrap();
         for data_update in data_updates.drain(..) {

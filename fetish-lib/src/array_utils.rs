@@ -35,7 +35,7 @@ pub fn all_finite(vec : ArrayView1<f32>) -> bool {
     true
 }
 
-///Vectorizes [flattens] the given matrix `mat`.
+///Vectorizes (flattens) the given matrix `mat`.
 pub fn flatten_matrix(mat : ArrayView2<f32>) -> ArrayView1<f32> {
     let full_dim = mat.shape()[0] * mat.shape()[1];
     let reshaped = mat.clone().into_shape((full_dim,)).unwrap();

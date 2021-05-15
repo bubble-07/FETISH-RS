@@ -25,7 +25,7 @@ use crate::model::*;
 
 ///A [`Model`] for a term, with information about what
 ///prior updates and data updates have been applied as part of the operation
-///of the Bayesian embedding process in an [`EmbedderState`].
+///of the Bayesian embedding process in an [`crate::embedder_state::EmbedderState`].
 #[derive(Clone)]
 pub struct TermModel<'a> {
     pub type_id : TypeId,

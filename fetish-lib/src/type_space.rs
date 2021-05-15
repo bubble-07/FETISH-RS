@@ -8,7 +8,7 @@ use crate::term_index::*;
 use crate::nonprimitive_term_pointer::*;
 
 ///Directory of currently-known non-primitive [`PartiallyAppliedTerm`]s for a given
-///[`TypeId`] in the context of an [`InterpreterState`].
+///[`TypeId`] in the context of an [`crate::interpreter_state::InterpreterState`].
 pub struct TypeSpace {
     my_type : TypeId,
     terms : Vec<PartiallyAppliedTerm>,

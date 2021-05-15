@@ -19,7 +19,7 @@ pub struct CountSketch {
 
 impl CountSketch {
     ///Creates a [`CountSketch`] which projects from the specified `in_dims` to
-    ///the specified [`out_dims`].
+    ///the specified `out_dims`.
     pub fn new(in_dims : usize, out_dims : usize) -> CountSketch {
         //Need to initialize both indices and signs here.
         let mut indices = Vec::<usize>::with_capacity(in_dims);

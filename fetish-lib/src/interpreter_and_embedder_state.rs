@@ -69,7 +69,7 @@ impl<'a> InterpreterAndEmbedderState<'a> {
     }
 
     ///Constructs a new [`InterpreterAndEmbedderState`] with the given [`PriorSpecification`]s
-    ///for [`TermModel`]s and [`Elaborator`]s within the given [`Context`].
+    ///for [`crate::term_model::TermModel`]s and [`crate::elaborator::Elaborator`]s within the given [`Context`].
     pub fn new(model_prior_specification : &'a dyn PriorSpecification,
                elaborator_prior_specification : &'a dyn PriorSpecification, 
                ctxt : &'a Context) -> InterpreterAndEmbedderState<'a> {

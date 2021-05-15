@@ -14,7 +14,7 @@ use noisy_float::prelude::*;
 ///a function [`Type`] or a vector [`Type`].
 ///Vectors are stored inline here, whereas functions
 ///are stored as [`TermPointer`]s to the relevant
-///[`PartiallyAppliedTerm`]s in an [`InterpreterState`].
+///[`crate::term::PartiallyAppliedTerm`]s in an [`InterpreterState`].
 #[derive(Clone, PartialEq, Hash, Eq)]
 pub enum TermReference {
     ///A [`TermPointer`] reference to a function

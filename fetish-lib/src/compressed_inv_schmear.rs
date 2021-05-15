@@ -10,7 +10,7 @@ use crate::inverse_schmear::*;
 ///An [`InverseSchmear`] which has been compressed relative to some expansion matrix.
 ///When an inverse schmear is compressed, it may be in a subspace such that
 ///there's always a positive offset from zero in mahalanobis distance, hence the constant
-///`extra_sq_distance` included in this struct's [`sq_mahalanobis_dist`] implementation.
+///`extra_sq_distance` included in this struct's [`Self::sq_mahalanobis_dist`] implementation.
 ///See [`InverseSchmear#compress`].
 pub struct CompressedInverseSchmear {
     pub inv_schmear : InverseSchmear,

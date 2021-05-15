@@ -13,10 +13,10 @@ use crate::displayable_with_state::*;
 use crate::typed_vector::*;
 use crate::context::*;
 
-///A sampled possible state for embeddings drawn from an [`EmbedderState`].
+///A sampled possible state for embeddings drawn from an [`crate::embedder_state::EmbedderState`].
 ///This [`SampledEmbedderState`] has one [`SampledEmbeddingSpace`] for every
 ///function [`TypeId`] in the given [`Context`], which in turn contains
-///a sampled [`Elaborator`] and [`SampledModelEmbedding`]s
+///a sampled [`crate::elaborator::Elaborator`] and [`SampledModelEmbedding`]s
 pub struct SampledEmbedderState<'a> {
     pub embedding_spaces : HashMap::<TypeId, SampledEmbeddingSpace<'a>>,
     pub ctxt : &'a Context
@@ -36,7 +36,7 @@ impl<'a> SampledEmbedderState<'a> {
     }
 
     ///Given a compressed [`TypedVector`] for a function type, expands the
-    ///compressed vector using this [`SampledEmbeddingState`]'s corresponding
+    ///compressed vector using this [`SampledEmbedderState`]'s corresponding
     ///elaborator sample and inflates it to yield a linear transformation
     ///from the feature space of the input space to the compressed space of the output.
     pub fn expand_compressed_function(&self, compressed_vec : &TypedVector) -> Array2<f32> {

@@ -8,7 +8,7 @@ use crate::term_input_output::*;
 
 ///The pairing of a [`TermApplication`] with
 ///a [`TermReference`] that it evaluated to
-///when passed into an [`InterpreterState`].
+///when passed into an [`crate::interpreter_state::InterpreterState`].
 #[derive(Clone, PartialEq, Hash, Eq)]
 pub struct TermApplicationResult {
     pub term_app : TermApplication,
