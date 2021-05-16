@@ -1,8 +1,13 @@
 [package]
-name = "FETISH-RS"
+name = "fetish-lib"
 version = "0.1.0"
-authors = ["bubble-07 <spagrab@gmail.com>"]
+authors = ["Alex Grabanski (bubble-07) <spagrab@gmail.com>, <agraban.xyz>"]
 edition = "2018"
+license = "MIT"
+description = "(F)unctional (E)mbedding of (T)erms (I)n a (S)patial (H)ierarchy"
+repository = "https://github.com/bubble-07/FETISH-RS/"
+keywords = ["embedding", "functional", "interpreter", "ML", "research"]
+categories = ["mathematics", "science", "compilers"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -18,10 +23,3 @@ noisy_float="0.1.12"
 multimap="0.8.1"
 topological-sort="0.1.0"
 log="0.4.11"
-argmin={version = "0.3.1", features = ["ndarrayl"] }
-anyhow="1.0.37"
-fetish-lib= { path = "fetish-lib" }
-pretty_env_logger="0.4.0"
-
-[profile.release]
-debug = true
