@@ -18,9 +18,9 @@ use std::collections::HashMap;
 use crate::term_index::*;
 use crate::input_to_schmeared_output::*;
 
-//Learned "opposite" of the sketcher for a given type
+use serde::{Serialize, Deserialize};
 
-type ModelKey = TermIndex;
+//Learned "opposite" of the sketcher for a given type
 
 ///Learned left-inverse to the sketcher for a given type.
 ///Given compressed vectors, an [`Elaborator`] represents
@@ -33,8 +33,36 @@ pub struct Elaborator<'a> {
     pub model : NormalInverseWishart,
     ///Stored collection of [`InputToSchmearedOutput`] updates that have been applied to this [`Elaborator`]
     ///indexed by the [`TermIndex`]es of terms that they originated from.
-    pub updates : HashMap::<ModelKey, Vec<InputToSchmearedOutput>>,
+    pub updates : HashMap::<TermIndex, Vec<InputToSchmearedOutput>>,
     pub ctxt : &'a Context
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SerializedElaborator {
+    pub type_id : TypeId,
+    pub model : NormalInverseWishart,
+    pub updates : HashMap::<TermIndex, Vec<InputToSchmearedOutput>>
+}
+
+impl <'a> Elaborator<'a> {
+    pub fn serialize(self) -> SerializedElaborator {
+        SerializedElaborator {
+            type_id : self.type_id,
+            model : self.model,
+            updates : self.updates
+        }
+    }
+}
+
+impl SerializedElaborator {
+    pub fn deserialize<'a>(self, ctxt : &'a Context) -> Elaborator<'a> {
+        Elaborator {
+            type_id : self.type_id,
+            model : self.model,
+            updates : self.updates,
+            ctxt
+        }
+    }
 }
 
 impl<'a> Elaborator<'a> {
@@ -42,8 +70,8 @@ impl<'a> Elaborator<'a> {
     ///Before calling this, you should make sure that there is in fact a [`crate::linear_sketch::LinearSketch`]
     ///for the given type, and that it has a kernel. There's no point in creating one of these
     ///otherwise.
-    pub fn new(type_id : TypeId, prior_specification : &dyn PriorSpecification, 
-                                 ctxt : &'a Context) -> Elaborator<'a> {
+    pub fn new(type_id : TypeId, ctxt : &'a Context) -> Elaborator<'a> {
+        let prior_specification = ctxt.get_elaborator_prior_specification(type_id);
         let feature_space_info = ctxt.get_feature_space_info(type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
         let sketched_dimension = sketcher.get_output_dimension();
@@ -139,14 +167,14 @@ impl<'a> Elaborator<'a> {
 
     ///Returns true if this [`Elaborator`] has an update stemming from the given
     ///[`TermIndex`] that has been applied to it.
-    pub fn has_data(&self, update_key : &ModelKey) -> bool {
+    pub fn has_data(&self, update_key : &TermIndex) -> bool {
         self.updates.contains_key(update_key)
     }
     ///Given a [`Model`] for a term with the given [`TermIndex`], updates this
     ///[`Elaborator`] to reflect that the passed [`Model`] should be something
     ///that this [`Elaborator`] does a good job of faithfully representing through
     ///a round-trip projection for the type -> expansion with the [`Elaborator`].
-    pub fn update_data(&mut self, update_key : ModelKey, data_update : &Model) {
+    pub fn update_data(&mut self, update_key : TermIndex, data_update : &Model) {
         let feature_space_info = self.ctxt.get_feature_space_info(self.type_id);
         let sketcher = &feature_space_info.sketcher.as_ref().unwrap();
         let kernel_mat = &sketcher.get_kernel_matrix().as_ref().unwrap();
@@ -173,7 +201,7 @@ impl<'a> Elaborator<'a> {
         self.updates.insert(update_key, data_updates);
     }
     ///Undoes an update added for the given [`TermIndex`] using [`Self::update_data`]
-    pub fn downdate_data(&mut self, update_key : &ModelKey) {
+    pub fn downdate_data(&mut self, update_key : &TermIndex) {
         let mut data_updates = self.updates.remove(update_key).unwrap();
         for data_update in data_updates.drain(..) {
             self.model -= &data_update;

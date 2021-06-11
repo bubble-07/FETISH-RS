@@ -7,22 +7,24 @@ use crate::term_reference::*;
 use std::collections::HashMap;
 use multimap::MultiMap;
 
+use serde::{Serialize, Deserialize};
+
 ///For a given function type `A -> B`, stores
 ///current information about [`TermApplicationResult`]s
 ///for that function type with several easily-queryable views.
-pub struct ApplicationTable<'a> {
+#[derive(Serialize, Deserialize)]
+pub struct ApplicationTable {
     func_type_id : TypeId,
     table : MultiMap::<TermApplication, TermReference>,
     result_to_application_map :  MultiMap::<TermReference, TermApplicationResult>,
     arg_to_application_map : MultiMap::<TermReference, TermApplicationResult>,
-    func_to_application_map : MultiMap::<TermPointer, TermApplicationResult>,
-    ctxt : &'a Context
+    func_to_application_map : MultiMap::<TermPointer, TermApplicationResult>
 }
 
-impl <'a> ApplicationTable<'a> {
+impl ApplicationTable {
     ///Constructs an initially-empty [`ApplicationTable`] for the given
     ///function [`TypeId`] in the given [`Context`].
-    pub fn new(func_type_id : TypeId, ctxt : &'a Context) -> ApplicationTable<'a> {
+    pub fn new(func_type_id : TypeId, ctxt : &Context) -> ApplicationTable {
         if (!ctxt.is_vector_type(func_type_id)) {
             ApplicationTable {
                 func_type_id,
@@ -30,7 +32,6 @@ impl <'a> ApplicationTable<'a> {
                 result_to_application_map : MultiMap::new(),
                 arg_to_application_map : MultiMap::new(),
                 func_to_application_map : MultiMap::new(),
-                ctxt
             }
         } else {
             panic!();

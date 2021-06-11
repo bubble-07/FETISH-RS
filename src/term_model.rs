@@ -18,6 +18,8 @@ use crate::func_inverse_schmear::*;
 use crate::input_to_schmeared_output::*;
 use crate::context::*;
 
+use serde::{Serialize, Deserialize};
+
 use rand::prelude::*;
 
 use std::collections::HashMap;
@@ -32,6 +34,36 @@ pub struct TermModel<'a> {
     pub model : Model<'a>,
     prior_updates : HashMap::<TermApplication, Multiple<NormalInverseWishart>>,
     data_updates : HashMap::<TermInputOutput, Multiple<InputToSchmearedOutput>>
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SerializedTermModel {
+    pub type_id : TypeId,
+    pub model : SerializedModel,
+    prior_updates : HashMap::<TermApplication, Multiple<NormalInverseWishart>>,
+    data_updates : HashMap::<TermInputOutput, Multiple<InputToSchmearedOutput>>
+}
+
+impl <'a> TermModel<'a> {
+    pub fn serialize(self) -> SerializedTermModel {
+        SerializedTermModel {
+            type_id : self.type_id,
+            model : self.model.serialize(),
+            prior_updates : self.prior_updates,
+            data_updates : self.data_updates
+        }
+    }
+}
+
+impl SerializedTermModel {
+    pub fn deserialize<'a>(self, ctxt : &'a Context) -> TermModel<'a> {
+        TermModel {
+            type_id : self.type_id,
+            model : self.model.deserialize(ctxt),
+            prior_updates : self.prior_updates,
+            data_updates : self.data_updates
+        }
+    }
 }
 
 impl <'a> TermModel<'a> {

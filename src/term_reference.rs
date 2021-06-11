@@ -10,12 +10,14 @@ use crate::displayable_with_state::*;
 use crate::interpreter_state::*;
 use noisy_float::prelude::*;
 
+use serde::{Serialize, Deserialize};
+
 ///A reference to an arbitrary term, which may belong to
 ///a function [`Type`] or a vector [`Type`].
 ///Vectors are stored inline here, whereas functions
 ///are stored as [`TermPointer`]s to the relevant
 ///[`crate::term::PartiallyAppliedTerm`]s in an [`InterpreterState`].
-#[derive(Clone, PartialEq, Hash, Eq)]
+#[derive(Clone, PartialEq, Hash, Eq, Serialize, Deserialize)]
 pub enum TermReference {
     ///A [`TermPointer`] reference to a function
     FuncRef(TermPointer),

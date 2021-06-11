@@ -5,11 +5,13 @@ use ndarray::*;
 
 use rand::prelude::*;
 
+use serde::{Serialize, Deserialize};
+
 ///Represents a count-sketch linear projection transformation
 ///for efficient dimensionality reduction.
 ///(See Kenneth L. Clarkson and David P. Woodruff. Low rank approximation and
 ///regression in input sparsity time. In STOC, 2013.) 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct CountSketch {
     in_dims : usize,
     out_dims : usize,

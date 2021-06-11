@@ -21,6 +21,7 @@ use crate::interpreter_state::*;
 use crate::newly_evaluated_terms::*;
 
 use crate::term_application_result::*;
+use serde::{Serialize, Deserialize};
 
 ///A more convenient, stateful wrapper around an [`InterpreterState`] and [`EmbedderState`]
 ///which automatically tracks any [`NewlyEvaluatedTerms`] originating from evaluations,
@@ -32,7 +33,32 @@ pub struct InterpreterAndEmbedderState<'a> {
     pub newly_evaluated_terms : NewlyEvaluatedTerms
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct SerializedInterpreterAndEmbedderState {
+    pub interpreter_state : SerializedInterpreterState,
+    pub embedder_state : SerializedEmbedderState,
+    pub newly_evaluated_terms : NewlyEvaluatedTerms
+}
+
+impl SerializedInterpreterAndEmbedderState {
+    pub fn deserialize<'a>(self, ctxt : &'a Context) -> InterpreterAndEmbedderState<'a> {
+        InterpreterAndEmbedderState {
+            interpreter_state : self.interpreter_state.deserialize(ctxt),
+            embedder_state : self.embedder_state.deserialize(ctxt),
+            newly_evaluated_terms : self.newly_evaluated_terms
+        }
+    }
+}
+
 impl<'a> InterpreterAndEmbedderState<'a> {
+    pub fn serialize(self) -> SerializedInterpreterAndEmbedderState {
+        SerializedInterpreterAndEmbedderState {
+            interpreter_state : self.interpreter_state.serialize(),
+            embedder_state : self.embedder_state.serialize(),
+            newly_evaluated_terms : self.newly_evaluated_terms
+        }
+    }
+
     ///Gets the [`Context`] that this [`InterpreterAndEmbedderState`] exists in.
     pub fn get_context(&self) -> &Context {
         self.interpreter_state.get_context()
@@ -68,13 +94,10 @@ impl<'a> InterpreterAndEmbedderState<'a> {
         self.newly_evaluated_terms = NewlyEvaluatedTerms::new();
     }
 
-    ///Constructs a new [`InterpreterAndEmbedderState`] with the given [`PriorSpecification`]s
-    ///for [`crate::term_model::TermModel`]s and [`crate::elaborator::Elaborator`]s within the given [`Context`].
-    pub fn new(model_prior_specification : &'a dyn PriorSpecification,
-               elaborator_prior_specification : &'a dyn PriorSpecification, 
-               ctxt : &'a Context) -> InterpreterAndEmbedderState<'a> {
+    ///Constructs a new [`InterpreterAndEmbedderState`] with the given [`Context`].
+    pub fn new(ctxt : &'a Context) -> InterpreterAndEmbedderState<'a> {
         let interpreter_state = InterpreterState::new(ctxt);
-        let embedder_state = EmbedderState::new(model_prior_specification, elaborator_prior_specification, ctxt);
+        let embedder_state = EmbedderState::new(ctxt);
         let newly_evaluated_terms = NewlyEvaluatedTerms::new();
         InterpreterAndEmbedderState {
             interpreter_state,

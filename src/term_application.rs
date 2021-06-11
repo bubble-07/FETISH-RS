@@ -8,9 +8,11 @@ use std::hash::*;
 use crate::interpreter_state::*;
 use crate::displayable_with_state::*;
 
+use serde::{Serialize, Deserialize};
+
 ///The application of some [`TermPointer`] to a function
 ///to a [`TermReference`] argument.
-#[derive(Clone, PartialEq, Hash, Eq)]
+#[derive(Clone, PartialEq, Hash, Eq, Serialize, Deserialize)]
 pub struct TermApplication {
     pub func_ptr : TermPointer,
     pub arg_ref : TermReference

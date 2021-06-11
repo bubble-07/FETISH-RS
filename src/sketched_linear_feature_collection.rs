@@ -9,8 +9,10 @@ use ndarray_rand::rand_distr::StandardNormal;
 use crate::feature_collection::*;
 use crate::params::*;
 
+use serde::{Serialize, Deserialize};
+
 ///A [`FeatureCollection`] of sketched, linear features.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SketchedLinearFeatureCollection {
     in_dimensions : usize,
     out_dimensions : usize,

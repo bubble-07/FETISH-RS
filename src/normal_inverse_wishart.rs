@@ -22,10 +22,11 @@ use crate::function_space_info::*;
 
 use rand::prelude::*;
 
+use serde::{Serialize, Deserialize};
 
 ///Matrix-normal-inverse-wishart distribution representation
 ///for bayesian inference
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct NormalInverseWishart {
     pub mean : Array2<f32>,
     ///This is always maintained to equal `mean.dot(&precision)`

@@ -7,8 +7,11 @@ use std::collections::HashMap;
 use crate::term_index::*;
 use crate::nonprimitive_term_pointer::*;
 
+use serde::{Serialize, Deserialize};
+
 ///Directory of currently-known non-primitive [`PartiallyAppliedTerm`]s for a given
 ///[`TypeId`] in the context of an [`crate::interpreter_state::InterpreterState`].
+#[derive(Serialize, Deserialize)]
 pub struct TypeSpace {
     my_type : TypeId,
     terms : Vec<PartiallyAppliedTerm>,

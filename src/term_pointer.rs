@@ -8,9 +8,11 @@ use crate::term_index::*;
 use crate::primitive_term_pointer::*;
 use crate::nonprimitive_term_pointer::*;
 
+use serde::{Serialize, Deserialize};
+
 ///A pointer to an arbitrary primitive or non-primitive
 ///term within an [`InterpreterState`].
-#[derive(Copy, Clone, PartialEq, Hash, Eq)]
+#[derive(Copy, Clone, PartialEq, Hash, Eq, Serialize, Deserialize)]
 pub struct TermPointer {
     pub type_id : TypeId,
     pub index : TermIndex

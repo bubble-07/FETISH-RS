@@ -5,6 +5,8 @@ use crate::function_space_info::*;
 use crate::feature_space_info::*;
 use crate::primitive_directory::*;
 use crate::primitive_term_pointer::*;
+use crate::prior_directory::*;
+use crate::prior_specification::*;
 
 ///Stores interpreter-global context information, such as the
 ///collection of all types in the language, the collection of all
@@ -14,10 +16,25 @@ use crate::primitive_term_pointer::*;
 pub struct Context {
     pub type_info_directory : TypeInfoDirectory,
     pub space_info_directory : SpaceInfoDirectory,
-    pub primitive_directory : PrimitiveDirectory
+    pub primitive_directory : PrimitiveDirectory,
+    pub prior_directory : PriorDirectory
 }
 
 impl Context {
+    //Prior information
+    ///Gets the [`PriorSpecification`] for the [`Elaborator`] of the given type
+    pub fn get_elaborator_prior_specification(&self, type_id : TypeId) -> &dyn PriorSpecification {
+        let prior_info = self.prior_directory.get_prior_info(type_id);
+        &*prior_info.elaborator_prior_specification
+    }
+
+    ///Gets the [`PriorSpecification`] for new [`TermModel`]s of the given type
+    pub fn get_model_prior_specification(&self, type_id : TypeId) -> &dyn PriorSpecification {
+        let prior_info = self.prior_directory.get_prior_info(type_id);
+        &*prior_info.model_prior_specification
+    }
+    
+
     //Primitive information
     
     ///Given a [`PrimitiveTermPointer`], yields the [`FuncImpl`] it references.

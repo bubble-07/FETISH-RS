@@ -10,10 +10,12 @@ use crate::linalg_utils::*;
 use crate::inverse_schmear::*;
 use crate::pseudoinverse::*;
 
+use serde::{Serialize, Deserialize};
+
 ///Represents a (multivariate) probability distribution by its
 ///mean and its covariance.
 ///See also [`InverseSchmear`], [`crate::func_schmear::FuncSchmear`]
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Schmear {
     pub mean : Array1<f32>,
     pub covariance : Array2<f32>

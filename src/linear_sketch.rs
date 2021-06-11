@@ -11,10 +11,12 @@ use crate::kernel::*;
 use crate::inverse_schmear::*;
 use crate::pseudoinverse::*;
 
+use serde::{Serialize, Deserialize};
+
 ///A representation of a linear "sketch", or projection from a higher dimension to a
 ///lower-dimension. This struct represents both the sketching matrix itself and information
 ///about its pseudoinverse and kernel.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct LinearSketch {
     projection_mat : Array2<f32>,
     projection_mat_pinv : Array2<f32>,

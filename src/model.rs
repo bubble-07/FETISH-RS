@@ -17,6 +17,8 @@ use crate::func_schmear::*;
 use crate::func_inverse_schmear::*;
 use crate::space_info::*;
 
+use serde::{Serialize, Deserialize};
+
 use rand::prelude::*;
 
 ///A representation of the information known via Bayesian regression
@@ -32,6 +34,35 @@ pub struct Model<'a> {
     pub data : NormalInverseWishart,
     pub ctxt : &'a Context
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct SerializedModel {
+    pub arg_type_id : TypeId,
+    pub ret_type_id : TypeId,
+    pub data : NormalInverseWishart
+}
+
+impl <'a> Model<'a> {
+    pub fn serialize(self) -> SerializedModel {
+        SerializedModel {
+            arg_type_id : self.arg_type_id,
+            ret_type_id : self.ret_type_id,
+            data : self.data
+        }
+    }
+}
+
+impl SerializedModel {
+    pub fn deserialize<'a>(self, ctxt : &'a Context) -> Model<'a> {
+        Model {
+            arg_type_id : self.arg_type_id,
+            ret_type_id : self.ret_type_id,
+            data : self.data,
+            ctxt
+        }
+    }
+}
+
 
 ///Convenience method to get all ordered features for a given collection of [`FeatureCollection`]s
 ///and a given input vector.

@@ -19,18 +19,42 @@ use crate::term_application_result::*;
 use crate::primitive_term_pointer::*;
 use crate::func_impl::*;
 use topological_sort::TopologicalSort;
+use serde::{Serialize, Deserialize};
 
 ///Represents the state of a simple interpreter for the combinatorial language
 ///defined through the referenced [`Context`], with the given [`TypeId`]-indexed
 ///[`TypeSpace`]s and [`ApplicationTable`]s memoizing all known non-primitive terms
 ///and results of term evaluations, respectively. 
 pub struct InterpreterState<'a> {
-    pub application_tables : HashMap::<TypeId, ApplicationTable<'a>>,
+    pub application_tables : HashMap::<TypeId, ApplicationTable>,
     pub type_spaces : HashMap::<TypeId, TypeSpace>,
     pub ctxt : &'a Context
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct SerializedInterpreterState {
+    pub application_tables : HashMap::<TypeId, ApplicationTable>,
+    pub type_spaces : HashMap::<TypeId, TypeSpace>
+}
+
+impl SerializedInterpreterState {
+    pub fn deserialize<'a>(self, ctxt : &'a Context) -> InterpreterState<'a> {
+        InterpreterState {
+            application_tables : self.application_tables,
+            type_spaces : self.type_spaces,
+            ctxt
+        }
+    }
+}
+
 impl <'a> InterpreterState<'a> {
+    pub fn serialize(self) -> SerializedInterpreterState {
+        SerializedInterpreterState {
+            application_tables : self.application_tables,
+            type_spaces : self.type_spaces
+        }
+    }
+
     ///Gets the [`Context`] that this [`InterpreterState`] operates within.
     pub fn get_context(&self) -> &Context {
         self.ctxt

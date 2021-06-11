@@ -13,6 +13,8 @@ use rustfft::num_complex::Complex;
 use rustfft::num_traits::Zero;
 use crate::params::*;
 
+use serde::{Serialize, Deserialize};
+
 ///A feature collection consisting of sketched quadratic features
 ///utilizing the [`CountSketch`]-and-[`FFT`] technique
 ///described in (TODO: cite reference from paper here)
@@ -26,28 +28,60 @@ pub struct QuadraticFeatureCollection {
     ifft : Arc<dyn FFT<f32>>
 }
 
-impl QuadraticFeatureCollection {
-    ///Constructs a new [`QuadraticFeatureCollection`] with the given number of input
-    ///dimensions, the given scaling factor `alpha`], and the given number of quadratic
-    ///features `out_dimensions`.
-    pub fn new(in_dimensions : usize, out_dimensions : usize, alpha : f32) -> QuadraticFeatureCollection {
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SerializableQuadraticFeatureCollection {
+    in_dimensions : usize,
+    alpha : f32,
+    sketch_one : CountSketch,
+    sketch_two : CountSketch
+}
 
+impl SerializableQuadraticFeatureCollection {
+    pub fn new(in_dimensions : usize, out_dimensions : usize, alpha : f32) -> SerializableQuadraticFeatureCollection {
         let sketch_one = CountSketch::new(in_dimensions, out_dimensions);
         let sketch_two = CountSketch::new(in_dimensions, out_dimensions);
-        
+        SerializableQuadraticFeatureCollection {
+            in_dimensions,
+            alpha,
+            sketch_one,
+            sketch_two
+        }
+    }
+    pub fn deserialize(self) -> QuadraticFeatureCollection {
         let mut fftplanner = FFTplanner::<f32>::new(false);
         let mut ifftplanner = FFTplanner::<f32>::new(true);
+
+        let out_dimensions = self.sketch_one.get_out_dimensions();
 
         let fft = fftplanner.plan_fft(out_dimensions);
         let ifft = ifftplanner.plan_fft(out_dimensions);
 
         QuadraticFeatureCollection {
-            in_dimensions,
-            alpha,
-            sketch_one,
-            sketch_two,
+            in_dimensions : self.in_dimensions,
+            alpha : self.alpha,
+            sketch_one : self.sketch_one,
+            sketch_two : self.sketch_two,
             fft,
             ifft
+        }
+    }
+}
+
+impl QuadraticFeatureCollection {
+    ///Constructs a new [`QuadraticFeatureCollection`] with the given number of input
+    ///dimensions, the given scaling factor `alpha`], and the given number of quadratic
+    ///features `out_dimensions`.
+    pub fn new(in_dimensions : usize, out_dimensions : usize, alpha : f32) -> QuadraticFeatureCollection {
+        let serializable = SerializableQuadraticFeatureCollection::new(in_dimensions, out_dimensions, alpha);
+        serializable.deserialize()
+    }
+
+    pub fn serialize(self) -> SerializableQuadraticFeatureCollection {
+        SerializableQuadraticFeatureCollection {
+            in_dimensions : self.in_dimensions,
+            alpha : self.alpha,
+            sketch_one : self.sketch_one,
+            sketch_two : self.sketch_two
         }
     }
 }

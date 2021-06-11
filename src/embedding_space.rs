@@ -19,6 +19,7 @@ use crate::schmear::*;
 use crate::elaborator::*;
 use crate::sampled_embedding_space::*;
 use crate::term_index::*;
+use serde::{Serialize, Deserialize};
 
 use std::collections::HashMap;
 
@@ -27,14 +28,50 @@ use std::collections::HashMap;
 ///the learned [`TermModel`]s for the type.
 pub struct EmbeddingSpace<'a> {
     pub type_id : TypeId,
-    ///[`PriorSpecification`] to use for any newly-created [`TermModel`]s.
-    pub model_prior_specification : &'a dyn PriorSpecification,
     pub elaborator : Elaborator<'a>,
     pub models : HashMap<TermIndex, TermModel<'a>>,
     pub ctxt : &'a Context
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct SerializedEmbeddingSpace {
+    pub type_id : TypeId,
+    pub elaborator : SerializedElaborator,
+    pub models : HashMap<TermIndex, SerializedTermModel>
+}
+
+impl SerializedEmbeddingSpace {
+    pub fn deserialize<'a>(mut self, ctxt : &'a Context) -> EmbeddingSpace<'a> {
+        let elaborator = self.elaborator.deserialize(ctxt);
+        let mut models = HashMap::new();
+        for (term_index, serialized_term_model) in self.models.drain() {
+            let term_model = serialized_term_model.deserialize(ctxt);
+            models.insert(term_index, term_model);
+        }
+        EmbeddingSpace {
+            type_id : self.type_id,
+            elaborator,
+            models,
+            ctxt
+        }
+    }
+}
+
 impl <'a> EmbeddingSpace<'a> {
+    pub fn serialize(mut self) -> SerializedEmbeddingSpace {
+        let elaborator = self.elaborator.serialize();
+        let mut models = HashMap::new();
+        for (term_index, deserialized_term_model) in self.models.drain() {
+            let term_model = deserialized_term_model.serialize();
+            models.insert(term_index, term_model);
+        }
+        SerializedEmbeddingSpace {
+            type_id : self.type_id,
+            elaborator,
+            models
+        }
+    }
+
     ///Draws a sample from the distribution defined by this [`EmbeddingSpace`]
     ///over collections of [`TermModel`]s of the same type, to yield
     ///a corresponding `SampledEmbeddingSpace` containing information about
@@ -91,7 +128,8 @@ impl <'a> EmbeddingSpace<'a> {
     }
     ///Adds a new [`TermModel`] with the assigned [`TermIndex`].
     pub fn add_model(&mut self, model_key : TermIndex) {
-        let model = TermModel::new(self.type_id, self.model_prior_specification, self.ctxt);
+        let prior_spec = self.ctxt.get_model_prior_specification(self.type_id);
+        let model = TermModel::new(self.type_id, prior_spec, self.ctxt);
         self.models.insert(model_key, model);
     }
     
@@ -108,15 +146,13 @@ impl <'a> EmbeddingSpace<'a> {
         self.models.contains_key(&model_key)
     }
 
-    ///Constructs a new embedding space with the given [`PriorSpecification`]s for [`TermModel`]s
+    ///Constructs a new embedding space with the given [`TypeId`] for [`TermModel`]s
     ///and for the [`Elaborator`], respectively, and occurring within the given [`Context`].
-    pub fn new(type_id : TypeId, model_prior_specification : &'a dyn PriorSpecification,
-                                 elaborator_prior_specification : &dyn PriorSpecification,
-                                 ctxt : &'a Context) -> EmbeddingSpace<'a> {
+    pub fn new(type_id : TypeId, ctxt : &'a Context) -> EmbeddingSpace<'a> {
+        let elaborator = Elaborator::new(type_id, ctxt);
         EmbeddingSpace {
             models : HashMap::new(),
-            model_prior_specification,
-            elaborator : Elaborator::new(type_id, elaborator_prior_specification, ctxt),
+            elaborator,
             type_id,
             ctxt
         }

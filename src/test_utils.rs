@@ -1,11 +1,14 @@
 extern crate ndarray;
 extern crate ndarray_linalg;
 
+use std::collections::HashMap;
 use ndarray::*;
 use crate::context::*;
 use crate::space_info::*;
 use crate::term_model::*;
 use crate::type_id::*;
+use crate::prior_info::*;
+use crate::prior_directory::*;
 use crate::data_point::*;
 use crate::schmear::*;
 use crate::func_schmear::*;
@@ -71,14 +74,24 @@ fn get_test_vector_only_space_info_directory() -> SpaceInfoDirectory {
     }
 }
 
+fn get_test_vector_only_prior_info_directory() -> PriorDirectory {
+    //Empty, because we have no function types
+    let priors = HashMap::new();
+    PriorDirectory {
+        priors
+    }
+}
+
 pub fn get_test_vector_only_context() -> Context {
     let type_info_directory = get_test_vector_only_type_info_directory();
     let space_info_directory = get_test_vector_only_space_info_directory();
     let primitive_directory = PrimitiveDirectory::new(&type_info_directory);
+    let prior_directory = get_test_vector_only_prior_info_directory();
     Context {
         type_info_directory,
         space_info_directory,
-        primitive_directory
+        primitive_directory,
+        prior_directory
     }
 }
 

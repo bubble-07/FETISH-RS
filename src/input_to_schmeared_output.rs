@@ -8,10 +8,12 @@ use crate::schmear::*;
 use crate::sigma_points::*;
 use crate::function_space_info::*;
 
+use serde::{Serialize, Deserialize};
+
 ///A variation on [`DataPoint`] where the output
 ///is allowed to be a schmear instead of just one point,
 ///and the weight is assumed to be one.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct InputToSchmearedOutput {
     pub in_vec : Array1<f32>,
     pub out_schmear : Schmear

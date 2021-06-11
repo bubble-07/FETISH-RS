@@ -6,10 +6,12 @@ use crate::type_id::*;
 use crate::context::*;
 use crate::term_input_output::*;
 
+use serde::{Serialize, Deserialize};
+
 ///The pairing of a [`TermApplication`] with
 ///a [`TermReference`] that it evaluated to
 ///when passed into an [`crate::interpreter_state::InterpreterState`].
-#[derive(Clone, PartialEq, Hash, Eq)]
+#[derive(Clone, PartialEq, Hash, Eq, Serialize, Deserialize)]
 pub struct TermApplicationResult {
     pub term_app : TermApplication,
     pub result_ref : TermReference

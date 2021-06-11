@@ -23,6 +23,9 @@
 #![allow(unused_parens)]
 
 #[macro_use] extern crate log;
+#[macro_use] extern crate serde;
+pub mod prior_info;
+pub mod prior_directory;
 pub mod multiple;
 pub mod term_input_output;
 pub mod everything;

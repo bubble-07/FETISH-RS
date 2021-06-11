@@ -26,6 +26,7 @@ use crate::normal_inverse_wishart::*;
 use crate::elaborator::*;
 use topological_sort::TopologicalSort;
 use crate::context::*;
+use serde::{Serialize, Deserialize};
 
 ///An [`EmbedderState`] keeps track of the embeddings of function terms ([`TermModel`]s)
 ///which come from some [`InterpreterState`], and also the learned [`Elaborator`]s for
@@ -35,7 +36,36 @@ pub struct EmbedderState<'a> {
     pub ctxt : &'a Context
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct SerializedEmbedderState {
+    pub model_spaces : HashMap::<TypeId, SerializedEmbeddingSpace>
+}
+
+impl SerializedEmbedderState {
+    pub fn deserialize<'a>(mut self, ctxt : &'a Context) -> EmbedderState<'a> {
+        let mut model_spaces = HashMap::new(); 
+        for (type_id, serialized_embedding_space) in self.model_spaces.drain() {
+            let embedding_space = serialized_embedding_space.deserialize(ctxt);
+            model_spaces.insert(type_id, embedding_space);
+        }
+        EmbedderState {
+            model_spaces,
+            ctxt
+        }
+    }
+}
+
 impl<'a> EmbedderState<'a> {
+    pub fn serialize(mut self) -> SerializedEmbedderState {
+        let mut model_spaces = HashMap::new(); 
+        for (type_id, deserialized_embedding_space) in self.model_spaces.drain() {
+            let embedding_space = deserialized_embedding_space.serialize();
+            model_spaces.insert(type_id, embedding_space);
+        }
+        SerializedEmbedderState {
+            model_spaces
+        }
+    }
 
     ///Draws a sample from the distribution over [`TermModel`]s represented in this
     ///[`EmbedderState`], yielding a [`SampledEmbedderState`].
@@ -53,16 +83,13 @@ impl<'a> EmbedderState<'a> {
 
     ///Creates a new [`EmbedderState`], initially populated with default embeddings
     ///for primitive terms in the passed [`Context`].
-    pub fn new(model_prior_specification : &'a dyn PriorSpecification,
-               elaborator_prior_specification : &'a dyn PriorSpecification, 
-               ctxt : &'a Context) -> EmbedderState<'a> {
+    pub fn new(ctxt : &'a Context) -> EmbedderState<'a> {
         info!("Readying embedder state");
 
         let mut model_spaces = HashMap::new();
         for func_type_id in 0..ctxt.get_total_num_types() {
             if (!ctxt.is_vector_type(func_type_id)) {
-                let mut model_space = EmbeddingSpace::new(func_type_id, model_prior_specification, 
-                                                      elaborator_prior_specification, ctxt);
+                let mut model_space = EmbeddingSpace::new(func_type_id, ctxt);
 
                 //Initialize embeddings for primitive terms
                 let primitive_type_space = ctxt.primitive_directory

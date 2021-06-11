@@ -8,10 +8,12 @@ use crate::displayable_with_context::*;
 use crate::interpreter_state::*;
 use crate::primitive_term_pointer::*;
 
+use serde::{Serialize, Deserialize};
+
 ///The application of some [`PrimitiveTermPointer`]
 ///(which points to a [`FuncImpl`]) to some number of
 ///[`TermReference`] arguments.
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PartiallyAppliedTerm {
     pub func_ptr : PrimitiveTermPointer,
     pub args : Vec<TermReference> 

@@ -8,8 +8,10 @@ use crate::linalg_utils::*;
 use rand::prelude::*;
 use crate::params::*;
 
+use serde::{Serialize, Deserialize};
+
 ///A feature collection of random fourier features
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct FourierFeatureCollection {
     in_dimensions : usize,
     num_features : usize,

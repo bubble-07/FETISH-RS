@@ -4,10 +4,12 @@ use crate::term::*;
 use crate::term_application_result::*;
 use crate::primitive_term_pointer::*;
 use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
 
 ///A collection of [`TermApplicationResult`]s and [`NonPrimitiveTermPointer`]s
 ///which were generated as a consequence of new evaluations performed
 ///by an [`crate::interpreter_state::InterpreterState`].
+#[derive(Serialize, Deserialize)]
 pub struct NewlyEvaluatedTerms {
     pub term_app_results : Vec<TermApplicationResult>,
     pub terms : Vec<NonPrimitiveTermPointer>
