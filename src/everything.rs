@@ -1,3 +1,5 @@
+pub use crate::prior_info::*;
+pub use crate::prior_directory::*;
 pub use crate::term_input_output::*;
 pub use crate::schmeared_hole::*;
 pub use crate::typed_vector::*;

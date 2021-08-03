@@ -27,7 +27,7 @@ impl FourierFeatureCollection {
     ///a sampled coefficient vector.
     pub fn new(in_dimensions: usize, num_features : usize,
                alpha : f32,
-               generator : fn(&mut ThreadRng, usize) -> Array1<f32>) -> FourierFeatureCollection {
+               generator : impl Fn(&mut ThreadRng, usize) -> Array1<f32>) -> FourierFeatureCollection {
 
         let mut ws = Array::zeros((num_features, in_dimensions));
         let mut rng = rand::thread_rng();

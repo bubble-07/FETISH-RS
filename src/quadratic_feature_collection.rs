@@ -47,6 +47,9 @@ impl SerializableQuadraticFeatureCollection {
             sketch_two
         }
     }
+    pub fn get_dimension(&self) -> usize {
+        self.sketch_one.get_out_dimensions()
+    }
     pub fn deserialize(self) -> QuadraticFeatureCollection {
         let mut fftplanner = FFTplanner::<f32>::new(false);
         let mut ifftplanner = FFTplanner::<f32>::new(true);
